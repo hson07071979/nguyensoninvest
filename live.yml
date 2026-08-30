@@ -1,0 +1,61 @@
+name: Quét trong phiên
+
+on:
+  schedule:
+    # GitHub chạy theo UTC — giờ Việt Nam = UTC + 7. Đừng sửa thành giờ Việt Nam.
+    #
+    # Quét dày hơn ở khung 14h00–14h45 vì đó là CỬA SỔ QUYẾT ĐỊNH: hệ chỉ ăn tiền
+    # nếu khớp trong chính phiên bắn tín hiệu, và tài liệu đòi xác nhận sau 14h00.
+    - cron: '*/20 2-6 * * 1-5'    # 09h00–13h59 giờ VN · mỗi 20 phút
+    - cron: '*/5 7 * * 1-5'       # 14h00–14h59 giờ VN · mỗi 5 phút — cửa sổ quyết định
+    - cron: '5,25 8 * * 1-5'      # 15h05 và 15h25 giờ VN · chốt lại sau khi đóng cửa
+  workflow_dispatch:
+
+concurrency:
+  group: quet-trong-phien
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install requests
+
+      - name: Quét thị trường
+        env:
+          # Hai bien nay la BI MAT cua repo (Settings -> Secrets -> Actions).
+          # KHONG khai bao thi bo quet van chay binh thuong, chi la khong co
+          # chuong ve dien thoai. Xem huong dan dung o README.
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT:  ${{ secrets.TELEGRAM_CHAT }}
+        run: python live_scan.py
+
+      # Sổ lệnh chỉ tự ghi SAU 14h50 giờ Việt Nam, khi giá đã ngừng nhảy.
+      # Chạy ở mọi lần quét cũng không sao — script tự biết đường đứng yên.
+      - name: Vào sổ lệnh
+        run: python portfolio.py
+
+      - name: Đăng kết quả
+        run: |
+          set -e
+          git config user.name  "Bot Nguyễn Sơn Invest"
+          git config user.email "bot@users.noreply.github.com"
+          git add live.json portfolio.json
+          if git diff --cached --quiet; then
+            echo "Không có gì đổi."
+          else
+            git commit -m "Quét phiên $(TZ=Asia/Ho_Chi_Minh date '+%d/%m %H:%M')"
+            # nhánh có thể đã đổi do lần chạy khác — kéo về rồi đẩy lại
+            git pull --rebase --autostash || true
+            git push
+          fi

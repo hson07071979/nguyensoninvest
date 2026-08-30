@@ -1,0 +1,24 @@
+# ============================================================
+# MÃ LOẠI THỦ CÔNG — Nguyễn Sơn Invest
+# ------------------------------------------------------------
+# Mã trong file này KHÔNG BAO GIỜ vào watchlist và KHÔNG BAO GIỜ
+# kêu chuông, dù điểm số có đẹp tới đâu. Dùng khi anh có lý do
+# riêng mà con số không thấy được: ban lãnh đạo, tin đồn, hàng
+# đã từng làm anh mất tiền, hay đơn giản là không muốn cầm.
+#
+# Mã bị loại vẫn hiện trong Bộ lọc và ô Tra cứu, có dán nhãn
+# "ĐÃ LOẠI THỦ CÔNG" — để anh không quên là chính mình đã bỏ nó.
+#
+# BACKTEST KHÔNG ĐỔI. File này chỉ chi phối từ hôm nay trở đi.
+# Lịch sử phải giữ nguyên si, nếu không con số hiệu suất thành
+# vô nghĩa.
+#
+# Cách dùng: mỗi dòng một mã. Dòng bắt đầu bằng # là ghi chú.
+# Sửa xong bấm "Commit changes" — bản quét tối nay sẽ áp dụng.
+# ============================================================
+
+# Ví dụ (đang bị vô hiệu vì có dấu # ở đầu dòng):
+# ROS
+
+# LƯU Ý: loại một mã đang cầm KHÔNG làm bot bán nó. Vị thế đã mở vẫn do bộ thoát
+# chín lớp quyết định — loại chỉ nghĩa là "đừng mua thêm, đừng báo chuông nữa".

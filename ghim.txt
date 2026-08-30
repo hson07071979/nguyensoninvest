@@ -1,0 +1,25 @@
+# ============================================================
+# MÃ GHIM THỦ CÔNG — Nguyễn Sơn Invest
+# ------------------------------------------------------------
+# Mã trong file này LUÔN có mặt trong watchlist, kể cả khi điểm
+# số tụt xuống dưới ngưỡng. Nó sẽ được đánh dấu "ghim" kèm lý do
+# vì sao chưa đạt, để anh biết mình đang theo dõi cái gì.
+#
+# GHIM KHÔNG PHẢI LỆNH MUA. Bot vẫn chỉ vào lệnh khi mã qua đủ
+# chín lớp. Ghim chỉ nghĩa là "đừng cho nó rơi khỏi tầm mắt tôi".
+#
+# Cách dùng: mỗi dòng một mã. Dòng bắt đầu bằng # là ghi chú.
+# Sửa xong bấm "Commit changes" — bản quét tối nay sẽ áp dụng.
+# ============================================================
+
+MSN
+HAG
+ACB
+HDB
+STB
+BAF
+GMD
+IDC
+POW
+KBC
+SAB
