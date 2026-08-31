@@ -3,12 +3,12 @@
  "nav0": 1000000000.0,
  "cash": 1000000000.0,
  "nav": 1000000000,
- "session_done": "2026-08-26",
- "updated": "2026-08-27T05:53:27",
+ "session_done": "2026-08-28",
+ "updated": "2026-08-31T15:22:07",
  "open": [],
  "closed": [],
  "log": [],
- "light": "DO",
+ "light": "VANG",
  "stats": {
   "n_open": 0,
   "n_closed": 0,
@@ -16,6 +16,6 @@
   "total_return": 0.0,
   "best": null,
   "worst": null,
-  "since": "2026-08-26"
+  "since": "2026-08-28"
  }
 }
