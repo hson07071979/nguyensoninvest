@@ -3,8 +3,8 @@
  "nav0": 1000000000.0,
  "cash": 1000000000.0,
  "nav": 1000000000,
- "session_done": "2026-08-28",
- "updated": "2026-08-31T15:22:07",
+ "session_done": "2026-09-03",
+ "updated": "2026-09-03T18:53:45",
  "open": [],
  "closed": [],
  "log": [],
@@ -16,6 +16,6 @@
   "total_return": 0.0,
   "best": null,
   "worst": null,
-  "since": "2026-08-28"
+  "since": "2026-09-03"
  }
 }
