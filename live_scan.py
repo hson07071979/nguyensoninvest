@@ -148,11 +148,33 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac):
         print('telegram loi:', type(e).__name__, e)
 
 
+def loai_so_tay():
+    """Ma anh Son loai tay o So tay. Doc THANG manual.json nam ngay canh file nay,
+    de loai mot ma la no im chuong ngay luot quet sau — khong phai cho toi 19h30.
+
+    Co y KHONG import manual.py: file do nam o repo private, khong duoc day sang
+    day. Vai dong doc JSON re hon nhieu so voi viec dong bo them mot file nua."""
+    try:
+        with open('manual.json', encoding='utf-8') as f:
+            o = json.load(f)
+    except Exception:
+        return set()
+    out = set()
+    for w in (o.get('loai') or []):
+        s = str((w.get('sym') if isinstance(w, dict) else w) or '').strip().upper()
+        if s.isalnum() and 3 <= len(s) <= 10:
+            out.add(s)
+    return out
+
+
 def main():
     if not os.path.exists('thresholds.json'):
         sys.exit('HONG: khong co thresholds.json — repo private chua day sang')
     T = json.load(open('thresholds.json', encoding='utf-8'))
-    syms = T['syms']
+    BO = loai_so_tay()
+    syms = {k: v for k, v in T['syms'].items() if k not in BO}
+    if BO:
+        print(f'bo qua {len(BO)} ma anh Son loai tay: {" ".join(sorted(BO))}')
     # phai doc TRUOC khi ghi de live.json, khong thi mat moc so sanh
     cu_mua, cu_ses = doc_live_cu()
 

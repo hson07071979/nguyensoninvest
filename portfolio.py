@@ -157,7 +157,10 @@ def main():
     light = T.get('light') or 'XANH'
     smul = SIZE_MAP.get(light, 1.0)
     syms_th = T.get('syms', {})
-    loai = set()
+    # Danh sach loai = loai.txt (repo private day sang) + So tay anh Son dang len.
+    # Thieu ve thu hai thi ma anh vua loai sang nay van bi vao so lenh chieu nay.
+    from live_scan import loai_so_tay
+    loai = set(loai_so_tay())
     if os.path.exists('loai.txt'):
         for line in open('loai.txt', encoding='utf-8'):
             t = line.split('#')[0].strip().upper()
