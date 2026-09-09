@@ -12,14 +12,4 @@
 # Sửa xong bấm "Commit changes" — bản quét tối nay sẽ áp dụng.
 # ============================================================
 
-MSN
-HAG
-ACB
-HDB
-STB
-BAF
-GMD
-IDC
-POW
-KBC
-SAB
+
