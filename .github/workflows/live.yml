@@ -2,18 +2,32 @@ name: Quét trong phiên
 
 on:
   schedule:
-    # GitHub chạy theo UTC — giờ Việt Nam = UTC + 7. Đừng sửa thành giờ Việt Nam.
+    # ⚠️ ĐỌC TRƯỚC KHI SỬA — đo thật 10–14/09/2026 trên chính repo này.
     #
-    # Quét dày hơn ở khung 14h00–14h45 vì đó là CỬA SỔ QUYẾT ĐỊNH: hệ chỉ ăn tiền
-    # nếu khớp trong chính phiên bắn tín hiệu, và tài liệu đòi xác nhận sau 14h00.
-    - cron: '*/20 2-6 * * 1-5'    # 09h00–13h59 giờ VN · mỗi 20 phút
-    - cron: '*/5 7 * * 1-5'       # 14h00–14h59 giờ VN · mỗi 5 phút — cửa sổ quyết định
-    - cron: '5,25 8 * * 1-5'      # 15h05 và 15h25 giờ VN · chốt lại sau khi đóng cửa
+    # Bản cũ đặt ~27 nhịp cron mỗi ngày (*/20, */5, 5+25). THỰC TẾ GitHub chỉ cho
+    # chạy 1–3 nhịp/ngày, và phần lớn rơi SAU khi thị trường đóng cửa:
+    #     14/09 T2: 14h42 · 20h33 · 21h54   (trong phiên: 1 lần)
+    #     11/09 T6: 14h07 · 18h59 · 19h43   (trong phiên: 1 lần)
+    #     10/09 T5: 19h48                   (trong phiên: 0 lần)
+    # Tức lớp chuông báo gần như CHẾT, dù tab Actions nhìn vẫn xanh.
+    #
+    # Nguyên nhân: cron của GitHub là "best effort". Khi máy chủ đông, nhịp bị đẩy
+    # trễ 4–6 tiếng; mà nhịp trễ quá xa thì GitHub BỎ LUÔN chứ không chạy bù. Đặt
+    # thêm cron KHÔNG chữa được — đã thử ở repo kia và thất bại.
+    #
+    # CÁCH CHỮA: đừng phụ thuộc vào việc cron nổ đúng giờ. Mỗi lần chạy sẽ TỰ LẶP
+    # cho tới hết phiên (xem bước "Quét lặp" bên dưới). Nên chỉ cần MỘT nhịp lọt
+    # được vào trong phiên là cả phiên có người canh. Các mốc dưới đây là "cửa
+    # vào", không phải nhịp quét.
+    #
+    # Đặt ở phút :07 chứ không phải :00 — hàng đợi GitHub đông nhất ở đầu giờ.
+    - cron: '7 2-8 * * 1-5'    # 09h07 → 15h07 giờ VN, mỗi giờ một cửa vào
+    - cron: '37 8 * * 1-5'     # 15h37 giờ VN — chốt lại sau khi đóng cửa
   workflow_dispatch:
 
 concurrency:
   group: quet-trong-phien
-  cancel-in-progress: true
+  cancel-in-progress: true     # nhịp mới vào thì thay nhịp cũ, khỏi chạy chồng
 
 permissions:
   contents: write
@@ -21,7 +35,8 @@ permissions:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    # Trần cứng của GitHub là 6 tiếng. Vòng lặp tự dừng ở 5h40 để không bị chém.
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
@@ -31,31 +46,63 @@ jobs:
 
       - run: pip install requests
 
-      - name: Quét thị trường
+      - name: Quét lặp cho tới hết phiên
         env:
           # Hai bien nay la BI MAT cua repo (Settings -> Secrets -> Actions).
           # KHONG khai bao thi bo quet van chay binh thuong, chi la khong co
           # chuong ve dien thoai. Xem huong dan dung o README.
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT:  ${{ secrets.TELEGRAM_CHAT }}
-        run: python live_scan.py
-
-      # Sổ lệnh chỉ tự ghi SAU 14h50 giờ Việt Nam, khi giá đã ngừng nhảy.
-      # Chạy ở mọi lần quét cũng không sao — script tự biết đường đứng yên.
-      - name: Vào sổ lệnh
-        run: python portfolio.py
-
-      - name: Đăng kết quả
         run: |
-          set -e
           git config user.name  "Bot Nguyễn Sơn Invest"
           git config user.email "bot@users.noreply.github.com"
-          git add live.json portfolio.json
-          if git diff --cached --quiet; then
-            echo "Không có gì đổi."
-          else
-            git commit -m "Quét phiên $(TZ=Asia/Ho_Chi_Minh date '+%d/%m %H:%M')"
-            # nhánh có thể đã đổi do lần chạy khác — kéo về rồi đẩy lại
-            git pull --rebase --autostash || true
-            git push
-          fi
+
+          BAT_DAU=$(date +%s)
+          NGAN_SACH=$(( 5*3600 + 40*60 ))    # 5h40 — dưới trần 6h của GitHub
+          NHIP=0
+
+          while true; do
+            NHIP=$(( NHIP + 1 ))
+            GIO=$(TZ=Asia/Ho_Chi_Minh date '+%H:%M')
+            echo "══════ nhịp $NHIP · $GIO giờ VN ══════"
+
+            # Một nhịp hỏng KHÔNG được làm chết cả vòng lặp: FireAnt chặn tạm là
+            # chuyện thường, nhịp sau tự khỏi. Đây là lý do không dùng `set -e`.
+            python live_scan.py || echo "!! live_scan.py lỗi — bỏ qua nhịp này"
+            python portfolio.py || echo "!! portfolio.py lỗi — bỏ qua nhịp này"
+
+            git add live.json portfolio.json 2>/dev/null || true
+            if git diff --cached --quiet; then
+              echo "  không có gì đổi"
+            else
+              git commit -m "Quét phiên $(TZ=Asia/Ho_Chi_Minh date '+%d/%m %H:%M')" || true
+              # nhánh có thể đã đổi do lần chạy khác — kéo về rồi đẩy lại
+              git pull --rebase --autostash || true
+              git push || echo "!! push lỗi — nhịp sau đẩy lại"
+            fi
+
+            # 10# để bash không hiểu "0907" là số bát phân
+            PHUT=$(TZ=Asia/Ho_Chi_Minh date '+%H%M'); PHUT=$(( 10#$PHUT ))
+            TROI=$(( $(date +%s) - BAT_DAU ))
+
+            if [ "$PHUT" -ge 1530 ]; then
+              echo "Đã qua 15h30 giờ VN — phiên chốt xong, dừng."
+              break
+            fi
+            if [ "$TROI" -ge "$NGAN_SACH" ]; then
+              echo "Hết ngân sách 5h40 — dừng. Cửa vào giờ sau sẽ tiếp tục."
+              break
+            fi
+
+            # Dày hơn ở CỬA SỔ QUYẾT ĐỊNH 14h00–14h45: hệ chỉ ăn tiền nếu khớp
+            # trong chính phiên bắn tín hiệu, và tài liệu đòi xác nhận sau 14h00.
+            if [ "$PHUT" -ge 1400 ] && [ "$PHUT" -lt 1445 ]; then
+              NGHI=300      # 5 phút
+            else
+              NGHI=1200     # 20 phút
+            fi
+            echo "─── nghỉ $(( NGHI / 60 )) phút ───"
+            sleep "$NGHI"
+          done
+
+          echo "Xong $NHIP nhịp quét trong lần chạy này."
