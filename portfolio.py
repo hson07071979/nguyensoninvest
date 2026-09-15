@@ -46,13 +46,18 @@ BASE_SIZE   = 0.42
 MAX_POS     = 0.50
 MAX_TOTAL   = 1.00
 MAX_POS_N   = 12
+MAX_SECTOR  = 0.30          # tran moi nganh — bo may co, so lenh truoc day THIEU
 SIZE_MAP    = {'XANH': 1.0, 'VANG': 0.6, 'CAM': 0.35, 'DO': 0.2}
 TEN_DEN     = {'XANH': 'Xanh', 'VANG': 'Vàng', 'CAM': 'Cam', 'DO': 'Đỏ'}
 HARD_STOP   = -0.10
 STOP        = -0.07
 BE_TRIGGER  = 0.08
 BE_LEVEL    = 0.01
-T_VALVE     = 6
+# T+4, KHONG phai T+6. Doi tu 30/08/2026 sau khi quet lai tren vu tru 1.213 ma:
+# T+4 thang T+6 o CA BON chi so cung luc — +523,1% so +513,3% · DD 11,34% so
+# 12,43% · PF 4,43 so 4,04 · Sharpe 1,78 so 1,71. So lenh nay bi bo quen o T+6
+# suot tu do, tuc giu them 2 phien so voi bo may. Phat hien 15/09/2026.
+T_VALVE     = 4
 BIG_WIN     = 0.19
 CONF        = 2
 TRAIL_FAST  = 10
@@ -243,26 +248,54 @@ def main():
         px = float(h['price']) * 1000
         if px <= 0:
             continue
-        nav = P['cash'] + sum(p['sh'] * (p.get('last', 0) * 1000 or p['entry_px']) for p in P['open'])
-        dang_dung = sum(p['sh'] * (p.get('last', 0) * 1000 or p['entry_px']) for p in P['open'])
-        tran_con = max(0.0, MAX_TOTAL * nav - dang_dung)
-        tien = min(BASE_SIZE * smul * nav, MAX_POS * nav, tran_con, P['cash'] / (1 + FEE_BUY))
+        th = syms_th.get(h['sym'], {})
+        nganh = th.get('sector') or 'Khác'
+
+        def _gt(p):
+            return p['sh'] * (p.get('last', 0) * 1000 or p['entry_px'])
+
+        nav = P['cash'] + sum(_gt(p) for p in P['open'])
+        dang_dung = sum(_gt(p) for p in P['open'])
+        dung_nganh = sum(_gt(p) for p in P['open'] if (p.get('sector') or 'Khác') == nganh)
+
+        # CO LENH CHUAN lay THANG tu thresholds.json (`size_pct`, do vithe.py tinh).
+        # No da gom du: co nen 42% x he so den x he so cong rui ro x thuong nen chat
+        # 1,2 neu nen <= 10%, roi cat bang tran moi ma va tran moi nganh.
+        #
+        # Truoc day cho nay tu go `BASE_SIZE * smul` — THIEU ba thu ma bo may co:
+        #   1. he so rui ro 0,5 khi co vang (ICR mong / CAR sat nguong)
+        #   2. thuong 1,2 khi nen gia chat (<= 10%)
+        #   3. tran moi nganh 30%
+        # Hai cai dau lam vao lenh SAI CO; cai thu ba lam so lenh co the don 100%
+        # von vao mot nganh, dieu bo may khong bao gio lam (do tren 119 lenh that:
+        # tran nganh la thu quyet dinh co vi the 31% so lan).
+        co_chuan = th.get('size_pct')
+        if co_chuan is None:                       # thresholds cu chua co truong nay
+            co_chuan = BASE_SIZE * smul * 100
+
+        tien = min(co_chuan / 100.0 * nav,
+                   MAX_POS * nav,
+                   max(0.0, MAX_TOTAL * nav - dang_dung),
+                   max(0.0, MAX_SECTOR * nav - dung_nganh),
+                   P['cash'] / (1 + FEE_BUY))
         sh = int(tien / px // 100 * 100)
         if sh < 100:
             nhat_ky.append(f"BỎ QUA {h['sym']} — không đủ tiền/room")
             continue
         chi = sh * px * (1 + FEE_BUY)
         P['cash'] -= chi
-        th = syms_th.get(h['sym'], {})
         P['open'].append(dict(
             sym=h['sym'], name=h.get('name') or th.get('name', ''),
-            sector=th.get('sector') or 'Khác',
+            sector=nganh,
             entry=ses, entry_px=px, sh=sh, cost=round(chi),
             peak=0.0, b10=0, b20=0, part=False, held=0,
             light=light, score=h.get('score'),
             last=round(px / 1000, 2), last_day=ses, pnl=0.0))
+        # Ghi CO THUC TE da vao, khong phai co danh nghia. Truoc day ghi
+        # `BASE_SIZE*smul` nen nhat ky noi "25% NAV" trong khi lenh that co the
+        # bi tran nganh hay tien mat cat con it hon nhieu.
         nhat_ky.append(f"MUA {h['sym']} {px/1000:.2f} × {sh:,} cp "
-                       f"({BASE_SIZE*smul*100:.0f}% NAV · đèn {TEN_DEN.get(light, light)})")
+                       f"({sh*px/nav*100:.1f}% NAV · đèn {TEN_DEN.get(light, light)})")
 
     # ---------- 3. CHOT SO ----------
     mv = sum(p['sh'] * (p.get('last', 0) * 1000 or p['entry_px']) for p in P['open'])
