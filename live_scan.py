@@ -236,7 +236,14 @@ def main():
             'Đóng cửa nửa trên nến': close >= (hi + lo) / 2 if hi > lo else True,
         }
         # ba dieu kien nay da chot tu toi qua, khong doi trong phien
-        gate_ok = (t['state'] == 'cho')
+        #
+        # `dang_cam`: ma he thong DANG CAM thi khong keu MUA nua. Neu thieu cai
+        # nay, hai phien tran lien tiep se ra hai lenh mua cung mot ma — thanh
+        # 50% tai khoan don vao mot cho. So lenh (`portfolio.py`) von da chan
+        # bang `dang_cam`, nhung chuong bao va trang web thi chua biet, van hien
+        # "CHO DIEM MUA" cho ma da mua. Co nay do ban dung toi qua gan vao
+        # thresholds.json (gop so chay cua bo may + so ghi tien).
+        gate_ok = (t['state'] == 'cho') and not t.get('dang_cam')
 
         n_ok = sum(cond.values())
         fa_ok = (t['state'] == 'fa')      # qua het TRU diem — CHI DE MAT, khong duoc mua
