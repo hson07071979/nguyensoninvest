@@ -1,21 +1,48 @@
 {
  "version": 1,
  "nav0": 1000000000.0,
- "cash": 1000000000.0,
- "nav": 1000000000,
- "session_done": "2026-09-14",
- "updated": "2026-09-14T20:34:10",
- "open": [],
+ "cash": 749935465.0,
+ "nav": 999625465,
+ "session_done": "2026-09-15",
+ "updated": "2026-09-15T15:09:25",
+ "open": [
+  {
+   "sym": "BSR",
+   "name": "Công ty Cổ phần Lọc Hóa dầu Bình Sơn",
+   "sector": "Dầu khí",
+   "entry": "2026-09-15",
+   "entry_px": 30450.0,
+   "sh": 8200,
+   "cost": 250064535,
+   "peak": 0.0,
+   "b10": 0,
+   "b20": 0,
+   "part": false,
+   "held": 0,
+   "light": "VANG",
+   "score": 84.4,
+   "last": 30.45,
+   "last_day": "2026-09-15",
+   "pnl": 0.0
+  }
+ ],
  "closed": [],
- "log": [],
+ "log": [
+  {
+   "date": "2026-09-15",
+   "items": [
+    "MUA BSR 30.45 × 8,200 cp (25% NAV · đèn Vàng)"
+   ]
+  }
+ ],
  "light": "VANG",
  "stats": {
-  "n_open": 0,
+  "n_open": 1,
   "n_closed": 0,
   "winrate": null,
-  "total_return": 0.0,
+  "total_return": -0.04,
   "best": null,
   "worst": null,
-  "since": "2026-09-14"
+  "since": "2026-09-15"
  }
 }
