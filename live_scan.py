@@ -268,6 +268,12 @@ def main():
             need_vol=t['need_vol'], vol=int(vol),
             gtgd=round(tv / 1e9, 1), gtgd_proj=round(tv_proj / 1e9, 1),
             score=t['score'], base=t['base'],
+            # CO VI THE: do `vithe.py` tinh MOT LAN o ban dung toi qua roi xuat ra
+            # thresholds.json. Chuyen thang sang live.json de trang web CHI DOC.
+            # Tuyet doi khong de JS tu go lai cong thuc `42 * smul` — no bo mat he
+            # so rui ro, thuong nen chat va ba cai tran, nen trang noi mot dang
+            # bo may lam mot neo. Day dung la nguon goc cua hai loi ngay 15/09.
+            size_pct=t.get('size_pct'), size_tran=t.get('size_tran'),
             cond=cond,
             miss=[k for k, v in cond.items() if not v],
         ))
