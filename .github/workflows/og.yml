@@ -27,13 +27,15 @@ jobs:
           python-version: '3.11'
       - name: Cài Pillow
         run: pip install pillow
-      - name: Vẽ og.png
+      - name: Chan NaN trong khoi du lieu
+        run: python fix_nan.py
+      - name: Ve og.png
         run: python og_card.py
       - name: Đăng ảnh
         run: |
           git config user.name  "Bot Nguyễn Sơn Invest"
           git config user.email "bot@users.noreply.github.com"
-          git add og.png
+          git add index.html og.png
           if git diff --cached --quiet; then
             echo "Ảnh không đổi, bỏ qua."
           else
