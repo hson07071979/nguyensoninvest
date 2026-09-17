@@ -1,0 +1,42 @@
+name: Vẽ ảnh preview
+
+# Moi lan ban dung toi day index.html len day thi ve lai og.png theo so moi nhat.
+# Workflow nay nam o repo public, khong dung gi den repo bot — nen khong the lam
+# hong day chuyen tin hieu. Hong thi chi la anh preview cu, trang web van chay.
+on:
+  push:
+    paths:
+      - 'index.html'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: og
+  cancel-in-progress: true
+
+jobs:
+  ve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Cài Pillow
+        run: pip install pillow
+      - name: Vẽ og.png
+        run: python og_card.py
+      - name: Đăng ảnh
+        run: |
+          git config user.name  "Bot Nguyễn Sơn Invest"
+          git config user.email "bot@users.noreply.github.com"
+          git add og.png
+          if git diff --cached --quiet; then
+            echo "Ảnh không đổi, bỏ qua."
+          else
+            git commit -m "Vẽ lại ảnh preview"
+            git push
+          fi
