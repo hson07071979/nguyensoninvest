@@ -113,6 +113,16 @@ def doc_live_cu():
 
 
 def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac):
+    # Chuong ve dien thoai chi keu TRONG PHIEN, tu 09h00 den 15h00 gio VN.
+    # Truoc day ham nay duoc goi ma khong kiem tra gio: cron cua GitHub hay no
+    # tre vai tieng, va cua 15h37 thi chay sau khi dong cua - nen buoi toi van
+    # co chuong. Chot gio dat ngay trong day de moi duong goi deu bi rang buoc,
+    # ke ca luc bam Run workflow bang tay.
+    now_bao = gio_vn()
+    if now_bao.weekday() >= 5 or not (9.0 <= now_bao.hour + now_bao.minute / 60 <= 15.0):
+        print('ngoai gio bao chuong (09h00-15h00 T2-T6) - bo qua')
+        return
+
     tok = os.environ.get('TELEGRAM_TOKEN', '').strip()
     chat = os.environ.get('TELEGRAM_CHAT', '').strip()
     if not tok or not chat:
