@@ -2,9 +2,9 @@
  "version": 1,
  "nav0": 1000000000.0,
  "cash": 749935465.0,
- "nav": 997575465,
- "session_done": "2026-09-18",
- "updated": "2026-09-18T15:07:32",
+ "nav": 1008645465,
+ "session_done": "2026-09-21",
+ "updated": "2026-09-21T14:54:54",
  "open": [
   {
    "sym": "BSR",
@@ -14,16 +14,16 @@
    "entry_px": 30450.0,
    "sh": 8200,
    "cost": 250064535,
-   "peak": 0.008210180623973828,
+   "peak": 0.03612479474548436,
    "b10": 0,
    "b20": 0,
    "part": false,
-   "held": 3,
+   "held": 4,
    "light": "VANG",
    "score": 84.4,
-   "last": 30.2,
-   "last_day": "2026-09-18",
-   "pnl": -1.22
+   "last": 31.55,
+   "last_day": "2026-09-21",
+   "pnl": 3.2
   }
  ],
  "closed": [],
@@ -40,7 +40,7 @@
   "n_open": 1,
   "n_closed": 0,
   "winrate": null,
-  "total_return": -0.24,
+  "total_return": 0.86,
   "best": null,
   "worst": null,
   "since": "2026-09-15"
