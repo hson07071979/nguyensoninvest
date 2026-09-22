@@ -1,10 +1,10 @@
 {
  "version": 1,
  "nav0": 1000000000.0,
- "cash": 749935465.0,
- "nav": 1008645465,
- "session_done": "2026-09-21",
- "updated": "2026-09-21T14:54:54",
+ "cash": 496055215.0,
+ "nav": 1006625215,
+ "session_done": "2026-09-22",
+ "updated": "2026-09-22T15:09:53",
  "open": [
   {
    "sym": "BSR",
@@ -18,16 +18,41 @@
    "b10": 0,
    "b20": 0,
    "part": false,
-   "held": 4,
+   "held": 5,
    "light": "VANG",
    "score": 84.4,
-   "last": 31.55,
-   "last_day": "2026-09-21",
-   "pnl": 3.2
+   "last": 31.35,
+   "last_day": "2026-09-22",
+   "pnl": 2.54
+  },
+  {
+   "sym": "PVP",
+   "name": "Công ty Cổ phần Vận tải Dầu khí Thái Bình Dương",
+   "sector": "Hàng & Dịch vụ Công nghiệp",
+   "entry": "2026-09-22",
+   "entry_px": 19500.0,
+   "sh": 13000,
+   "cost": 253880250,
+   "peak": 0.0,
+   "b10": 0,
+   "b20": 0,
+   "part": false,
+   "held": 0,
+   "light": "VANG",
+   "score": 74.1,
+   "last": 19.5,
+   "last_day": "2026-09-22",
+   "pnl": 0.0
   }
  ],
  "closed": [],
  "log": [
+  {
+   "date": "2026-09-22",
+   "items": [
+    "MUA PVP 19.50 × 13,000 cp (25.2% NAV · đèn Vàng)"
+   ]
+  },
   {
    "date": "2026-09-15",
    "items": [
@@ -37,10 +62,10 @@
  ],
  "light": "VANG",
  "stats": {
-  "n_open": 1,
+  "n_open": 2,
   "n_closed": 0,
   "winrate": null,
-  "total_return": 0.86,
+  "total_return": 0.66,
   "best": null,
   "worst": null,
   "since": "2026-09-15"
