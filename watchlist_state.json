@@ -3,7 +3,7 @@
  "members": {
   "GMD": {
    "added": "2026-08-28",
-   "score": 83.9,
+   "score": 84.2,
    "status": "đạt",
    "note": ""
   },
@@ -33,25 +33,25 @@
   },
   "MSN": {
    "added": "2026-08-28",
-   "score": 67.2,
+   "score": 72.8,
    "status": "đạt",
    "note": ""
   },
   "VCB": {
    "added": "2026-08-28",
-   "score": 57.5,
+   "score": 57.7,
    "status": "đạt",
    "note": ""
   },
   "MBS": {
    "added": "2026-08-28",
-   "score": 56.4,
+   "score": 56.5,
    "status": "đạt",
    "note": ""
   },
   "IDC": {
    "added": "2026-08-28",
-   "score": 62.0,
+   "score": 62.1,
    "status": "đạt",
    "note": ""
   },
@@ -69,37 +69,31 @@
   },
   "VHM": {
    "added": "2026-09-16",
-   "score": 81.4,
-   "status": "đạt",
-   "note": ""
-  },
-  "DHC": {
-   "added": "2026-09-16",
-   "score": 84.4,
+   "score": 76.9,
    "status": "đạt",
    "note": ""
   },
   "VPI": {
    "added": "2026-09-16",
-   "score": 74.3,
+   "score": 74.2,
    "status": "đạt",
    "note": ""
   },
   "MWG": {
    "added": "2026-09-16",
-   "score": 67.1,
+   "score": 67.4,
    "status": "đạt",
    "note": ""
   },
   "BVH": {
    "added": "2026-09-16",
-   "score": 64.5,
+   "score": 64.4,
    "status": "đạt",
    "note": ""
   },
   "PLX": {
    "added": "2026-09-16",
-   "score": 58.7,
+   "score": 58.8,
    "status": "đạt",
    "note": ""
   },
@@ -117,7 +111,7 @@
   },
   "VGC": {
    "added": "2026-09-18",
-   "score": 48.0,
+   "score": 49.0,
    "status": "đạt",
    "note": ""
   },
@@ -129,18 +123,34 @@
   },
   "PVP": {
    "added": "2026-09-21",
-   "score": 74.1,
+   "score": 79.5,
    "status": "đạt",
    "note": ""
   },
   "TCH": {
    "added": "2026-09-21",
-   "score": 46.4,
+   "score": 46.6,
    "status": "đạt",
    "note": ""
   }
  },
  "log": [
+  {
+   "date": "2026-09-22",
+   "size": 22,
+   "added_ct": [],
+   "removed_ct": [
+    {
+     "sym": "DHC",
+     "why": "không còn đạt ngưỡng",
+     "score": 74.4
+    }
+   ],
+   "added": [],
+   "removed": [
+    "DHC"
+   ]
+  },
   {
    "date": "2026-09-21",
    "size": 23,
