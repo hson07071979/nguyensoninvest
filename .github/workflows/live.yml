@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - run: pip install requests
+      - run: pip install requests==2.33.1
 
       - name: Quét lặp cho tới hết phiên
         env:
@@ -71,7 +71,8 @@ jobs:
             python live_scan.py || echo "!! live_scan.py lỗi — bỏ qua nhịp này"
             python portfolio.py || echo "!! portfolio.py lỗi — bỏ qua nhịp này"
 
-            git add live.json portfolio.json 2>/dev/null || true
+            # obs/ = so do Dieu kien 9 moi lan quet (audit 23/09/2026)
+            git add live.json portfolio.json obs/ 2>/dev/null || true
             if git diff --cached --quiet; then
               echo "  không có gì đổi"
             else
