@@ -258,7 +258,10 @@ def main():
     if not os.path.exists('thresholds.json'):
         sys.exit('HONG: khong co thresholds.json — repo private chua day sang')
     T = json.load(open('thresholds.json', encoding='utf-8'))
-    CF = T.get('cfg') or {}
+    CF = dict(T.get('cfg') or {})
+    # Dieu kien 9 la dieu kien PROD: cfg thieu khoa use_ordimb thi van BAT BUOC (fail safe).
+    if CF:
+        CF.setdefault('use_ordimb', True)
     U = T.get('spec_u') or {}
     spec_ok = _hash_ok(T) and bool(U) and T.get('spec_version') == SP.SPEC_VERSION
     BO = loai_so_tay()
