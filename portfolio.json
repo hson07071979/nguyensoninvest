@@ -1,52 +1,59 @@
 {
- "version": 1,
+ "version": 2,
  "nav0": 1000000000.0,
- "cash": 496055215.0,
- "nav": 1006215215,
- "session_done": "2026-09-23",
- "updated": "2026-09-23T15:06:54",
- "open": [
+ "cash": 990416215.0,
+ "nav": 990416215,
+ "session_done": "2026-09-24",
+ "updated": "2026-09-24T15:09:12",
+ "open": [],
+ "closed": [
   {
-   "sym": "BSR",
-   "name": "Công ty Cổ phần Lọc Hóa dầu Bình Sơn",
-   "sector": "Dầu khí",
-   "entry": "2026-09-15",
-   "entry_px": 30450.0,
-   "sh": 8200,
-   "cost": 250064535,
-   "peak": 0.03612479474548436,
-   "b10": 0,
-   "b20": 0,
-   "part": false,
-   "held": 6,
-   "light": "VANG",
-   "score": 84.4,
-   "last": 31.3,
-   "last_day": "2026-09-23",
-   "pnl": 2.38
-  },
-  {
+   "book_id": "LIVE_PAPER",
+   "position_source": "live_scan",
    "sym": "PVP",
    "name": "Công ty Cổ phần Vận tải Dầu khí Thái Bình Dương",
    "sector": "Hàng & Dịch vụ Công nghiệp",
    "entry": "2026-09-22",
-   "entry_px": 19500.0,
+   "exit": "2026-09-24",
+   "entry_px": 19.5,
+   "exit_px": 19.2,
    "sh": 13000,
-   "cost": 253880250,
-   "peak": 0.0,
-   "b10": 0,
-   "b20": 0,
-   "part": false,
    "held": 1,
+   "pnl_pct": -1.93,
+   "pnl_vnd": -4904250,
+   "reason": "Huỷ: vào sổ bằng luật cũ, Điều kiện 9 không đạt (OrdImb 1,381 < 1,40)",
+   "peak": 0.0,
    "light": "VANG",
-   "score": 74.1,
-   "last": 19.5,
-   "last_day": "2026-09-23",
-   "pnl": -0.4
+   "phan": 1.0
+  },
+  {
+   "book_id": "LIVE_PAPER",
+   "position_source": "live_scan",
+   "sym": "BSR",
+   "name": "Công ty Cổ phần Lọc Hóa dầu Bình Sơn",
+   "sector": "Dầu khí",
+   "entry": "2026-09-15",
+   "exit": "2026-09-24",
+   "entry_px": 30.45,
+   "exit_px": 30.0,
+   "sh": 8200,
+   "held": 7,
+   "pnl_pct": -1.87,
+   "pnl_vnd": -4679535,
+   "reason": "Van thời gian T+4",
+   "peak": 3.5,
+   "light": "VANG",
+   "phan": 1.0
   }
  ],
- "closed": [],
  "log": [
+  {
+   "date": "2026-09-24",
+   "items": [
+    "BÁN BSR 30.00 (-1.6%) — Van thời gian T+4",
+    "HUỶ PVP — Huỷ: vào sổ bằng luật cũ, Điều kiện 9 không đạt (OrdImb 1,381 < 1,40)"
+   ]
+  },
   {
    "date": "2026-09-22",
    "items": [
@@ -62,12 +69,23 @@
  ],
  "light": "VANG",
  "stats": {
-  "n_open": 2,
-  "n_closed": 0,
-  "winrate": null,
-  "total_return": 0.62,
-  "best": null,
-  "worst": null,
+  "n_open": 0,
+  "n_closed": 2,
+  "winrate": 0.0,
+  "total_return": -0.96,
+  "best": -1.87,
+  "worst": -1.93,
   "since": "2026-09-15"
+ },
+ "book_id": "LIVE_PAPER",
+ "nav_source": "portfolio.json",
+ "prod_config_hash": "4cafdd187f59",
+ "checks": {
+  "nav_identity": true,
+  "pnl_reconcile_gap_vnd": 0,
+  "cash_nonneg": true,
+  "max_pos_ok": true,
+  "pnl_reconcile_ok": true,
+  "ok": true
  }
 }
