@@ -85,7 +85,12 @@ def latest_row(sym, frm, to):
             if isinstance(d, list):
                 if not d:
                     return None
-                return max(d, key=lambda x: str(x.get('Date', '')))
+                d = sorted(d, key=lambda x: str(x.get('Date', '')))
+                row = dict(d[-1])
+                # phien giao dich LIEN TRUOC (tu chinh du lieu, khong doan bang lich —
+                # ngay le khong lam hong viec khop dac ta)
+                row['_prev'] = str(d[-2].get('Date', ''))[:10] if len(d) >= 2 else None
+                return row
         except Exception:
             time.sleep(1.2 * (a + 1))
     return None
@@ -110,9 +115,14 @@ def latest_row(sym, frm, to):
 # van chay binh thuong nhu cu.
 # ============================================================================
 def doc_live_cu():
-    """MUA cua lan quet truoc, de biet ma nao VUA len muc do."""
+    """Nhung ma DA KEU CHUONG trong phien (`alerted`), giu qua moi lan quet — ke ca
+    lan quet hong du lieu. Truoc day chi so voi MUA cua lan quet TRUOC, nen mot lan
+    FireAnt sap hay OrdImb nhap nhay quanh 1,40 lam keu lai cung mot ma (audit 24/09)."""
     try:
         d = json.load(open('live.json', encoding='utf-8'))
+        if 'alerted' in d:          # chi nhung ma DA GUI THANH CONG — gui hong thi lan sau gui lai
+            al = d.get('alerted') or {}
+            return set(al.get('syms') or []), (al.get('session') or d.get('session'))
         return {h['sym'] for h in d.get('hits', []) if h.get('level') == 'MUA'}, d.get('session')
     except Exception:
         return set(), None
@@ -126,21 +136,30 @@ def co_lenh(h, T, den):
         import allocator as AL
         CF = T.get('cfg') or {}
         sp = (T['syms'].get(h['sym']) or {}).get('spec') or {}
-        P = json.load(open('portfolio.json', encoding='utf-8')) if os.path.exists('portfolio.json') else {}
-        op = [p for p in (P.get('open') or []) if (p.get('sh') or 0) > 0]
-        val = lambda p: p['sh'] * ((p.get('last') or 0) * 1000 or p['entry_px'])
-        inv = sum(val(p) for p in op)
-        nav = (P.get('cash') if P else None)
-        nav = (nav + inv) if nav is not None else 1e9
-        cash = P.get('cash', nav) if P else nav
-        sec = sum(val(p) for p in op if (p.get('sector') or 'Khác') == (sp.get('sector') or 'Khác'))
+        # NAV HIEN TAI cua so he thong (bo may) do ban dung toi qua xuat ra —
+        # KHONG phai von goc 1 ty. Thieu thi moi lui ve so ghi tien.
+        B = T.get('book') or {}
+        if B.get('nav'):
+            op = B.get('positions') or []
+            inv = sum(float(p.get('value') or 0) for p in op)
+            nav = float(B['nav']); cash = float(B.get('cash', nav - inv))
+            sec = sum(float(p.get('value') or 0) for p in op if (p.get('sector') or 'Khác') == (sp.get('sector') or 'Khác'))
+        else:
+            P = json.load(open('portfolio.json', encoding='utf-8')) if os.path.exists('portfolio.json') else {}
+            op = [p for p in (P.get('open') or []) if (p.get('sh') or 0) > 0]
+            val = lambda p: p['sh'] * ((p.get('last') or 0) * 1000 or p['entry_px'])
+            inv = sum(val(p) for p in op)
+            nav = (P.get('cash') + inv) if P.get('cash') is not None else 1e9
+            cash = P.get('cash', nav)
+            sec = sum(val(p) for p in op if (p.get('sector') or 'Khác') == (sp.get('sector') or 'Khác'))
         A = AL.entry_target(nav, cash, inv, sec, len(op), den, risk_mul=sp.get('rmul', 1.0),
                             base_rng=sp.get('base'), cfg=CF)
         return (round(A['theoretical'] / nav * 100, 1), round(A['actual'] / nav * 100, 1),
-                [AL.REASON_VI.get(x, x) for x in (A['reasons'] + ([A['binding']] if not A['ok'] else []))])
+                [AL.REASON_VI.get(x, x) for x in (A['reasons'] + ([A['binding']] if not A['ok'] else []))],
+                A['actual'], nav)
     except Exception as e:
         print('co_lenh loi:', e)
-        return None, None, []
+        return None, None, [], None, None
 
 
 def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None):
@@ -159,14 +178,16 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None):
     mua = [h for h in hits if h['level'] == 'MUA' and h.get('prod_ok')]
     moi = [h for h in mua if cu_ses != ses or h['sym'] not in cu_mua]
     if not moi:
-        return
+        return []
 
     dong = [f"\U0001F534 *{len(moi)} mã đủ TOÀN BỘ điều kiện PROD* — phiên {ses}", '']
     for h in moi:
-        theo, thuc, ly = co_lenh(h, T or {}, den)
+        theo, thuc, ly, tien, nav = co_lenh(h, T or {}, den)
         size = (f"cỡ PROD *{theo:.1f}% NAV*" if theo is not None else "cỡ: không tính được")
         if thuc is not None and theo is not None and abs(thuc - theo) > 0.05:
             size += f" → còn vào được *{thuc:.1f}%* ({', '.join(ly) or 'giới hạn'})"
+        if tien and nav:
+            size += f" = *{tien/1e6:,.0f} triệu* trên NAV hiện tại {nav/1e9:.2f} tỷ"
         dong.append(
             f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%)\n"
             f"   vol {h['volr']}× TB20 · GTGD {h['gtgd']} tỷ · điểm {h['score']:.0f} · "
@@ -181,6 +202,7 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None):
                   'parse_mode': 'Markdown', 'disable_web_page_preview': True},
             timeout=20)
         print('telegram:', 'da gui' if r.ok else f'HONG {r.status_code} {r.text[:120]}')
+        return [h['sym'] for h in moi] if r.ok else []
     except Exception as e:
         print('telegram loi:', type(e).__name__, e)
 
@@ -272,7 +294,7 @@ def main():
 
     now = gio_vn()
     today = now.date().isoformat()
-    frm = (now.date() - dt.timedelta(days=7)).isoformat()
+    frm = (now.date() - dt.timedelta(days=21)).isoformat()   # du dai de qua ky nghi Tet
     frac = clock_frac(now)
     phien_mo = now.weekday() < 5 and 9.0 <= (now.hour + now.minute / 60) <= 15.1
 
@@ -292,7 +314,8 @@ def main():
                    status='DATA_DEGRADED',
                    source_health=dict(status='DOWN', expected=len(syms), scanned=0, coverage=0.0,
                                       missing=sorted(loi)[:200], source='FireAnt HistoricalQuotes'),
-                   note='Chưa lấy được dữ liệu từ FireAnt — KHÔNG phải "không có tín hiệu".')
+                   note='Chưa lấy được dữ liệu từ FireAnt — KHÔNG phải "không có tín hiệu".',
+                   alerted=dict(session=cu_ses, syms=sorted(cu_mua)))
         json.dump(out, open('live.json', 'w', encoding='utf-8'), ensure_ascii=False)
         print('khong co du lieu phien hom nay — DATA_DEGRADED')
         return
@@ -333,7 +356,11 @@ def main():
             n += d.weekday() < 5
             d += dt.timedelta(days=1)
         return n
-    spec_for_session = bool(T.get('asof')) and ses > T['asof'] and _weekdays_between(T['asof'], ses) == 0
+    prev_ses = Counter(r.get('_prev') for r in rows.values() if str(r.get('Date', ''))[:10] == ses
+                       and r.get('_prev')).most_common(1)
+    prev_ses = prev_ses[0][0] if prev_ses else None
+    spec_for_session = bool(T.get('asof')) and ses > T['asof'] and (
+        prev_ses == T['asof'] if prev_ses else _weekdays_between(T['asof'], ses) == 0)
     if not spec_for_session:
         print(f"dac ta toi {T.get('asof')} khong danh cho phien {ses} — khong bao MUA")
     spec_ok = spec_ok and spec_for_session
@@ -387,7 +414,7 @@ def main():
             gtgd=round(tv / 1e9, 1), gtgd_proj=round(tv_proj / 1e9, 1),
             score=(round(v['score'], 1) if v.get('score') is not None else t.get('score')),
             score_prev=t.get('score'), base=t['base'],
-            ordimb=(None if oi is None else round(oi, 3)),
+            ordimb=(None if oi is None else round(oi, 4)),
             ordimb_min=CF.get('ordimb_min'),
             ordimb_available=bool(v.get('ordimb_available')),
             ordimb_asof=(now.isoformat(timespec='seconds') if oi is not None else None),
@@ -419,14 +446,16 @@ def main():
     out = dict(base,
                session=ses, open=phien_mo, frac=round(frac, 3),
                scanned=len(fresh),
-               status=('DATA_DEGRADED' if degraded else ('OK' if spec_for_session else 'BUILD_DONE')),
+               status=('DATA_DEGRADED' if degraded else ('OK' if spec_for_session else
+                       ('SPEC_STALE' if ses > (T.get('asof') or '') else 'BUILD_DONE'))),
                source_health=health,
                hits=hits, de_mat_pct=DE_MAT_PCT,
                n_mua=sum(1 for h in hits if h['level'] == 'MUA'),
                n_de_mat=sum(1 for h in hits if h['level'] == 'DE_MAT'),
                n_cho_dong_tien=sum(1 for h in hits if h.get('reason') == 'WAITING_FOR_FLOW_CONFIRMATION'))
+    da_keu = gui_telegram(hits, ses, cu_mua, cu_ses, T.get('light', 'VANG'), frac, T) or []
+    out['alerted'] = dict(session=ses, syms=sorted((cu_mua if cu_ses == ses else set()) | set(da_keu)))
     json.dump(out, open('live.json', 'w', encoding='utf-8'), ensure_ascii=False)
-    gui_telegram(hits, ses, cu_mua, cu_ses, T.get('light', 'VANG'), frac, T)
     print(f"quét {len(fresh)}/{len(syms)} mã ({cov:.0%}) · phiên {ses} · đã đi {frac*100:.0f}% "
           f"· dòng tiền có {obs['ordimb']}/{len(fresh)} · {out['n_mua']} MUA · "
           f"{out['n_cho_dong_tien']} chờ dòng tiền · trạng thái {out['status']}")
