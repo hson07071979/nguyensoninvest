@@ -55,6 +55,16 @@ VOID = {('PVP', '2026-09-22'): 'Huỷ: vào sổ bằng luật cũ, Điều ki�
 def cfg(T):
     C = dict(DEF)
     C.update({k: v for k, v in (T.get('cfg') or {}).items() if v is not None})
+    bad = [k for k in ('use_protective_candle', 'use_giveback', 'use_big_sell', 'use_partial_take',
+                       'cb_enable', 'stage1') if C.get(k)]
+    if (C.get('entry_mode') or 'close') != 'close': bad.append('entry_mode')
+    if C.get('entry_next_open'): bad.append('entry_next_open')
+    if int(C.get('hs_from', 2) or 2) != 2: bad.append('hs_from')
+    if float(C.get('fill_ratio', 1.0) or 1.0) != 1.0: bad.append('fill_ratio')
+    if float(C.get('slip') or 0) > 0: bad.append('slip')
+    if C.get('use_market_gate') is False: bad.append('use_market_gate=False')
+    if bad:
+        sys.exit(f"HONG: PROD bat {bad} ma so ghi tien chua ho tro — se lech bo may. Dung.")
     return C
 
 
@@ -146,28 +156,53 @@ def dong_vi_the(P, p, ly_do, ngay, px_adj, px_raw, k_adj, C, phan=1.0):
 
 
 def main():
-    if not os.path.exists('live.json'):
-        sys.exit('HONG: chua co live.json — chay live_scan.py truoc')
-    L = json.load(open('live.json', encoding='utf-8'))
-    T = json.load(open('thresholds.json', encoding='utf-8')) if os.path.exists('thresholds.json') else {}
+    if not os.path.exists('thresholds.json'):
+        sys.exit('HONG: chua co thresholds.json — ban dung toi chua dang')
+    T = json.load(open('thresholds.json', encoding='utf-8'))
     C = cfg(T)
-    ses = L.get('session')
+    # Phien = phien ma ban dung toi vua chot (thresholds.asof), khong phai live.json.
+    ses = T.get('asof')
     if not ses:
         print('chua co phien nao — khong lam gi')
         return
     now = gio_vn()
     hom_nay = now.date().isoformat()
-    chot = (ses < hom_nay) or (now.hour + now.minute / 60 >= 14.83)
+    # Chi vao so tren du lieu CUOI PHIEN (loi 2: truoc day chot o lan chay dau tien sau
+    # 14h50, lenh MUA den luc 15h40 khong bao gio duoc vao).
+    chot = (ses < hom_nay) or (now.hour + now.minute / 60 >= 15.5)
     if not chot:
         print(f'phien {ses} chua dong cua — chua vao so')
         return
     P = nap()
+    # DUNG LAI SO MOT LAN (24/09/2026): so cu mo tu 15/09 bang lop quet live cu — bo
+    # sot BVH 14/09 (lech nen) va vao sai PVP 22/09 (Dieu kien 9 = 1,381). Dung lai
+    # tu 11/09 bang CHINH cac lenh cua bo may (signals_recent) de so ghi tien trung
+    # bo may tu dau. Giu ban cu trong `so_cu` de doi chieu, khong xoa dau vet.
+    if not P.get('dung_lai_2409') and T.get('light_by_date'):
+        cu = {k: P.get(k) for k in ('open', 'closed', 'log', 'cash', 'nav', 'session_done')}
+        P = rong()
+        P['so_cu'] = cu
+        P['dung_lai_2409'] = True
+        P['session_done'] = '2026-09-11'
+        if '2026-09-14' not in (T.get('light_by_date') or {}):
+            print('CANH BAO: cua so light_by_date khong con 14/09 — dung lai so se thieu BVH')
+        P['log'] = [dict(date=ses, items=['DỰNG LẠI SỔ: sổ cũ (15–23/09) do lớp quét live cũ ghi — bỏ sót BVH 14/09, '
+                                          'vào sai PVP 22/09 (Điều kiện 9 = 1,381 < 1,40). Sổ mới vào đúng các lệnh của '
+                                          'bộ máy từ 14/09, vốn 1 tỷ. Bản cũ lưu trong "so_cu".'])]
     if P.get('session_done') == ses and not os.environ.get('LAM_LAI'):
         print(f'phien {ses} da vao so roi')
         return
     P['version'] = 2; P['book_id'] = BOOK_ID; P['nav_source'] = 'portfolio.json'
 
-    light = T.get('light') or 'XANH'
+    # Den thi truong CUA CHINH PHIEN (engine2 dung den tinh bang dong cua phien do).
+    # thresholds.json cua phien nay chi co sau ban dung toi — nen so ghi tien chay
+    # trong daily.yml cua repo rieng, SAU khi dang thresholds (loi 3: den tre 1 phien).
+    if not T or T.get('asof') != ses:
+        print(f"thresholds.json cua phien {ses} chua co (asof={T.get('asof')}) — doi ban dung toi")
+        return
+    light = T.get('light')
+    if light not in ('XANH', 'VANG', 'CAM', 'DO'):
+        print('khong co den thi truong hop le — khong vao so'); return
     syms_th = T.get('syms', {})
     from live_scan import loai_so_tay
     loai = set(loai_so_tay())
@@ -178,6 +213,68 @@ def main():
                 loai.add(t)
     nhat_ky = []
 
+    # ---------- CAC PHIEN CHUA XU LY (theo dung thu tu) ----------
+    lights = dict(T.get('light_by_date') or {}); lights[ses] = light
+    sig_by = {}
+    for h in (T.get('signals_recent') or []) + (T.get('signals_today') or []):
+        sig_by.setdefault(h.get('date'), {})[h['sym']] = h
+    done = P.get('session_done')
+    cho = sorted(d for d in lights if (not done or d > done) and d <= ses)
+    if done and done < ses and T.get('light_by_date') is None:
+        nhat_ky.append(f"CẢNH BÁO: sổ dừng ở {done}; bản dựng không có lịch sử đèn/tín hiệu — chỉ xử lý {ses}")
+    CACHE = {}
+    # Lo qua nhieu phien (ngoai cua so light_by_date) -> KHONG im lang
+    if done and cho and T.get('light_by_date'):
+        truoc = min(T['light_by_date'])
+        if done < truoc:
+            nhat_ky.append(f"CẢNH BÁO: sổ dừng ở {done}, bản dựng chỉ còn lịch sử từ {truoc} — "
+                           "các phiên ở giữa không xử lý được lệnh mua / hạ 1/3 / nhồi")
+    theo_phien = []
+    for d in (cho or [ses]):
+        nk = []
+        mot_phien(P, T, C, d, lights.get(d), list(sig_by.get(d, {}).values()), loai, syms_th,
+                  nk, CACHE, ses)
+        if nk:
+            theo_phien.append((d, nk))
+
+
+    # ---------- 4. CHOT SO + DOI SOAT ----------
+    mv = sum(p['sh'] * (p.get('last_val') or (p.get('last') or 0) * 1000 or p['entry_px']) for p in P['open'])
+    P['nav'] = round(P['cash'] + mv)
+    P['session_done'] = ses
+    P['updated'] = now.isoformat(timespec='seconds')
+    P['light'] = light
+    P['prod_config_hash'] = T.get('prod_config_hash')
+    P['open'].sort(key=lambda p: p['entry'])
+    P['closed'] = P['closed'][:400]
+    if nhat_ky:
+        P['log'].insert(0, dict(date=ses, items=nhat_ky))
+    for d, nk in theo_phien:          # moi viec ghi dung ngay phien cua no
+        P['log'].insert(0, dict(date=d, items=nk))
+    P['log'].sort(key=lambda x: x['date'], reverse=True)
+    P['log'] = P['log'][:120]
+    P['checks'] = doi_soat(P, C)
+    tong_ = P['closed']
+    thang = [c for c in tong_ if c['pnl_pct'] > 0]
+    P['stats'] = dict(
+        n_open=len(P['open']), n_closed=len(tong_),
+        winrate=round(100 * len(thang) / len(tong_), 1) if tong_ else None,
+        total_return=round((P['nav'] / NAV0 - 1) * 100, 2),
+        best=max((c['pnl_pct'] for c in tong_), default=None),
+        worst=min((c['pnl_pct'] for c in tong_), default=None),
+        since=min([p['entry'] for p in P['open']] + [c['entry'] for c in P['closed']] or [ses]))
+    json.dump(P, open(FILE, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    print(f"so lenh · phien {ses} · den {light} · NAV {P['nav']/1e9:.4f} ty "
+          f"({P['stats']['total_return']:+.2f}%) · {len(P['open'])} ma dang cam · doi soat "
+          f"{'DAT' if P['checks']['ok'] else 'TRUOT'}")
+    for x in nhat_ky:
+        print('  ' + x)
+
+
+def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF):
+    """Xu ly MOT phien: huy lenh sai luat, thoat lenh (tang dan), vao lenh bo may,
+    nhoi lenh. Goi lan luot cho moi phien chua xu ly (audit 24/09, loi D3: truoc day
+    bo lo mot dem la mat lenh mua va lan ha 1/3 cua phien do)."""
     # ---------- 0. HUY LENH SAI LUAT (mot lan) ----------
     for p in P['open']:
         k = (p['sym'], p['entry'])
@@ -186,11 +283,13 @@ def main():
 
     # ---------- 1. CHAM SOC CAC VI THE DANG MO ----------
     mo = [p for p in P['open'] if p.get('sh', 0) > 0]
-    hist = {}
-    if mo:
-        frm = (min(dt.date.fromisoformat(p['entry']) for p in mo) - dt.timedelta(days=75)).isoformat()
+    need = [p for p in mo if p['sym'] not in CACHE]
+    if need:
+        frm = (min(dt.date.fromisoformat(p['entry']) for p in need) - dt.timedelta(days=75)).isoformat()
         with ThreadPoolExecutor(max_workers=6) as ex:
-            hist = dict(zip([p['sym'] for p in mo], ex.map(lambda p: bars(p['sym'], frm, ses), mo)))
+            CACHE.update(zip([p['sym'] for p in need], ex.map(lambda p: bars(p['sym'], frm, ASOF), need)))
+    # chi dung nen TOI phien dang xu ly (xu ly bu nhieu phien bi lo theo dung thu tu)
+    hist = {p['sym']: [x for x in (CACHE.get(p['sym']) or []) if x[0] <= ses] for p in mo}
 
     con_lai = []
     for p in mo:
@@ -222,8 +321,18 @@ def main():
             p['void_done'] = True
             nhat_ky.append(f"HUỶ {p['sym']} — {p['void']}")
             continue
-        peak = 0.0; b10 = 0; b20 = 0; da_dong = False
-        for i in range(i0, len(ngays)):
+        # XU LY TANG DAN (audit 24/09, loi 1): chi xet cac phien CHUA xu ly. Chay lai tu
+        # ngay mua bang gia von / so co HIEN TAI (sau khi nhoi) tung ban lai o qua khu
+        # mot vi the dang lai (-46 tr trong kich ban kiem thu). Nay mang peak/b10/b20
+        # sang tu lan truoc, dung nhu engine2 cap nhat tung phien mot.
+        ld = p.get('last_done')
+        if ld and ld in ngays:
+            start = ngays.index(ld) + 1
+            peak = float(p.get('peak') or 0.0); b10 = int(p.get('b10') or 0); b20 = int(p.get('b20') or 0)
+        else:
+            start = i0; peak = 0.0; b10 = 0; b20 = 0
+        da_dong = False
+        for i in range(start, len(ngays)):
             px = adj[i]
             held = i - i0
             gain = px / epx_adj - 1
@@ -234,7 +343,8 @@ def main():
             p.update(peak=peak, b10=b10, b20=b20, held=held,
                      last=round(raw[i] / 1000, 2), last_adj=round(px / 1000, 4), last_day=ngays[i],
                      last_val=round(px / k_adj, 2), k_adj=round(k_adj, 6),
-                     pnl=round((px * (1 - C['fee_sell']) / epx_adj - 1) * 100, 2))
+                     pnl=round((px * (1 - C['fee_sell']) / epx_adj - 1) * 100, 2),
+                     last_done=ngays[i])
             if held < 2:                       # T+2: chua ve hang, chua ban duoc
                 continue
             r = None; phan = 1.0
@@ -250,7 +360,7 @@ def main():
                 r, phan = 'Đèn Cam — hạ 1/3', 1 / 3
             if r:
                 het = dong_vi_the(P, p, r, ngays[i], px, raw[i], k_adj, C, phan)
-                nhat_ky.append(f"BÁN {p['sym']} {raw[i]/1000:.2f} ({gain*100:+.1f}%) — {r}")
+                nhat_ky.append(f"BÁN {p['sym']} {raw[i]/1000:.2f} (lãi/lỗ sau phí {P['closed'][0]['pnl_pct']:+.2f}%) — {r}")
                 if het:
                     da_dong = True
                     break
@@ -266,26 +376,22 @@ def main():
     def tong():
         return sum(p['sh'] * gia(p) for p in P['open'])
 
-    # ---------- 2. TIN HIEU MUA DA CHUNG MINH -> VAO SO ----------
+    # ---------- 2. LENH MUA CUA BO MAY TRONG PHIEN NAY -> VAO SO ----------
+    # Nguon DUY NHAT: thresholds.json['signals_today'] = cac lenh engine2 THUC SU mua
+    # o phien `ses` (du dieu kien PROD, ke ca Dieu kien 9 da lap du tu nguon chinh
+    # thuc). Khong con doc muc MUA cua live.json — lop do de keu chuong trong phien,
+    # con so ghi tien phai la ban sao cua bo may (audit 24/09).
     dang_cam = {p['sym'] for p in P['open']}
-    ban_hom_nay = {c['sym'] for c in P['closed'] if c['exit'] == ses}
-    hash_ok = bool(L.get('prod_config_hash')) and L.get('prod_config_hash') == T.get('prod_config_hash')
     muon_mua = []
-    for h in L.get('hits', []):
-        if h.get('level') != 'MUA':
+    for h in (signals or []):
+        if h.get('date') != ses:
             continue
-        if not h.get('prod_ok') or h.get('missing_conditions'):
-            nhat_ky.append(f"TỪ CHỐI {h['sym']} — chưa đủ điều kiện PROD: {', '.join(h.get('missing_conditions') or ['?'])}")
+        if C.get('use_ordimb', True) and not ((h.get('ordimb') or 0) >= C.get('ordimb_min', 1.4)):
+            nhat_ky.append(f"TỪ CHỐI {h['sym']} — Điều kiện 9 không đạt ({h.get('ordimb')})")
             continue
-        if C.get('use_ordimb', True) and not (h.get('ordimb_available') and (h.get('ordimb') or 0) >= C.get('ordimb_min', 1.4)):
-            nhat_ky.append(f"TỪ CHỐI {h['sym']} — Điều kiện 9 chưa được chứng minh")
+        if h['sym'] in dang_cam or h['sym'] in loai:
             continue
-        if not hash_ok:
-            nhat_ky.append(f"TỪ CHỐI {h['sym']} — live.json và thresholds.json khác cấu hình PROD")
-            continue
-        if h['sym'] in dang_cam or h['sym'] in ban_hom_nay or h['sym'] in loai:
-            continue
-        muon_mua.append(h)
+        muon_mua.append(dict(h, price=float(h['price']) / 1000))
     # thu tu uu tien = engine2.rank_rows('score'): diem CANSLIM giam dan, hoa -> ma
     muon_mua.sort(key=lambda h: (-(h.get('score') or 0), h['sym']))
 
@@ -294,8 +400,8 @@ def main():
         if px <= 0:
             continue
         th = syms_th.get(h['sym'], {})
-        sp = th.get('spec') or {}
-        nganh = sp.get('sector') or th.get('sector') or 'Khác'
+        sp = dict(rmul=h.get('rmul', 1.0), base=h.get('base'))
+        nganh = h.get('sector') or th.get('sector') or 'Khác'
         inv = tong(); nav = P['cash'] + inv
         sec = sum(p['sh'] * gia(p) for p in P['open'] if (p.get('sector') or 'Khác') == nganh)
         A = AL.entry_target(nav, P['cash'], inv, sec, len(P['open']), light,
@@ -311,12 +417,12 @@ def main():
         chi = sh * c_px
         P['cash'] -= chi
         P['open'].append(dict(
-            book_id=BOOK_ID, position_source='live_scan_MUA', nav_source='portfolio.json',
+            book_id=BOOK_ID, position_source='engine_signal', nav_source='portfolio.json',
             sym=h['sym'], name=h.get('name') or th.get('name', ''), sector=nganh,
             entry=ses, entry_px=px, cost_px=c_px, sh=sh, cost=round(chi),
             peak=0.0, b10=0, b20=0, part=False, pyr=False, held=0,
             light=light, score=h.get('score'), ordimb=h.get('ordimb'),
-            prod_config_hash=L.get('prod_config_hash'),
+            prod_config_hash=T.get('prod_config_hash'),
             size_theo=round(A['theoretical'] / nav * 100, 2), size_reasons=A['reasons'],
             last=round(px / 1000, 2), last_day=ses, pnl=0.0))
         nhat_ky.append(f"MUA {h['sym']} {px/1000:.2f} × {sh:,} cp ({chi/nav*100:.1f}% NAV · "
@@ -336,10 +442,22 @@ def main():
                 continue
             inv = tong(); nav = P['cash'] + inv
             sec = sum(q['sh'] * gia(q) for q in P['open'] if q.get('sector') == p.get('sector'))
-            room, why = AL.addon_capacity(nav, P['cash'], inv, sec, p['sh'] * lastp, cfg=T.get('cfg') or {})
+            if (T.get('cfg') or {}).get('pyr_caps'):
+                room, why = AL.addon_capacity(nav, P['cash'], inv, sec, p['sh'] * lastp, cfg=T.get('cfg') or {})
+            else:
+                # = engine2 PROD (pyr_caps=False): lenh nhoi chi xet tran moi ma + tien mat
+                _mp = (T.get('cfg') or {}).get('max_pos', 0.5)
+                room, why = min((nav * _mp - p['sh'] * lastp, 'max_pos'), (P['cash'], 'cash'), key=lambda t: t[0])
+                room = max(0.0, room)
             raw_now = (p.get('last') or 0) * 1000
             c2 = raw_now * (1 + C['fee_buy'])
-            add = min(int(p['sh'] * 0.5 // 100 * 100), AL.lots(room, c2))
+            cur_sh = p['sh'] * lastp / raw_now if raw_now else p['sh']   # so co HIEN TAI (sau chia tach)
+            add = int(cur_sh * 0.5 // 100 * 100)
+            if (T.get('cfg') or {}).get('pyr_caps'):
+                add = min(add, AL.lots(room, c2))
+            elif (p['sh'] * lastp + add * raw_now > nav * (T.get('cfg') or {}).get('max_pos', 0.5)
+                  or add * c2 > P['cash']):   # = engine2: tran moi ma tinh KHONG phi, tien mat CO phi
+                continue
             if add < 100 or raw_now <= 0:
                 continue
             # quy doi co phieu mua hom nay sang don vi "co phieu goc" cua vi the
@@ -348,38 +466,9 @@ def main():
             p['cost_px'] = (p['cost_px'] * p['sh'] + c2 * add) / (p['sh'] + add_u)
             P['cash'] -= add * c2; p['sh'] = p['sh'] + add_u; p['pyr'] = True
             p['cost'] = round(p['cost_px'] * p['sh'])
-            nhat_ky.append(f"NHỒI {p['sym']} +{add:,} cp @ {lastp/1000:.2f} (giới hạn: {AL.REASON_VI.get(why, why)})")
+            nhat_ky.append(f"NHỒI {p['sym']} +{add:,} cp @ {raw_now/1000:.2f} (giới hạn: {AL.REASON_VI.get(why, why)})")
     for p in P['open']:
         p.pop('_hi10', None); p.pop('_gain', None)
-
-    # ---------- 4. CHOT SO + DOI SOAT ----------
-    mv = tong()
-    P['nav'] = round(P['cash'] + mv)
-    P['session_done'] = ses
-    P['updated'] = now.isoformat(timespec='seconds')
-    P['light'] = light
-    P['prod_config_hash'] = T.get('prod_config_hash')
-    P['open'].sort(key=lambda p: p['entry'])
-    P['closed'] = P['closed'][:400]
-    if nhat_ky:
-        P['log'].insert(0, dict(date=ses, items=nhat_ky))
-        P['log'] = P['log'][:120]
-    P['checks'] = doi_soat(P, C)
-    tong_ = P['closed']
-    thang = [c for c in tong_ if c['pnl_pct'] > 0]
-    P['stats'] = dict(
-        n_open=len(P['open']), n_closed=len(tong_),
-        winrate=round(100 * len(thang) / len(tong_), 1) if tong_ else None,
-        total_return=round((P['nav'] / NAV0 - 1) * 100, 2),
-        best=max((c['pnl_pct'] for c in tong_), default=None),
-        worst=min((c['pnl_pct'] for c in tong_), default=None),
-        since=(P['log'][-1]['date'] if P['log'] else ses))
-    json.dump(P, open(FILE, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-    print(f"so lenh · phien {ses} · den {light} · NAV {P['nav']/1e9:.4f} ty "
-          f"({P['stats']['total_return']:+.2f}%) · {len(P['open'])} ma dang cam · doi soat "
-          f"{'DAT' if P['checks']['ok'] else 'TRUOT'}")
-    for x in nhat_ky:
-        print('  ' + x)
 
 
 def doi_soat(P, C):

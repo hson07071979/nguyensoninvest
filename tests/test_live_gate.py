@@ -67,6 +67,9 @@ class SignalGate(unittest.TestCase):
 
 
 class PortfolioGate(unittest.TestCase):
+    """Paper book (audit 24/09) = copy of the ENGINE: it books only
+    thresholds.json signals_today/signals_recent (engine2 actual entries, Cond9
+    already proven with end-of-day data). live.json MUA never books."""
     def setUp(self):
         self.cwd = os.getcwd()
         self.tmp = tempfile.mkdtemp()
@@ -78,49 +81,48 @@ class PortfolioGate(unittest.TestCase):
             sys.modules.pop(m, None)
         import portfolio
         self.P = portfolio
-        # after the close so the book is written; no open positions -> no network
-        portfolio.gio_vn = lambda: dt.datetime(2026, 9, 23, 15, 30)
-        self.T = dict(asof='2026-09-22', light='XANH', prod_config_hash='H1',
-                      cfg=dict(CFG), syms={'AAA': dict(name='A', spec=dict(sector='X', base=0.1))})
-        json.dump(self.T, open('thresholds.json', 'w'))
+        portfolio.gio_vn = lambda: dt.datetime(2026, 9, 23, 20, 0)   # after the nightly build
 
     def tearDown(self):
         os.chdir(self.cwd)
         sys.path.remove(self.tmp)
         shutil.rmtree(self.tmp)
 
-    def run_book(self, **hit):
-        h = dict(sym='AAA', name='A', level='MUA', price=31.0, score=60, prod_ok=True,
-                 missing_conditions=[], ordimb_available=True, ordimb=1.5)
-        h.update(hit)
-        json.dump(dict(session='2026-09-23', prod_config_hash='H1', hits=[h]), open('live.json', 'w'))
+    def run_book(self, live_mua=False, **sig):
+        h = dict(date='2026-09-23', sym='AAA', name='A', price=31000.0, score=60, ordimb=1.5,
+                 sector='X', rmul=1.0, base=0.1)
+        h.update(sig)
+        T = dict(asof='2026-09-23', light='XANH', prod_config_hash='H1', cfg=dict(CFG),
+                 light_by_date={'2026-09-23': 'XANH'},
+                 signals_today=([] if live_mua else [h]),
+                 syms={'AAA': dict(name='A', spec=dict(sector='X', base=0.1))})
+        json.dump(T, open('thresholds.json', 'w'))
+        json.dump(dict(session='2026-09-23', prod_config_hash='H1',
+                       hits=[dict(sym='AAA', level='MUA', prod_ok=True, ordimb=1.5, ordimb_available=True,
+                                  price=31.0, score=60)] if live_mua else []), open('live.json', 'w'))
         if os.path.exists('portfolio.json'):
             os.remove('portfolio.json')
         self.P.main()
         return json.load(open('portfolio.json'))
 
-    def test_books_full_prod_signal(self):
+    def test_books_engine_signal(self):
         P = self.run_book()
         self.assertEqual([p['sym'] for p in P['open']], ['AAA'])
+        self.assertEqual(P['open'][0]['position_source'], 'engine_signal')
         self.assertTrue(P['checks']['ok'])
         self.assertEqual(P['version'], 2)
-
-    def test_rejects_prod_ok_false(self):
-        P = self.run_book(prod_ok=False, missing_conditions=['ordimb'])
-        self.assertEqual(P['open'], [])
-
-    def test_rejects_missing_flow_even_if_prod_ok(self):
-        self.assertEqual(self.run_book(ordimb_available=False, ordimb=None)['open'], [])
 
     def test_rejects_flow_below_threshold(self):
         self.assertEqual(self.run_book(ordimb=1.381)['open'], [])
 
-    def test_rejects_config_hash_mismatch(self):
-        json.dump(dict(self.T, prod_config_hash='OTHER'), open('thresholds.json', 'w'))
-        self.assertEqual(self.run_book()['open'], [])
+    def test_rejects_missing_flow(self):
+        self.assertEqual(self.run_book(ordimb=None)['open'], [])
 
-    def test_rejects_non_mua_level(self):
-        self.assertEqual(self.run_book(level='SAP_DU')['open'], [])
+    def test_live_mua_never_books(self):
+        self.assertEqual(self.run_book(live_mua=True)['open'], [])
+
+    def test_other_session_signal_not_booked(self):
+        self.assertEqual(self.run_book(date='2026-09-22')['open'], [])
 
 
 if __name__ == '__main__':

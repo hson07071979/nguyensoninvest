@@ -69,10 +69,13 @@ jobs:
             # Một nhịp hỏng KHÔNG được làm chết cả vòng lặp: FireAnt chặn tạm là
             # chuyện thường, nhịp sau tự khỏi. Đây là lý do không dùng `set -e`.
             python live_scan.py || echo "!! live_scan.py lỗi — bỏ qua nhịp này"
-            python portfolio.py || echo "!! portfolio.py lỗi — bỏ qua nhịp này"
+            # So ghi tien KHONG con chay o day: no vao so dung cac lenh cua bo may,
+            # sau ban dung toi (daily.yml repo rieng) — cung den, cung du lieu.
 
             # obs/ = so do Dieu kien 9 moi lan quet (audit 23/09/2026)
-            git add live.json portfolio.json obs/ 2>/dev/null || true
+            mkdir -p obs
+            git add live.json 2>/dev/null || true
+            git add obs/ 2>/dev/null || true
             if git diff --cached --quiet; then
               echo "  không có gì đổi"
             else
