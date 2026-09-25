@@ -1,0 +1,63 @@
+name: Canh giờ mở phiên
+
+# VÌ SAO CÓ FILE NÀY (đo thật 24–25/09/2026): cron của GitHub nổ muộn hoặc bỏ nhịp.
+# Hai ngày liền, lần quét đầu tiên trong phiên là 14h33 và 14h41 — cả buổi sáng không
+# có ai canh, dù "Quét trong phiên" đặt cửa vào mỗi giờ từ 09h07.
+#
+# CÁCH CHỮA: một chuỗi "người gác" nối tiếp nhau bằng workflow_dispatch (không phụ
+# thuộc hàng đợi cron). Mỗi người gác ngủ tối đa ~5h45 rồi:
+#   * nếu đã tới giờ mở phiên (T2–T6, 09h00–20h45 giờ VN, gồm phần xác nhận sau phiên) -> gọi "Quét trong phiên";
+#   * nếu chưa -> gọi người gác kế tiếp.
+# "Quét trong phiên" khi xong phiên (sau 15h30) gọi lại người gác đầu tiên, nên chuỗi
+# tự duy trì. Cron của cả hai workflow vẫn giữ làm lưới an toàn: chuỗi đứt thì cron
+# nối lại. Repo public nên phút chạy Actions không tính tiền.
+#
+# Chỉ dùng GITHUB_TOKEN của chính repo (quyền actions: write), không cần bí mật nào.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '45 21 * * 0-4'    # 04h45 giờ VN T2–T6: nối lại chuỗi nếu bị đứt
+
+concurrency:
+  group: canh-gio
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  canh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - name: Ngủ tới giờ mở phiên hoặc tới hết ngân sách, rồi gọi bước kế
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Giây tới 09h00 giờ VN của NGÀY GIAO DỊCH kế tiếp (bỏ T7, CN)
+          now=$(date +%s)
+          target=$(TZ=Asia/Ho_Chi_Minh python3 - <<'PY'
+          import datetime as dt, time
+          n = dt.datetime.now()
+          t = n.replace(hour=9, minute=0, second=0, microsecond=0)
+          if n >= n.replace(hour=20, minute=45, second=0, microsecond=0): t += dt.timedelta(days=1)
+          while t.weekday() >= 5: t += dt.timedelta(days=1)
+          if t < n: t = n
+          print(int(time.mktime(t.timetuple())))
+          PY
+          )
+          wait=$(( target - now ))
+          budget=$(( 5*3600 + 45*60 ))
+          echo "Giờ VN: $(TZ=Asia/Ho_Chi_Minh date '+%a %d/%m %H:%M') · còn $(( wait/60 )) phút tới 09h00 phiên kế"
+          if [ "$wait" -gt "$budget" ]; then
+            sleep "$budget"
+            echo "Hết ngân sách — gọi người gác kế tiếp"
+            gh workflow run canh.yml -R "$REPO"
+          else
+            [ "$wait" -gt 0 ] && sleep "$wait"
+            echo "Tới giờ mở phiên — gọi Quét trong phiên"
+            gh workflow run live.yml -R "$REPO"
+          fi

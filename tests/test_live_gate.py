@@ -125,5 +125,70 @@ class PortfolioGate(unittest.TestCase):
         self.assertEqual(self.run_book(date='2026-09-22')['open'], [])
 
 
+class MomentumExit(unittest.TestCase):
+    """25/09/2026: paper book must apply the engine's momentum exit (T+mo_by without a
+    close >= +mo_need after the buy fee -> sell), same priority as engine2."""
+    DAYS = ['2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25']
+
+    def setUp(self):
+        self.cwd = os.getcwd(); self.tmp = tempfile.mkdtemp()
+        for f in ('live_scan.py', 'portfolio.py', 'signal_spec.py', 'allocator.py'):
+            shutil.copy(os.path.join(ROOT, f), self.tmp)
+        os.chdir(self.tmp); sys.path.insert(0, self.tmp)
+        for m in ('portfolio', 'live_scan'):
+            sys.modules.pop(m, None)
+        import portfolio
+        self.P = portfolio
+        portfolio.gio_vn = lambda: dt.datetime(2026, 9, 25, 20, 0)
+
+    def tearDown(self):
+        os.chdir(self.cwd); sys.path.remove(self.tmp); shutil.rmtree(self.tmp)
+
+    def run_path(self, closes, oi=1.5, **cfg):
+        path = dict(zip(self.DAYS, closes))
+        self.P.bars = lambda sym, frm, to: [(d, c, c, c) for d, c in sorted(path.items()) if d <= to]
+        C = dict(CFG, mo_by=3, mo_need=0.01, t_valve=4); C.update(cfg)
+        T = dict(asof='2026-09-25', light='XANH', prod_config_hash='H1', cfg=C,
+                 light_by_date={d: 'XANH' for d in self.DAYS},
+                 signals_recent=[dict(date='2026-09-21', sym='AAA', name='A', price=closes[0], score=60,
+                                      ordimb=oi, sector='X', rmul=1.0, base=0.1)],
+                 syms={'AAA': dict(name='A', spec=dict(sector='X', base=0.1))})
+        json.dump(T, open('thresholds.json', 'w'))
+        json.dump(dict(session='2026-09-25', hits=[]), open('live.json', 'w'))
+        self.P.main()
+        return json.load(open('portfolio.json'))
+
+    def test_no_run_by_t3_is_sold_at_t3(self):
+        P = self.run_path([10000, 10040, 10060, 10080, 10500])     # never closes >= +1% after fee by T+3
+        self.assertEqual(P['open'], [])
+        c = P['closed'][0]
+        self.assertTrue(c['reason'].startswith('Momentum'), c)
+        self.assertEqual(c['exit'], '2026-09-24')
+
+    def test_ran_is_kept(self):
+        P = self.run_path([10000, 10250, 10200, 10150, 10300])     # +2.5% at T+1 -> momentum satisfied
+        self.assertEqual([p['sym'] for p in P['open']], ['AAA'])
+
+    # ---- mua do (PROD 25/09/2026): mua ATC, toi xac nhan DK9, truot thi ban ATC T+2 ----
+    def test_probe_failing_cond9_sold_at_t2_close(self):
+        P = self.run_path([10000, 10300, 10500, 10600, 10700], oi=1.2, stage1=1.0, probe_exit='close')
+        self.assertEqual(P['open'], [])
+        c = P['closed'][0]
+        self.assertTrue(c['reason'].startswith('Cond9'), c)
+        self.assertEqual(c['exit'], '2026-09-23')                  # T+2 (hang ve chieu T+2), khong som hon
+
+    def test_probe_passing_cond9_is_kept(self):
+        P = self.run_path([10000, 10300, 10500, 10600, 10700], oi=1.5, stage1=1.0, probe_exit='close')
+        self.assertEqual([p['sym'] for p in P['open']], ['AAA'])
+
+    def test_without_stage1_failing_cond9_is_not_booked(self):
+        P = self.run_path([10000, 10300, 10500, 10600, 10700], oi=1.2)
+        self.assertEqual(P['open'], []); self.assertEqual(P['closed'], [])
+
+    def test_rule_off_when_not_in_cfg(self):
+        P = self.run_path([10000, 10040, 10060, 10080, 10500], mo_by=None, mo_need=None)
+        self.assertEqual([p['sym'] for p in P['open']], ['AAA'])
+
+
 if __name__ == '__main__':
     unittest.main()

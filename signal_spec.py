@@ -40,13 +40,15 @@ LABEL = {
     'cond8': 'Đóng cửa nửa trên nến',
     'ordimb': 'Cỡ lệnh mua ≥ {ordimb_min}× cỡ lệnh bán',
     'risk': 'Qua cổng rủi ro',
-    'dk5': 'LNST không ở vùng yếu 0–25%',
+    'dk5': 'LNST không ở vùng yếu {dk5_lo}–{dk5_hi}%',
     'score': 'Điểm CANSLIM ≥ {score_floor}',
 }
 
 
 def required_conditions(cfg):
-    req = ['uni', 'pct', 'vol', 'gtgd', 'volat', 'mcap', 'hist', 'base', 'risk', 'dk5', 'score']
+    req = ['uni', 'pct', 'vol', 'gtgd', 'volat', 'mcap', 'hist', 'base', 'risk', 'score']
+    if cfg.get('dk5_hi', 0.25) > cfg.get('dk5_lo', 0.0):      # DK5 tat tu 25/09/2026
+        req.insert(9, 'dk5')
     if cfg.get('use_cond8'):
         req.append('cond8')
     if cfg.get('use_ordimb'):
@@ -59,7 +61,8 @@ def labels(cfg):
                gtgd_bn=round(cfg.get('gtgd_min', 0) / 1e9), volat_pct=round(cfg.get('volat_min', 0) * 100, 1),
                mcap_bn=round(cfg.get('min_mktcap', 0) / 1e9), min_history=cfg.get('min_history'),
                base_pct=round(cfg.get('base_range', 0) * 100), ordimb_min=('%.2f' % cfg.get('ordimb_min', 0)),
-               score_floor=cfg.get('score_floor'))
+               score_floor=cfg.get('score_floor'),
+               dk5_lo=round(cfg.get('dk5_lo', 0.0) * 100), dk5_hi=round(cfg.get('dk5_hi', 0.25) * 100))
     return {k: v.format(**fmt) for k, v in LABEL.items()}
 
 
@@ -142,7 +145,7 @@ def evaluate(sp, row, U, cfg):
     ok['ordimb'] = oi is not None and oi >= cfg['ordimb_min']
     ok['risk'] = not sp.get('blocked')
     npg = sp.get('npat_yoy')
-    ok['dk5'] = not (npg is not None and 0 <= npg < 0.25)
+    ok['dk5'] = not (npg is not None and cfg.get('dk5_lo', 0.0) <= npg < cfg.get('dk5_hi', 0.25))
     # ---- CANSLIM score with today's values (engine.canslim_score) ----
     p = dict(sp.get('pts_static') or {})
     _h = [x for x in (sp.get('hi52_249'), ah) if x is not None]
