@@ -256,6 +256,87 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None):
         return da_gui
 
 
+def danh_gia_thoat(P, rows, CF, ses, now):
+    """LUAT THOAT TRONG PHIEN cho so ghi tien (26/09/2026, TOP110 + S1).
+
+    Dung DUNG exit_rules.decide nhu portfolio.py. Gia hien tai = gia DONG CUA TAM TINH
+    (HistoricalQuotes cua phien dang chay). Quy tac van la quy tac dong cua: day KHONG
+    phai lenh dung trong phien — so chot theo gia dong cua that luc portfolio.py chay.
+    Tra ve list dict cho moi vi the dang mo."""
+    import exit_rules as ER
+    out = []
+    for p in (P.get('open') or []):
+        if (p.get('sh') or 0) <= 0:
+            continue
+        r = rows.get(p['sym'])
+        if not r or str(r.get('Date', ''))[:10] != ses:
+            continue
+        try:
+            raw = float(r.get('PriceClose') or 0); adj = float(r.get('AdjClose') or raw)
+        except Exception:
+            continue
+        cost = float(p.get('cost_px') or 0); k = float(p.get('k_adj') or 1.0)
+        if raw <= 0 or cost <= 0:
+            continue
+        f_now = adj / raw if raw else 1.0
+        gain = (raw * f_now) / (cost * k) - 1 if p.get('k_adj') else raw / cost - 1
+        moi = (p.get('last_done') or '') < ses
+        held = int(p.get('held') or 0) + (1 if moi else 0)
+        peak = max(float(p.get('peak') or 0.0), gain)
+        tail = list(p.get('tail_adj') or [])
+        px_adj = gain + 1  # don vi tuong doi: chi can so sanh voi MA cung don vi
+        b10 = int(p.get('b10') or 0); b20 = int(p.get('b20') or 0)
+        if tail and moi:
+            base_ = cost * k
+            seq = [x / base_ for x in tail] + [px_adj]
+            ma = lambda n: (sum(seq[-n:]) / n) if len(seq) >= n else None
+            m10, m30 = ma(int(CF.get('trail_fast', 10))), ma(int(CF.get('trail_ma', 30)))
+            b10 = b10 + 1 if (m10 is not None and px_adj < m10) else 0
+            b20 = b20 + 1 if (m30 is not None and px_adj < m30) else 0
+        st = ER.status(CF, gain, peak, held, probe_fail=bool(p.get('probe_fail')), b10=b10, b20=b20,
+                       light_today=None, light_entry=p.get('light'), part=bool(p.get('part')))
+        out.append(dict(sym=p['sym'], entry=p.get('entry'), price=round(raw / 1000, 2), held=held,
+                        asof=now.isoformat(timespec='seconds'), provisional=now.hour + now.minute / 60 < 14.75, **st))
+    return out
+
+
+def gui_telegram_thoat(ex, P, ses, cu, now, T):
+    """(1) 14:00-14:50: vi the co luat thoat BAN DUOC theo gia tam tinh -> nhac dat ATC.
+    (2) Sau 15:30 khi so ghi tien da chot phien: gui DUNG cac dong BAN cua so (cung ly do)."""
+    tok = os.environ.get('TELEGRAM_TOKEN', '').strip(); chat = os.environ.get('TELEGRAM_CHAT', '').strip()
+    t = now.hour + now.minute / 60
+    if not tok or not chat or now.weekday() >= 5:
+        return []
+    da = []
+
+    def _post(text):
+        try:
+            r = requests.post(f'https://api.telegram.org/bot{tok}/sendMessage',
+                              json={'chat_id': chat, 'text': text, 'disable_web_page_preview': True}, timeout=20)
+            print('telegram thoat:', 'da gui' if r.ok else f'HONG {r.status_code}')
+            return r.ok
+        except Exception as e:
+            print('telegram thoat loi:', e); return False
+    if 14.0 <= t <= 14.84:
+        ban = [x for x in ex if x.get('exit_reason') and 'T:' + x['sym'] not in cu]
+        cho = [x for x in ex if x.get('pending_exit') and 'W:' + x['sym'] not in cu]
+        if ban or cho:
+            dong = [f"🔻 LUẬT THOÁT — sổ ghi tiến, phiên {ses} (giá {now:%H:%M}, tạm tính giá đóng cửa)", '']
+            dong += [f"{x['sym']}: {x['action']}" for x in ban]
+            dong += [f"{x['sym']}: {x['action']}" for x in cho]
+            dong += ['', 'Luật tính bằng giá ĐÓNG CỬA, bán ATC — không phải lệnh dừng trong phiên. Sổ chốt theo giá đóng cửa thật.']
+            if _post('\n'.join(dong)):
+                da += ['T:' + x['sym'] for x in ban] + ['W:' + x['sym'] for x in cho]
+    if t >= 15.5 and P.get('session_done') == ses and 'S:' + ses not in cu:
+        items = [i for L in (P.get('log') or []) if L.get('date') == ses for i in L.get('items', []) if i.startswith('BÁN')]
+        if items:
+            if _post('\n'.join([f"📒 SỔ GHI TIẾN đã bán ATC phiên {ses}", ''] + items)):
+                da.append('S:' + ses)
+        else:
+            da.append('S:' + ses)
+    return da
+
+
 def loai_so_tay():
     """Ma anh Son loai tay o So tay. Doc THANG manual.json nam ngay canh file nay,
     de loai mot ma la no im chuong ngay luot quet sau — khong phai cho toi 19h30.
@@ -348,6 +429,17 @@ def main():
     phien_mo = now.weekday() < 5 and 9.0 <= (now.hour + now.minute / 60) <= 15.1
 
     rows = {}; loi = []
+    # vi the dang mo cua so ghi tien: can gia hom nay de xet luat thoat (S1...) du ngoai TOP
+    try:
+        PF = json.load(open('portfolio.json', encoding='utf-8')) if os.path.exists('portfolio.json') else {}
+    except Exception:
+        PF = {}
+    them = [p['sym'] for p in (PF.get('open') or []) if p.get('sym') and p['sym'] not in syms]
+    rows_pf = {}   # rieng: khong tron vao do phu / tin hieu cua vu tru
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        for s, r in zip(them, ex.map(lambda s: latest_row(s, frm, today), them)):
+            if r:
+                rows_pf[s] = r
     with ThreadPoolExecutor(max_workers=8) as ex:
         for s, r in zip(syms, ex.map(lambda s: latest_row(s, frm, today), syms)):
             if r:
@@ -550,6 +642,11 @@ def main():
                n_cho_dong_tien=sum(1 for h in hits if h.get('reason') == 'WAITING_FOR_FLOW_CONFIRMATION'),
                n_mua_do=sum(1 for h in hits if h.get('mua_do')))
     da_keu = gui_telegram(hits, ses, cu_mua, cu_ses, T.get('light', 'VANG'), frac, T) or []
+    try:
+        out['exits'] = danh_gia_thoat(PF, {**rows_pf, **rows}, CF, ses, now)
+        da_keu += gui_telegram_thoat(out['exits'], PF, ses, (cu_mua if cu_ses == ses else set()), now, T) or []
+    except Exception as e:
+        print('luat thoat trong phien loi:', type(e).__name__, e)
     out['alerted'] = dict(session=ses, syms=sorted((cu_mua if cu_ses == ses else set()) | set(da_keu)))
     json.dump(out, open('live.json', 'w', encoding='utf-8'), ensure_ascii=False)
     print(f"quét {len(fresh)}/{len(syms)} mã ({cov:.0%}) · phiên {ses} · đã đi {frac*100:.0f}% "
