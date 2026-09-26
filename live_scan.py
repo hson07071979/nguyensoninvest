@@ -97,6 +97,70 @@ def latest_row(sym, frm, to):
 
 
 
+
+KHONG_RO = object()   # tai hong sau 3 lan: KHONG biet ma co dong phien nay hay khong
+
+
+def phien_row(sym, ses):
+    """Dong du lieu cua DUNG phien `ses` (FireAnt HistoricalQuotes, cung nguon voi
+    bo may). Tra ve dict; None = ma KHONG co dong cho phien nay (bo may cung se de
+    NaN); KHONG_RO = tai hong -> cat ngang thieu, khong bao gio doan."""
+    for a in range(3):
+        try:
+            r = requests.get(BASE + '/Companies/HistoricalQuotes',
+                             params={'symbol': sym, 'startDate': ses, 'endDate': ses},
+                             headers=H, timeout=30)
+            d = r.json()
+            if isinstance(d, list):
+                for x in d:
+                    if str(x.get('Date', ''))[:10] == ses:
+                        return x
+                return None
+        except Exception:
+            pass
+        time.sleep(1.2 * (a + 1))
+    return KHONG_RO
+
+
+def cat_ngang(U, ses, fresh, rows, syms, CF):
+    """CROSS-SECTION CUA PHIEN (SPEC v3, 26/09/2026). Bo may xep hang RS / Momentum
+    va cat TOP-N tren TOAN BO thi truong CUA PHIEN t (fa_ind.pct_rank, vn300.build_topn).
+    Ban v2 so voi danh sach cua phien t-1 -> 14/01/2026 VNM: live RS 70,09 (L +15,
+    diem 59,6 -> MUA) trong khi bo may RS 67,92 (diem 44,6 -> KHONG mua).
+    Chi tai khi co ma chạm Dieu kien 1 (khong co thi khong ma nao MUA duoc).
+    Ma tai hong -> KHONG_RO: signal_spec chan bien, khong quyet duoc thi khong MUA."""
+    xs = (U or {}).get('xs') or {}
+    if not xs:
+        return None, dict(status='NO_XS')
+    trig = False
+    for s_, r_ in fresh.items():
+        sp_ = (syms.get(s_) or {}).get('spec') or {}
+        if sp_.get('thr') is None:
+            continue
+        pct_ = SP.ret32(SP.f32(SP._num(r_.get('PriceClose'))), SP.f32(SP._num(r_.get('PriceBasic'))))
+        if not SP.isnan(pct_) and pct_ >= SP.f32(sp_['thr']):
+            trig = True
+            break
+    if not trig:
+        return None, dict(status='SKIPPED_NO_TRIGGER', n_xs=len(xs))
+    xr, can = {}, []
+    for s_ in xs:
+        if s_ in fresh:
+            xr[s_] = fresh[s_]
+        elif s_ in rows:                      # dong moi nhat cu hon phien -> khong co dong phien nay
+            xr[s_] = None
+        else:
+            can.append(s_)
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        for s_, r_ in zip(can, ex.map(lambda z: phien_row(z, ses), can)):
+            if r_ is not KHONG_RO:
+                xr[s_] = r_
+    X = SP.cross_section(U, xr)
+    st = dict(status=('COMPLETE' if not X['unknown'] else 'PARTIAL'), n_xs=len(xs), fetched=len(can),
+              unknown=X['unknown'], unknown_syms=X['unknown_syms'],
+              n_rank_r12=len(X['r12']), n_rank_r3=len(X['r3']), n_tv=len(X['tv']))
+    return X, st
+
 # ============================================================================
 # CHUONG BAO GUI VE DIEN THOAI (Telegram)
 #
@@ -550,6 +614,14 @@ def main():
     obs = flow_obs(ses, now, fresh, syms)
     obs_extra = dict(filled_from_quotes=len(of_src))
 
+    X, xsec = (None, dict(status='NO_SPEC'))
+    if spec_ok:
+        try:
+            X, xsec = cat_ngang(U, ses, fresh, rows, syms, CF)
+        except Exception as e:           # hong -> X None: RS / TOP-N khong quyet -> khong MUA
+            X, xsec = None, dict(status='ERROR', error=f'{type(e).__name__}: {e}')
+        print('cat ngang phien:', {k: v for k, v in xsec.items() if k != 'unknown_syms'})
+
     hits = []
     for s, r in fresh.items():
         t = syms[s]
@@ -567,7 +639,7 @@ def main():
         volr_proj = volr / frac if frac > 0 else volr
         tv_proj = tv / frac if frac > 0 else tv
         if spec_ok and sp:
-            res = SP.evaluate(sp, r, U, CF)
+            res = SP.evaluate(sp, r, U, CF, X)
             lvl, why = SP.classify(res, CF)
         else:
             # Old thresholds without a spec: fail SAFE. Nothing can be MUA because the
@@ -603,6 +675,8 @@ def main():
             required_conditions=res.get('required', []),
             passed_conditions=res.get('passed', []),
             missing_conditions=res.get('missing', []),
+            # RS / Mom / TOP-N chua quyet duoc vi cat ngang phien thieu ma (khong bao gio MUA)
+            undetermined_conditions=res.get('undetermined', []),
             prod_ok=bool(res.get('all_ok')),
             # MUA DO (PROD stage1, 25/09/2026): du DK1-8, DK9 chua co so -> mua ATC, toi xac nhan
             mua_do=bool(CF.get('stage1') is not None and not dang_cam
@@ -629,7 +703,9 @@ def main():
                   ordimb_coverage=round(oi_cov, 3), freshness=ses,
                   source='FireAnt HistoricalQuotes (+ Markets/Quotes cho dong tien)',
                   ordimb_filled_from_quotes=obs_extra['filled_from_quotes'],
-                  spec_ok=spec_ok, spec_for_session=spec_for_session)
+                  spec_ok=spec_ok, spec_for_session=spec_for_session,
+                  # cat ngang phien cho RS / Momentum / TOP-N (SPEC v3)
+                  xsec=xsec)
     out = dict(base,
                session=ses, open=phien_mo, frac=round(frac, 3),
                scanned=len(fresh),

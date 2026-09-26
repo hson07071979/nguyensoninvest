@@ -20,24 +20,32 @@ import signal_spec as SP  # noqa: E402
 CFG = dict(top_n=40, vol_floor=1.5, gtgd_min=10e9, volat_min=0.02, min_mktcap=1e12,
            min_history=250, base_range=0.22, use_cond8=False, use_ordimb=True,
            ordimb_min=1.40, score_floor=50, use_top_liquid=True)
-U = dict(topn_cut=1e9, r12=[i / 100 for i in range(100)], r3=[i / 100 for i in range(100)])
 SPEC = dict(thr=0.03, vol_s19=19e6, vol_c19=19, rng_s19=19 * 0.04, rng_c19=19,
-            tv_s19=19 * 20e9, tv_c19=19, shares=1e9, nbars=500, base=0.10,
-            blocked=False, npat_yoy=0.5, pts_static=dict(C=15, A=10),
+            tv_s19=19 * 20e9, tv_c19=19, shares=1e9, nbars_prev=499, nbars=500, base=0.10,
+            blocked=False, npat_yoy=0.5, pts_static=dict(C1=15, A1=10),
             hi52_249=30000, c250=15000, c60=20000)
+# SPEC v3: the session cross-section (100 other symbols + AAA) the engine ranks on
+U = dict(top_n=40, xs=dict({'S%02d' % i: [1000.0, 1000.0, 19 * 5e9, 19] for i in range(100)},
+                           AAA=[SPEC['c250'], SPEC['c60'], SPEC['tv_s19'], SPEC['tv_c19']]))
+OTHERS = {'S%02d' % i: dict(AdjClose=1000.0 * (1 + i / 100), TotalValue=5e9) for i in range(100)}
 
 
 def row(**kw):
     r = dict(PriceClose=31000, PriceBasic=29000, PriceHigh=31500, PriceLow=29500,
+             AdjClose=31000, AdjHigh=31500, AdjLow=29500, MarketCap=31000 * 1e9,
              Volume=5e6, TotalValue=150e9,
              BuyQuantity=3e6, BuyCount=1000, SellQuantity=2e6, SellCount=1000)
     r.update(kw)
     return r
 
 
+def xsec(r, others=OTHERS):
+    return SP.cross_section(U, dict(others, AAA=r))
+
+
 class SignalGate(unittest.TestCase):
     def cls(self, r, cfg=CFG):
-        res = SP.evaluate(SPEC, r, U, cfg)
+        res = SP.evaluate(SPEC, r, U, cfg, xsec(r))
         return res, SP.classify(res, cfg)
 
     def test_full_signal_is_mua(self):
@@ -57,6 +65,20 @@ class SignalGate(unittest.TestCase):
         res, (lvl, _) = self.cls(row(SellQuantity=2.2e6))
         self.assertFalse(res['all_ok'])
         self.assertNotEqual(lvl, 'MUA')
+
+    def test_incomplete_cross_section_is_never_mua(self):
+        r = row()
+        half = {k: v for k, v in list(OTHERS.items())[:10]}       # 90 of 100 symbols failed to load
+        res = SP.evaluate(SPEC, r, U, CFG, SP.cross_section(U, dict(half, AAA=r)))
+        self.assertNotEqual(SP.classify(res, CFG)[0], 'MUA')
+        self.assertTrue(res['undetermined'])
+        res = SP.evaluate(SPEC, r, U, CFG, None)                    # no cross-section at all
+        self.assertNotEqual(SP.classify(res, CFG)[0], 'MUA')
+
+    def test_live_scan_passes_the_session_cross_section(self):
+        src = open(os.path.join(ROOT, 'live_scan.py'), encoding='utf-8').read()
+        self.assertIn('SP.evaluate(sp, r, U, CF, X)', src)
+        self.assertIn('def cat_ngang(', src)
 
     def test_cond9_required_when_prod_uses_it(self):
         self.assertIn('ordimb', SP.required_conditions(CFG))
