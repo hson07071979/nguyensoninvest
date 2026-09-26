@@ -164,23 +164,66 @@ def co_lenh(h, T, den):
 
 def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None):
     # Chuong ve dien thoai chi keu TRONG PHIEN, tu 09h00 den 15h00 gio VN.
+    # 09h00-15h00: chuong trong phien. 15h00-21h30: XAC NHAN SAU PHIEN — Dieu kien 9 chi co
+    # so sau khi dong cua, nen MUA that su (du ca 9 dieu kien) thuong chi xuat hien luc nay.
     now_bao = gio_vn()
-    if now_bao.weekday() >= 5 or not (9.0 <= now_bao.hour + now_bao.minute / 60 <= 15.0):
-        print('ngoai gio bao chuong (09h00-15h00 T2-T6) - bo qua')
+    t_bao = now_bao.hour + now_bao.minute / 60
+    if now_bao.weekday() >= 5 or not (9.0 <= t_bao <= 21.5):
+        print('ngoai gio bao chuong (09h00-21h30 T2-T6) - bo qua')
         return
+    sau_phien = t_bao > 15.0
 
     tok = os.environ.get('TELEGRAM_TOKEN', '').strip()
     chat = os.environ.get('TELEGRAM_CHAT', '').strip()
     if not tok or not chat:
         return
 
+    cu = cu_mua if cu_ses == ses else set()
+    da_gui = []
+
+    def _post(text):
+        try:
+            r = requests.post(f'https://api.telegram.org/bot{tok}/sendMessage',
+                              json={'chat_id': chat, 'text': text, 'parse_mode': 'Markdown',
+                                    'disable_web_page_preview': True}, timeout=20)
+            print('telegram:', 'da gui' if r.ok else f'HONG {r.status_code} {r.text[:120]}')
+            return r.ok
+        except Exception as e:
+            print('telegram loi:', type(e).__name__, e)
+            return False
+
+    # (1) MUA DO trong cua so ATC 14h00-14h50: du DK1-8, DK9 chua co so
+    if 14.0 <= t_bao <= 14.84:
+        do = [h for h in hits if h.get('mua_do') and 'D:' + h['sym'] not in cu]
+        if do:
+            dong = [f"\U0001F7E0 *MUA DÒ lúc ATC* — {len(do)} mã đủ ĐK1–8, phiên {ses}", '']
+            for h in do:
+                theo, thuc, ly, tien, nav = co_lenh(h, T or {}, den)
+                size = (f"cỡ *{thuc:.1f}% NAV*" if thuc is not None else "")
+                if tien and nav:
+                    size += f" ≈ *{tien/1e6:,.0f} triệu*"
+                dong.append(f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · vol {h['volr']}× · điểm {h['score']:.0f}  {size}")
+            dong += ['', "Tối ~18–19h có Điều kiện 9: đạt → giữ; không đạt → bán ATC T+2 (hàng về chiều T+2)."]
+            if _post('\n'.join(dong)):
+                da_gui += ['D:' + h['sym'] for h in do]
+    # (2) Sau phien: DK9 truot -> ban lenh do ATC T+2
+    if sau_phien:
+        tr = [h for h in hits if h.get('truot9') and 'X:' + h['sym'] not in cu]
+        if tr:
+            dong = [f"\u26AA *KHÔNG ĐẠT ĐIỀU KIỆN 9* — phiên {ses}", '']
+            dong += [f"*{h['sym']}* dòng tiền {h['ordimb']}× (< {h['ordimb_min']}) → *bán ATC T+2* nếu đã mua dò" for h in tr]
+            if _post('\n'.join(dong)):
+                da_gui += ['X:' + h['sym'] for h in tr]
+
     # MUA only — and only hits whose EVERY required production condition passed.
     mua = [h for h in hits if h['level'] == 'MUA' and h.get('prod_ok')]
-    moi = [h for h in mua if cu_ses != ses or h['sym'] not in cu_mua]
+    moi = [h for h in mua if h['sym'] not in cu]
     if not moi:
-        return []
+        return da_gui
 
-    dong = [f"\U0001F534 *{len(moi)} mã đủ TOÀN BỘ điều kiện PROD* — phiên {ses}", '']
+    dong = [(f"\U0001F7E2 *XÁC NHẬN ĐK9 — GIỮ lệnh dò* · {len(moi)} mã — phiên {ses}" if (sau_phien and (T or {}).get('cfg', {}).get('stage1') is not None) else
+             f"\U0001F534 *{len(moi)} mã đủ TOÀN BỘ điều kiện PROD* — phiên {ses}")
+            + (" · *XÁC NHẬN SAU PHIÊN* (Điều kiện 9 vừa có số)" if (sau_phien and not ((T or {}).get('cfg', {}).get('stage1') is not None)) else ""), '']
     for h in moi:
         theo, thuc, ly, tien, nav = co_lenh(h, T or {}, den)
         size = (f"cỡ PROD *{theo:.1f}% NAV*" if theo is not None else "cỡ: không tính được")
@@ -194,6 +237,11 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None):
             f"dòng tiền {h['ordimb']}× (≥ {h['ordimb_min']})\n"
             f"   {size}")
     dong += ['', f"Đèn thị trường *{den}* · phiên đã đi {frac*100:.0f}%"]
+    if sau_phien and ((T or {}).get('cfg', {}).get('stage1') is not None):
+        dong += ["Đã mua dò lúc ATC thì GIỮ, đi theo luật thoát bình thường. Chưa mua thì đừng đuổi giá phiên sau."]
+    elif sau_phien:
+        dong += ["Bộ máy ghi nhận lệnh ở giá đóng cửa hôm nay. Vào thực tế: đầu phiên sau, "
+                 "giá có thể đã khác — xem giá trước khi đặt."]
 
     try:
         r = requests.post(
@@ -202,9 +250,10 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None):
                   'parse_mode': 'Markdown', 'disable_web_page_preview': True},
             timeout=20)
         print('telegram:', 'da gui' if r.ok else f'HONG {r.status_code} {r.text[:120]}')
-        return [h['sym'] for h in moi] if r.ok else []
+        return da_gui + ([h['sym'] for h in moi] if r.ok else [])
     except Exception as e:
         print('telegram loi:', type(e).__name__, e)
+        return da_gui
 
 
 def loai_so_tay():
@@ -340,6 +389,46 @@ def main():
                 of_src[s_] = 'fireant.Markets/Quotes'
     except Exception as e:
         print('nguon dong tien thu hai loi:', type(e).__name__, e)
+    # ---- NGUON THU BA, SAU PHIEN (25/09/2026) ----
+    # So LENH dat mua/ban (Dieu kien 9) chi duoc so gd cong bo SAU khi dong cua (do
+    # 24-25/09: HOSE co tren FireAnt + Vietstock khoang 18h-19h, HNX tren hnx.vn toi hon).
+    # Tu 15h, voi nhung ma dang bung no (bien do >= nguong DK1) ma van chua co so lenh,
+    # hoi THANG nguon goc: HOSE -> Vietstock (khop FireAnt 444/444), HNX/UPCoM -> hnx.vn
+    # (khop FireAnt 96/96). Vietstock KHONG dung cho HNX (chuoi so khac, 95/96 lech).
+    try:
+        sau_phien = now.hour + now.minute / 60 >= 15.0
+        if sau_phien and os.path.isdir('sources'):
+            can = []
+            for s_, r in rows.items():
+                if ordimb_of(r) is not None or str(r.get('Date', ''))[:10] != today:
+                    continue
+                sp_ = (syms.get(s_) or {}).get('spec') or {}
+                try:
+                    pc_ = float(r.get('PriceClose') or 0) / float(r.get('PriceBasic') or 1) - 1
+                except Exception:
+                    continue
+                if sp_.get('thr') is not None and pc_ >= sp_['thr']:
+                    can.append(s_)
+            for s_ in can[:40]:
+                ex_ = (syms.get(s_) or {}).get('exch', 'HOSE')
+                try:
+                    if ex_ in ('HNX', 'UPCOM'):
+                        from sources import hnx as _hx
+                        f_ = (_hx.probe(s_, today, market='NY' if ex_ == 'HNX' else 'UC') or {}).get('fields') or {}
+                        nguon = 'hnx.vn TK_CungCau'
+                    else:
+                        from sources import vietstock as _vs
+                        f_ = next((x for x in (_vs.probe(s_, today) or []) if x.get('date') == today), {})
+                        nguon = 'vietstock gettradingresult'
+                    x_ = {k: f_.get(k) for k in ('BuyCount', 'BuyQuantity', 'SellCount', 'SellQuantity')}
+                    if ordimb_of(x_) is not None:
+                        rows[s_].update(x_); of_src[s_] = nguon
+                except Exception as e:
+                    print('nguon thu ba loi', s_, type(e).__name__, e)
+            if can:
+                print(f'sau phien: {len(can)} ma bung no chua co so lenh -> lap duoc {sum(1 for s_ in can if s_ in of_src)}')
+    except Exception as e:
+        print('nguon dong tien thu ba loi:', type(e).__name__, e)
     if ses != today or not phien_mo:
         phien_mo = False
         frac = 1.0
@@ -423,6 +512,12 @@ def main():
             passed_conditions=res.get('passed', []),
             missing_conditions=res.get('missing', []),
             prod_ok=bool(res.get('all_ok')),
+            # MUA DO (PROD stage1, 25/09/2026): du DK1-8, DK9 chua co so -> mua ATC, toi xac nhan
+            mua_do=bool(CF.get('stage1') is not None and not dang_cam
+                        and set(res.get('missing', [])) == {'ordimb'} and not v.get('ordimb_available')),
+            # sau phien: da co so DK9 nhung truot -> lenh do phai ban ATC T+2
+            truot9=bool(CF.get('stage1') is not None and not dang_cam
+                        and set(res.get('missing', [])) == {'ordimb'} and v.get('ordimb_available')),
             size_pct=t.get('size_pct'), size_tran=t.get('size_tran'),
             dang_cam=dang_cam,
             cond={SP.labels(CF).get(k, k) if CF else k: (k in res.get('passed', []))
@@ -452,7 +547,8 @@ def main():
                hits=hits, de_mat_pct=DE_MAT_PCT,
                n_mua=sum(1 for h in hits if h['level'] == 'MUA'),
                n_de_mat=sum(1 for h in hits if h['level'] == 'DE_MAT'),
-               n_cho_dong_tien=sum(1 for h in hits if h.get('reason') == 'WAITING_FOR_FLOW_CONFIRMATION'))
+               n_cho_dong_tien=sum(1 for h in hits if h.get('reason') == 'WAITING_FOR_FLOW_CONFIRMATION'),
+               n_mua_do=sum(1 for h in hits if h.get('mua_do')))
     da_keu = gui_telegram(hits, ses, cu_mua, cu_ses, T.get('light', 'VANG'), frac, T) or []
     out['alerted'] = dict(session=ses, syms=sorted((cu_mua if cu_ses == ses else set()) | set(da_keu)))
     json.dump(out, open('live.json', 'w', encoding='utf-8'), ensure_ascii=False)

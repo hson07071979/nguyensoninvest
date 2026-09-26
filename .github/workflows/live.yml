@@ -31,6 +31,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write     # để gọi lại "Canh giờ mở phiên" khi phiên kết thúc
 
 jobs:
   scan:
@@ -89,8 +90,11 @@ jobs:
             PHUT=$(TZ=Asia/Ho_Chi_Minh date '+%H%M'); PHUT=$(( 10#$PHUT ))
             TROI=$(( $(date +%s) - BAT_DAU ))
 
-            if [ "$PHUT" -ge 1530 ]; then
-              echo "Đã qua 15h30 giờ VN — phiên chốt xong, dừng."
+            # 25/09/2026: chạy tiếp tới 20h45 — Điều kiện 9 (số lệnh đặt mua/bán) chỉ được
+            # công bố SAU giờ đóng cửa (HOSE ~18h–19h, HNX muộn hơn). Các nhịp sau phiên
+            # lấp số lệnh từ nguồn gốc và gửi chuông "XÁC NHẬN SAU PHIÊN".
+            if [ "$PHUT" -ge 2045 ]; then
+              echo "Đã qua 20h45 giờ VN — xong phần xác nhận sau phiên, dừng."
               break
             fi
             if [ "$TROI" -ge "$NGAN_SACH" ]; then
@@ -102,6 +106,8 @@ jobs:
             # trong chính phiên bắn tín hiệu, và tài liệu đòi xác nhận sau 14h00.
             if [ "$PHUT" -ge 1400 ] && [ "$PHUT" -lt 1445 ]; then
               NGHI=300      # 5 phút
+            elif [ "$PHUT" -ge 1530 ]; then
+              NGHI=900      # 15 phút — chờ số lệnh sau phiên
             else
               NGHI=1200     # 20 phút
             fi
@@ -110,3 +116,18 @@ jobs:
           done
 
           echo "Xong $NHIP nhịp quét trong lần chạy này."
+
+      - name: Giao ca cho người gác phiên sau
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Hết ngân sách 5h40 khi CHƯA xong ngày (trước 20h45, ngày thường) -> tự gọi lại
+          # chính mình, không trông vào cron. Xong ngày -> giao ca cho người gác.
+          PHUT=$(TZ=Asia/Ho_Chi_Minh date '+%H%M'); PHUT=$(( 10#$PHUT ))
+          THU=$(TZ=Asia/Ho_Chi_Minh date +%u)
+          if [ "$THU" -le 5 ] && [ "$PHUT" -ge 900 ] && [ "$PHUT" -lt 2045 ]; then
+            gh workflow run live.yml -R "${{ github.repository }}" || echo "!! không tự gọi lại được — cron sẽ nối"
+          else
+            gh workflow run canh.yml -R "${{ github.repository }}" || echo "!! không gọi được người gác — cron sẽ nối lại"
+          fi

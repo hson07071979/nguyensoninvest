@@ -40,7 +40,7 @@ BOOK_ID = 'LIVE_PAPER'
 NAV0 = 1_000_000_000.0
 TEN_DEN = {'XANH': 'Xanh', 'VANG': 'Vàng', 'CAM': 'Cam', 'DO': 'Đỏ'}
 
-# Mac dinh = PROD tai 23/09/2026. Gia tri THAT doc tu thresholds.json['cfg']
+# Mac dinh = PROD tai 23/09/2026 (25/09: them momentum mo_by/mo_need, doc tu cfg). Gia tri THAT doc tu thresholds.json['cfg']
 # (xuat tu produce2.PROD) — xem cfg() ben duoi.
 DEF = dict(fee_buy=0.0015, fee_sell=0.0025, hard_stop=-0.10, stop=-0.07,
            be_trigger=0.08, be_level=0.01, use_be=True, t_valve=4, big_win=0.19,
@@ -56,7 +56,13 @@ def cfg(T):
     C = dict(DEF)
     C.update({k: v for k, v in (T.get('cfg') or {}).items() if v is not None})
     bad = [k for k in ('use_protective_candle', 'use_giveback', 'use_big_sell', 'use_partial_take',
-                       'cb_enable', 'stage1') if C.get(k)]
+                       'cb_enable') if C.get(k)]
+    # Mua do (PROD 25/09/2026): chi ho tro mua DU lenh luc ATC (stage1=1.0) va ban lenh do
+    # truot DK9 o gia dong cua T+2 (hang ve chieu T+2). Bien the khac se lech bo may.
+    if C.get('stage1') is not None and (float(C['stage1']) != 1.0 or C.get('probe_exit', 'open') != 'close'):
+        bad.append('stage1/probe_exit')
+    # ceil_vol_floor chi doi LOP VAO (engine) — so ghi tien vao theo signals cua engine nen khong anh huong
+    if C.get('mo_by') and not C.get('mo_need'): bad.append('mo_by khong co mo_need')
     if (C.get('entry_mode') or 'close') != 'close': bad.append('entry_mode')
     if C.get('entry_next_open'): bad.append('entry_next_open')
     if int(C.get('hs_from', 2) or 2) != 2: bad.append('hs_from')
@@ -348,11 +354,20 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
             if held < 2:                       # T+2: chua ve hang, chua ban duoc
                 continue
             r = None; phan = 1.0
-            if C['use_hard_stop'] and gain <= C['hard_stop']:          r = 'Hard stop −10%'
+            if p.get('probe_fail'):
+                # = engine2 stage 3: lenh do truot DK9 ban o dong cua T+2 (T+2,5), truoc moi luat khac
+                r = 'Cond9 không xác nhận — bán lệnh thăm dò'
+            elif C['use_hard_stop'] and gain <= C['hard_stop']:        r = 'Hard stop −10%'
+            # Momentum sau breakout (PROD 25/09/2026) — CUNG thu tu uu tien voi engine2
+            elif (C.get('mo_stop') is not None and held <= C.get('mo_stop_until', 99)
+                  and gain <= C['mo_stop']):                            r = 'Momentum: cắt sớm %.1f%%' % (C['mo_stop'] * 100)
+            elif (C.get('mo_by') and C['mo_by'] <= held <= C.get('mo_window', 99)
+                  and peak < C.get('mo_need', 0.0)):
+                r = 'Momentum: không chạy (T+%d chưa lên %.0f%%)' % (C['mo_by'], C['mo_need'] * 100)
             elif held >= 3 and gain <= C['stop']:                       r = 'Cắt lỗ −7%'
             elif C['use_be'] and peak >= C['be_trigger'] and gain <= C['be_level']:
                 r = 'Về bờ (đã lãi %d%%)' % int(C['be_trigger'] * 100)
-            elif held >= C['t_valve'] and gain <= 0:                    r = f"Van thời gian T+{C['t_valve']}"
+            elif held >= C['t_valve'] and gain <= C.get('valve_min', 0.0): r = f"Van thời gian T+{C['t_valve']}"
             elif peak >= C['big_win'] and b10 >= C['conf']:             r = f"Trailing MA{C['trail_fast']} (lãi lớn)"
             elif b20 >= C['conf']:                                      r = f"Trailing MA{C['trail_ma']}"
             elif (C['use_orange_cut'] and ngays[i] == ses and light == 'CAM' and not p.get('part')
@@ -386,12 +401,14 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
     for h in (signals or []):
         if h.get('date') != ses:
             continue
-        if C.get('use_ordimb', True) and not ((h.get('ordimb') or 0) >= C.get('ordimb_min', 1.4)):
+        dat9 = (h.get('ordimb') or 0) >= C.get('ordimb_min', 1.4)
+        if C.get('use_ordimb', True) and not dat9 and C.get('stage1') is None:
             nhat_ky.append(f"TỪ CHỐI {h['sym']} — Điều kiện 9 không đạt ({h.get('ordimb')})")
             continue
         if h['sym'] in dang_cam or h['sym'] in loai:
             continue
-        muon_mua.append(dict(h, price=float(h['price']) / 1000))
+        muon_mua.append(dict(h, price=float(h['price']) / 1000,
+                             _probe_fail=bool(C.get('stage1') is not None and C.get('use_ordimb', True) and not dat9)))
     # thu tu uu tien = engine2.rank_rows('score'): diem CANSLIM giam dan, hoa -> ma
     muon_mua.sort(key=lambda h: (-(h.get('score') or 0), h['sym']))
 
@@ -422,9 +439,13 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
             entry=ses, entry_px=px, cost_px=c_px, sh=sh, cost=round(chi),
             peak=0.0, b10=0, b20=0, part=False, pyr=False, held=0,
             light=light, score=h.get('score'), ordimb=h.get('ordimb'),
+            probe_fail=h.get('_probe_fail', False),
             prod_config_hash=T.get('prod_config_hash'),
             size_theo=round(A['theoretical'] / nav * 100, 2), size_reasons=A['reasons'],
             last=round(px / 1000, 2), last_day=ses, pnl=0.0))
+        if h.get('_probe_fail'):
+            nhat_ky.append(f"MUA DÒ {h['sym']} lúc ATC — tối ĐK9 = {h.get('ordimb')} < {C.get('ordimb_min', 1.4)}: "
+                           "không xác nhận, bán ATC T+2 khi hàng về")
         nhat_ky.append(f"MUA {h['sym']} {px/1000:.2f} × {sh:,} cp ({chi/nav*100:.1f}% NAV · "
                        f"lý thuyết {A['theoretical']/nav*100:.1f}% · đèn {TEN_DEN.get(light, light)} · "
                        f"OrdImb {h.get('ordimb')})")
@@ -432,7 +453,7 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
     # ---------- 3. KIM TU THAP (engine2 lop 9, qua allocator) ----------
     if C.get('use_pyramid') and light == 'XANH':
         for p in P['open']:
-            if p.get('pyr') or p['entry'] == ses:
+            if p.get('pyr') or p['entry'] == ses or p.get('probe_fail'):
                 continue
             held = p.get('held', 0); g = p.get('_gain')
             lastp = gia(p); hi10 = p.get('_hi10')
