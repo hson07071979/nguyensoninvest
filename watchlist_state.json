@@ -103,12 +103,6 @@
    "status": "đạt",
    "note": ""
   },
-  "PAN": {
-   "added": "2026-09-16",
-   "score": 45.7,
-   "status": "đạt",
-   "note": ""
-  },
   "VGC": {
    "added": "2026-09-18",
    "score": 53.7,
@@ -136,12 +130,6 @@
   "DHC": {
    "added": "2026-09-23",
    "score": 84.6,
-   "status": "đạt",
-   "note": ""
-  },
-  "AAA": {
-   "added": "2026-09-24",
-   "score": 54.3,
    "status": "đạt",
    "note": ""
   },
@@ -191,7 +179,7 @@
  "log": [
   {
    "date": "2026-09-25",
-   "size": 31,
+   "size": 29,
    "added_ct": [
     {
      "sym": "PVT",
@@ -243,7 +231,18 @@
      "rs": 48.1
     }
    ],
-   "removed_ct": [],
+   "removed_ct": [
+    {
+     "sym": "PAN",
+     "why": "không còn đạt ngưỡng",
+     "score": null
+    },
+    {
+     "sym": "AAA",
+     "why": "không còn đạt ngưỡng",
+     "score": null
+    }
+   ],
    "added": [
     "PVT",
     "HAH",
@@ -253,7 +252,10 @@
     "NAB",
     "CTG"
    ],
-   "removed": []
+   "removed": [
+    "PAN",
+    "AAA"
+   ]
   },
   {
    "date": "2026-09-24",
