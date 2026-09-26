@@ -204,7 +204,16 @@ def main():
                                           'vào sai PVP 22/09 (Điều kiện 9 = 1,381 < 1,40). Sổ mới vào đúng các lệnh của '
                                           'bộ máy từ 14/09, vốn 1 tỷ. Bản cũ lưu trong "so_cu".'])]
     if P.get('session_done') == ses and not os.environ.get('LAM_LAI'):
-        print(f'phien {ses} da vao so roi')
+        # PHIEN DA VAO SO — nhung neu cau hinh PROD vua doi (hash khac) hoac vi the thieu
+        # truong cua luat thoat dang chay thi phai NANG CAP TRANG THAI, khong duoc im lang
+        # tra ve (loi 26/09/2026: deploy TOP110+S1 xong, so van mang hash cu 89c720ebf701,
+        # BVH thieu profit_floor/sellable/action).
+        if can_nang_cap(P, T):
+            nang_cap(P, T, C, ses, now)
+            json.dump(P, open(FILE, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+        else:
+            print(f'phien {ses} da vao so roi')
+        kiem_sau(P, T)
         return
     P['version'] = 2; P['book_id'] = BOOK_ID; P['nav_source'] = 'portfolio.json'
 
@@ -267,7 +276,7 @@ def main():
         P['log'].insert(0, dict(date=d, items=nk))
     P['log'].sort(key=lambda x: x['date'], reverse=True)
     P['log'] = P['log'][:120]
-    P['checks'] = doi_soat(P, C)
+    P['checks'] = doi_soat(P, C, T.get('cfg') or {})
     tong_ = P['closed']
     thang = [c for c in tong_ if c['pnl_pct'] > 0]
     P['stats'] = dict(
@@ -278,6 +287,7 @@ def main():
         worst=min((c['pnl_pct'] for c in tong_), default=None),
         since=min([p['entry'] for p in P['open']] + [c['entry'] for c in P['closed']] or [ses]))
     json.dump(P, open(FILE, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    kiem_sau(P, T)
     print(f"so lenh · phien {ses} · den {light} · NAV {P['nav']/1e9:.4f} ty "
           f"({P['stats']['total_return']:+.2f}%) · {len(P['open'])} ma dang cam · doi soat "
           f"{'DAT' if P['checks']['ok'] else 'TRUOT'}")
@@ -447,10 +457,17 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
             prod_config_hash=T.get('prod_config_hash'),
             size_theo=round(A['theoretical'] / nav * 100, 2), size_reasons=A['reasons'],
             last=round(px / 1000, 2), last_day=ses, pnl=0.0))
+        P['open'][-1]['x0'] = ty_trong(P, h['sym'], nganh, ses, gia)
+        # vi the vua mua cung phai co trang thai cua ra (T+0: chua ban duoc)
+        P['open'][-1].update(ER.status(C, px / c_px - 1, 0.0, 0, probe_fail=bool(h.get('_probe_fail')),
+                                       light_today=light, light_entry=light))
+        P['open'][-1]['earliest_sell'] = f"T+{int(C.get('sell_from', 2) or 2)}"
         if h.get('_probe_fail'):
             nhat_ky.append(f"MUA DÒ {h['sym']} lúc ATC — tối ĐK9 = {h.get('ordimb')} < {C.get('ordimb_min', 1.4)}: "
                            f"không xác nhận, bán ATC T+{int(C.get('sell_from', 2) or 2)}")
-        nhat_ky.append(f"MUA {h['sym']} {px/1000:.2f} × {sh:,} cp ({chi/nav*100:.1f}% NAV · "
+        _x = P['open'][-1]['x0']
+        nhat_ky.append(f"MUA {h['sym']} {px/1000:.2f} × {sh:,} cp ({chi/nav*100:.1f}% NAV · ngành {_x['sector_pct']:.1f}% · "
+                       f"tổng cổ phiếu {_x['total_pct']:.1f}% NAV · "
                        f"lý thuyết {A['theoretical']/nav*100:.1f}% · đèn {TEN_DEN.get(light, light)} · "
                        f"OrdImb {h.get('ordimb')})")
 
@@ -491,26 +508,155 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
             p['cost_px'] = (p['cost_px'] * p['sh'] + c2 * add) / (p['sh'] + add_u)
             P['cash'] -= add * c2; p['sh'] = p['sh'] + add_u; p['pyr'] = True
             p['cost'] = round(p['cost_px'] * p['sh'])
-            nhat_ky.append(f"NHỒI {p['sym']} +{add:,} cp @ {raw_now/1000:.2f} (giới hạn: {AL.REASON_VI.get(why, why)})")
+            p['xp'] = ty_trong(P, p['sym'], p.get('sector'), ses, gia)
+            _x = p['xp']
+            nhat_ky.append(f"NHỒI {p['sym']} +{add:,} cp @ {raw_now/1000:.2f} — sau nhồi mã {_x['pos_pct']:.1f}% NAV · "
+                           f"ngành {_x['sector_pct']:.1f}% NAV · tổng {_x['total_pct']:.1f}% NAV "
+                           f"(giới hạn: {AL.REASON_VI.get(why, why)})")
     for p in P['open']:
         p.pop('_hi10', None); p.pop('_gain', None)
 
 
-def doi_soat(P, C):
-    """Accounting invariants of the book (every run):
-      NAV = cash + market value            (identity)
-      NAV - NAV0 = realised P&L + unrealised P&L   (cost basis incl. buy fees)
-      cash >= 0, no position above max_pos x NAV, sectors within sector_cap."""
+# Truong bat buoc tren moi vi the dang mo = cac truong exit_rules.status xuat ra.
+TRUONG_BAT_BUOC = ('peak_gain', 'gain', 'profit_lock_active', 'profit_floor', 'sellable',
+                   'pending_exit', 'action')
+
+
+def thieu_truong(P):
+    return [(p.get('sym'), k) for p in P.get('open') or [] if p.get('sh', 0) > 0
+            for k in TRUONG_BAT_BUOC if k not in p]
+
+
+def can_nang_cap(P, T):
+    return (P.get('prod_config_hash') != T.get('prod_config_hash')) or bool(thieu_truong(P))
+
+
+def ty_trong(P, sym, nganh, ngay, gia):
+    """Ty trong SAU khi khop, tren NAV cung phien: ma / nganh / tong co phieu (%)."""
+    inv = sum(q['sh'] * gia(q) for q in P['open'])
+    nav = P['cash'] + inv
+    me = sum(q['sh'] * gia(q) for q in P['open'] if q['sym'] == sym)
+    se = sum(q['sh'] * gia(q) for q in P['open'] if (q.get('sector') or 'Khác') == (nganh or 'Khác'))
+    f = lambda v: round(100 * v / nav, 2) if nav > 0 else None
+    return dict(date=ngay, pos_pct=f(me), sector_pct=f(se), total_pct=f(inv), nav=round(nav))
+
+
+def nang_cap(P, T, C, ses, now):
+    """NANG CAP TRANG THAI khi prod_config_hash doi (hoac thieu truong):
+    KHONG mua/ban lai, KHONG sua lich su. Voi moi vi the dang mo: tai lai nen tu ngay
+    mua toi `ses`, tinh lai peak / b10 / b20 / held theo dung quy uoc gia cua so,
+    roi gan trang thai cua ra theo luat MOI (exit_rules.status). Neu luat moi le ra
+    da ban o mot phien truoc -> ghi CANH BAO vao nhat ky (khong tu ban lui ngay)."""
+    cu = P.get('prod_config_hash'); moi = T.get('prod_config_hash')
+    light = T.get('light'); nk = []
+    for p in P['open']:
+        if p.get('sh', 0) <= 0:
+            continue
+        frm = (dt.date.fromisoformat(p['entry']) - dt.timedelta(days=75)).isoformat()
+        b = [x for x in bars(p['sym'], frm, ses) if x[0] <= ses]
+        if not b or p['entry'] > b[-1][0]:
+            sys.exit(f"HONG: nang cap so — khong tai duoc nen {p['sym']}, khong the gan trang thai luat moi")
+        ngays = [x[0] for x in b]; adj = [x[1] for x in b]; raw = [x[2] for x in b]
+        i0 = ngays.index(p['entry']) if p['entry'] in ngays else max(0, len([d for d in ngays if d < p['entry']]) - 1)
+        k_adj = adj[i0] / raw[i0] if raw[i0] else 1.0
+        epx_adj = cost_px(p, C) * k_adj
+        peak = 0.0; b10 = b20 = 0; som = None
+        _sf = int(C.get('sell_from', 2) or 2)
+        for i in range(i0, len(ngays)):
+            px = adj[i]; held = i - i0; gain = px / epx_adj - 1; peak = max(peak, gain)
+            mF = ma(adj, C['trail_fast'], i); mS = ma(adj, C['trail_ma'], i)
+            b10 = b10 + 1 if (mF is not None and px < mF) else 0
+            b20 = b20 + 1 if (mS is not None and px < mS) else 0
+            if i < len(ngays) - 1 and som is None:
+                dq = ER.decide(C, gain, peak, held, probe_fail=bool(p.get('probe_fail')), b10=b10, b20=b20,
+                               light_today=None, light_entry=p.get('light'), part=bool(p.get('part')))
+                if dq['rule']:
+                    som = (ngays[i], dq['rule'])
+        if abs(peak - float(p.get('peak') or 0)) > 0.001:
+            nk.append(f"NÂNG CẤP {p['sym']}: đỉnh lãi tính lại {peak*100:+.2f}% (sổ cũ ghi {float(p.get('peak') or 0)*100:+.2f}%)")
+        gain = adj[-1] / epx_adj - 1; held = len(ngays) - 1 - i0
+        p.update(peak=peak, b10=b10, b20=b20, held=held, last=round(raw[-1] / 1000, 2),
+                 last_adj=round(adj[-1] / 1000, 4), last_val=round(adj[-1] / k_adj, 2), k_adj=round(k_adj, 6),
+                 last_day=ngays[-1], last_done=ngays[-1],
+                 pnl=round((adj[-1] * (1 - C['fee_sell']) / epx_adj - 1) * 100, 2))
+        p.update(ER.status(C, gain, peak, held, probe_fail=bool(p.get('probe_fail')), b10=b10, b20=b20,
+                           light_today=(light if ngays[-1] == ses else None), light_entry=p.get('light'),
+                           part=bool(p.get('part'))))
+        p['earliest_sell'] = ngays[i0 + _sf] if i0 + _sf < len(ngays) else f"T+{_sf}"
+        p['cost_basis'] = 'cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1'
+        p['tail_adj'] = [round(x, 2) for x in adj[-30:]]
+        p['cfg_hash_state'] = moi          # hash cua luat dang gan trang thai (prod_config_hash = hash luc mua)
+        if som:
+            nk.append(f"CẢNH BÁO {p['sym']}: luật mới lẽ ra đã bán phiên {som[0]} ({som[1]}) — "
+                      "sổ KHÔNG bán lùi ngày; xử lý ở phiên kế tiếp theo đúng luật")
+        nk.append(f"NÂNG CẤP {p['sym']}: đỉnh {p['peak_gain']:+.2f}% · hiện {p['gain']:+.2f}% · sàn "
+                  f"{'—' if p['profit_floor'] is None else ('%+.2f%%' % p['profit_floor'])} · {p['action']}")
+    P['prod_config_hash'] = moi
+    P.setdefault('migrations', []).insert(0, dict(at=now.isoformat(timespec='seconds'), session=ses,
+                                                  from_hash=cu, to_hash=moi,
+                                                  n_open=len([p for p in P['open'] if p.get('sh', 0) > 0])))
+    P['log'].insert(0, dict(date=ses, items=[f"NÂNG CẤP TRẠNG THÁI SỔ: cấu hình {cu} → {moi} "
+                                             "(không mua/bán lại, không sửa lịch sử)"] + nk))
+    P['log'].sort(key=lambda x: x['date'], reverse=True)
+    P['checks'] = doi_soat(P, C, T.get('cfg') or {})
+    for x in P['log'][0]['items']:
+        print('  ' + x)
+
+
+def kiem_sau(P, T):
+    """CHOT CUNG sau moi lan chay: so phai cung hash voi thresholds.json, moi vi the
+    dang mo du truong cua luat thoat dang chay, doi soat DAT. Truot -> thoat ma 1,
+    workflow dung, khong dang."""
+    loi = []
+    if P.get('prod_config_hash') != T.get('prod_config_hash'):
+        loi.append(f"hash so {P.get('prod_config_hash')} != thresholds {T.get('prod_config_hash')}")
+    t = thieu_truong(P)
+    if t:
+        loi.append(f"vi the thieu truong: {t[:6]}")
+    if not (P.get('checks') or {}).get('ok'):
+        loi.append(f"doi soat truot: {P.get('checks')}")
+    if loi:
+        sys.exit('HONG so ghi tien: ' + ' | '.join(loi))
+    print(f"kiem so: DAT (hash {P.get('prod_config_hash')}, {len(P.get('open') or [])} vi the du truong)")
+
+
+def doi_soat(P, C, cfg=None):
+    """Bat bien ke toan + gioi han von cua so (moi lan chay):
+      NAV = tien mat + gia tri thi truong; NAV - NAV0 = lai/lo da chot + chua chot
+      tien mat >= 0
+      TAI THOI DIEM VAO LENH / NHOI (anh chup x0 / xp): ma <= max_pos, tong <= max_total,
+      nganh <= sector_cap cho lenh MOI. Lenh NHOI: PROD pyr_caps=False -> chi ma + tien mat
+      (dung luat engine2) — nganh vuot 30% khi nhoi duoc LIET KE ro, khong an.
+      Khong con dung sai x1,25 cho max_pos. Ty trong hien tai (troi theo gia) chi de xem."""
+    cfg = cfg or {}
+    mp = float(cfg.get('max_pos', 0.5)); mt = float(cfg.get('max_total', 1.0)); sc = float(cfg.get('sector_cap', 0.3))
+    TOL = 0.5   # diem %: lam tron lo 100 cp + phi mua
     g = lambda p: p.get('last_val') or (p.get('last') or 0) * 1000 or p['entry_px']
     mv = sum(p['sh'] * g(p) for p in P['open'])
     real = sum(c.get('pnl_vnd', 0) for c in P['closed'])
     unreal = sum(p['sh'] * g(p) - p['sh'] * cost_px(p, C) for p in P['open'])
     nav = P['cash'] + mv
     gap = (nav - P['nav0']) - (real + unreal)
+    vao = [(p['sym'], p['x0']) for p in P['open'] if p.get('x0')]
+    nhoi = [(p['sym'], p['xp']) for p in P['open'] if p.get('xp')]
+    cu = [p for p in P['open'] if not p.get('x0')]      # vi the truoc 26/09 chua co anh chup
     out = dict(nav_identity=abs(nav - P['nav']) < 1.0,
                pnl_reconcile_gap_vnd=round(gap),
                cash_nonneg=P['cash'] >= -1.0,
-               max_pos_ok=all(p['sh'] * g(p) <= 0.5 * nav * 1.25 for p in P['open']))
+               # lenh moi: ma / tong / nganh luc vao; vi the cu: gia von tren NAV hien tai
+               max_pos_ok=(all(x['pos_pct'] <= 100 * mp + TOL for _, x in vao + nhoi)
+                           and all(p['sh'] * cost_px(p, C) <= mp * nav + 1 for p in cu)),
+               max_total_ok=all(x['total_pct'] <= 100 * mt + TOL for _, x in vao + nhoi),
+               sector_cap_ok=all(x['sector_pct'] <= 100 * sc + TOL for _, x in vao))
+    if cfg.get('pyr_caps'):
+        out['sector_cap_ok'] = out['sector_cap_ok'] and all(x['sector_pct'] <= 100 * sc + TOL for _, x in nhoi)
+    out['pyr_sector_over'] = [dict(sym=s, **x) for s, x in nhoi if x['sector_pct'] > 100 * sc + TOL]
+    sec = {}
+    for p in P['open']:
+        sec[p.get('sector') or 'Khác'] = sec.get(p.get('sector') or 'Khác', 0) + p['sh'] * g(p)
+    out['now'] = dict(max_pos_pct=round(100 * max([p['sh'] * g(p) for p in P['open']] or [0]) / nav, 2) if nav else None,
+                      max_sector_pct=round(100 * max(sec.values() or [0]) / nav, 2) if nav else None,
+                      total_pct=round(100 * mv / nav, 2) if nav else None)
     # Lich su truoc ban va 23/09 ghi pnl_vnd thieu phi mua -> chenh lech lich su,
     # khong phai loi moi: chi coi la TRUOT neu lech > 0,1% NAV.
     out['pnl_reconcile_ok'] = abs(gap) <= 0.001 * P['nav0']
