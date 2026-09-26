@@ -422,7 +422,10 @@ def evaluate(sp, row, U, cfg, X=None):
              xsec=('none' if X is None else ('complete' if not X['unknown'] else 'partial')),
              xsec_unknown=(None if X is None else X['unknown']), exact_rank=exact)
     floor = cfg['score_floor']
-    ok['score'] = True if sc_lo >= floor else (False if sc_hi < floor else None)
+    if sp.get('funda') is False:
+        ok['score'] = False            # engine: no financial statements -> never scored
+    else:
+        ok['score'] = True if sc_lo >= floor else (False if sc_hi < floor else None)
     passed = [k for k in req if ok.get(k) is True]
     missing = [k for k in req if ok.get(k) is not True]
     und = [k for k in req if ok.get(k) is None]
