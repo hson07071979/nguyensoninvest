@@ -150,12 +150,48 @@
    "score": 64.6,
    "status": "đạt",
    "note": ""
+  },
+  "HAH": {
+   "added": "2026-09-25",
+   "score": 74.0,
+   "status": "đạt",
+   "note": ""
+  },
+  "AST": {
+   "added": "2026-09-25",
+   "score": 73.9,
+   "status": "đạt",
+   "note": ""
+  },
+  "LPB": {
+   "added": "2026-09-25",
+   "score": 66.3,
+   "status": "đạt",
+   "note": ""
+  },
+  "GAS": {
+   "added": "2026-09-25",
+   "score": 59.3,
+   "status": "đạt",
+   "note": ""
+  },
+  "NAB": {
+   "added": "2026-09-25",
+   "score": 57.2,
+   "status": "đạt",
+   "note": ""
+  },
+  "CTG": {
+   "added": "2026-09-25",
+   "score": 51.7,
+   "status": "đạt",
+   "note": ""
   }
  },
  "log": [
   {
    "date": "2026-09-25",
-   "size": 25,
+   "size": 31,
    "added_ct": [
     {
      "sym": "PVT",
@@ -163,11 +199,59 @@
      "sector": "Hàng & Dịch vụ Công nghiệp",
      "base": 20.8,
      "rs": 92.6
+    },
+    {
+     "sym": "HAH",
+     "score": 74.0,
+     "sector": "Hàng & Dịch vụ Công nghiệp",
+     "base": 15.0,
+     "rs": 72.4
+    },
+    {
+     "sym": "AST",
+     "score": 73.9,
+     "sector": "Bán lẻ",
+     "base": 9.7,
+     "rs": 85.2
+    },
+    {
+     "sym": "LPB",
+     "score": 66.3,
+     "sector": "Ngân hàng",
+     "base": 17.0,
+     "rs": 77.8
+    },
+    {
+     "sym": "GAS",
+     "score": 59.3,
+     "sector": "Điện, nước & xăng dầu khí đốt",
+     "base": 20.3,
+     "rs": 92.0
+    },
+    {
+     "sym": "NAB",
+     "score": 57.2,
+     "sector": "Ngân hàng",
+     "base": 11.2,
+     "rs": 72.3
+    },
+    {
+     "sym": "CTG",
+     "score": 51.7,
+     "sector": "Ngân hàng",
+     "base": 7.9,
+     "rs": 48.1
     }
    ],
    "removed_ct": [],
    "added": [
-    "PVT"
+    "PVT",
+    "HAH",
+    "AST",
+    "LPB",
+    "GAS",
+    "NAB",
+    "CTG"
    ],
    "removed": []
   },
