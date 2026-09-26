@@ -174,12 +174,18 @@
    "score": 51.7,
    "status": "đạt",
    "note": ""
+  },
+  "AAA": {
+   "added": "2026-09-25",
+   "score": 54.3,
+   "status": "đạt",
+   "note": ""
   }
  },
  "log": [
   {
    "date": "2026-09-25",
-   "size": 29,
+   "size": 30,
    "added_ct": [
     {
      "sym": "PVT",
@@ -229,6 +235,13 @@
      "sector": "Ngân hàng",
      "base": 7.9,
      "rs": 48.1
+    },
+    {
+     "sym": "AAA",
+     "score": 54.3,
+     "sector": "Hóa chất",
+     "base": 11.7,
+     "rs": 60.9
     }
    ],
    "removed_ct": [
@@ -250,7 +263,8 @@
     "LPB",
     "GAS",
     "NAB",
-    "CTG"
+    "CTG",
+    "AAA"
    ],
    "removed": [
     "PAN",
