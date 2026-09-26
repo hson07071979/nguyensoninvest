@@ -38,7 +38,52 @@
    "last_adj": 68.8,
    "last_val": 68800.0,
    "k_adj": 1.0,
-   "last_done": "2026-09-25"
+   "last_done": "2026-09-25",
+   "peak_gain": 4.26,
+   "gain": 1.02,
+   "profit_lock_active": false,
+   "profit_floor": null,
+   "profit_trigger": null,
+   "sellable": true,
+   "exit_reason": null,
+   "pending_exit": null,
+   "exit_phan": 1.0,
+   "action": "GIỮ",
+   "earliest_sell": "2026-09-17",
+   "cost_basis": "cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1",
+   "tail_adj": [
+    66800.0,
+    65500.0,
+    65000.0,
+    68500.0,
+    67500.0,
+    66800.0,
+    66600.0,
+    65900.0,
+    64500.0,
+    63600.0,
+    63000.0,
+    63800.0,
+    64000.0,
+    64100.0,
+    65400.0,
+    64100.0,
+    63000.0,
+    63500.0,
+    63000.0,
+    64000.0,
+    68000.0,
+    70200.0,
+    71000.0,
+    69400.0,
+    68500.0,
+    70500.0,
+    69700.0,
+    69300.0,
+    69200.0,
+    68800.0
+   ],
+   "cfg_hash_state": "a657b4464743"
   }
  ],
  "closed": [
@@ -82,6 +127,13 @@
   }
  ],
  "log": [
+  {
+   "date": "2026-09-25",
+   "items": [
+    "NÂNG CẤP TRẠNG THÁI SỔ: cấu hình 89c720ebf701 → a657b4464743 (không mua/bán lại, không sửa lịch sử)",
+    "NÂNG CẤP BVH: đỉnh +4.26% · hiện +1.02% · sàn — · GIỮ"
+   ]
+  },
   {
    "date": "2026-09-24",
    "items": [
@@ -183,12 +235,20 @@
  },
  "dung_lai_2409": true,
  "light": "VANG",
- "prod_config_hash": "89c720ebf701",
+ "prod_config_hash": "a657b4464743",
  "checks": {
   "nav_identity": true,
   "pnl_reconcile_gap_vnd": 0,
   "cash_nonneg": true,
   "max_pos_ok": true,
+  "max_total_ok": true,
+  "sector_cap_ok": true,
+  "pyr_sector_over": [],
+  "now": {
+   "max_pos_pct": 25.53,
+   "max_sector_pct": 25.53,
+   "total_pct": 25.53
+  },
   "pnl_reconcile_ok": true,
   "ok": true
  },
@@ -200,5 +260,14 @@
   "best": -1.73,
   "worst": -1.87,
   "since": "2026-09-14"
- }
+ },
+ "migrations": [
+  {
+   "at": "2026-09-26T23:41:49",
+   "session": "2026-09-25",
+   "from_hash": "89c720ebf701",
+   "to_hash": "a657b4464743",
+   "n_open": 1
+  }
+ ]
 }
