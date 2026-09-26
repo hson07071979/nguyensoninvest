@@ -203,7 +203,7 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None):
                 if tien and nav:
                     size += f" ≈ *{tien/1e6:,.0f} triệu*"
                 dong.append(f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · vol {h['volr']}× · điểm {h['score']:.0f}  {size}")
-            dong += ['', "Tối ~18–19h có Điều kiện 9: đạt → giữ; không đạt → bán ATC T+2 (hàng về chiều T+2)."]
+            dong += ['', f"Tối ~18–19h có Điều kiện 9: đạt → giữ; không đạt → bán ATC T+{int(((T or {}).get('cfg') or {}).get('sell_from', 2) or 2)} (phiên đầu tiên bán được)."]
             if _post('\n'.join(dong)):
                 da_gui += ['D:' + h['sym'] for h in do]
     # (2) Sau phien: DK9 truot -> ban lenh do ATC T+2
@@ -211,7 +211,7 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None):
         tr = [h for h in hits if h.get('truot9') and 'X:' + h['sym'] not in cu]
         if tr:
             dong = [f"\u26AA *KHÔNG ĐẠT ĐIỀU KIỆN 9* — phiên {ses}", '']
-            dong += [f"*{h['sym']}* dòng tiền {h['ordimb']}× (< {h['ordimb_min']}) → *bán ATC T+2* nếu đã mua dò" for h in tr]
+            dong += [f"*{h['sym']}* dòng tiền {h['ordimb']}× (< {h['ordimb_min']}) → *bán ATC T+{int(((T or {}).get('cfg') or {}).get('sell_from', 2) or 2)}* nếu đã mua dò" for h in tr]
             if _post('\n'.join(dong)):
                 da_gui += ['X:' + h['sym'] for h in tr]
 
