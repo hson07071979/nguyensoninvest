@@ -171,11 +171,11 @@ class MomentumExit(unittest.TestCase):
 
     # ---- mua do (PROD 25/09/2026): mua ATC, toi xac nhan DK9, truot thi ban ATC T+2 ----
     def test_probe_failing_cond9_sold_at_t2_close(self):
-        P = self.run_path([10000, 10300, 10500, 10600, 10700], oi=1.2, stage1=1.0, probe_exit='close')
+        P = self.run_path([10000, 10300, 10500, 10600, 10700], oi=1.2, stage1=1.0, probe_exit='close', sell_from=3, hs_from=3)
         self.assertEqual(P['open'], [])
         c = P['closed'][0]
         self.assertTrue(c['reason'].startswith('Cond9'), c)
-        self.assertEqual(c['exit'], '2026-09-23')                  # T+2 (hang ve chieu T+2), khong som hon
+        self.assertEqual(c['exit'], '2026-09-24')                  # T+3 (sell_from=3), khong som hon
 
     def test_probe_passing_cond9_is_kept(self):
         P = self.run_path([10000, 10300, 10500, 10600, 10700], oi=1.5, stage1=1.0, probe_exit='close')

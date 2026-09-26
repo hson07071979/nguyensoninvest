@@ -65,7 +65,8 @@ def cfg(T):
     if C.get('mo_by') and not C.get('mo_need'): bad.append('mo_by khong co mo_need')
     if (C.get('entry_mode') or 'close') != 'close': bad.append('entry_mode')
     if C.get('entry_next_open'): bad.append('entry_next_open')
-    if int(C.get('hs_from', 2) or 2) != 2: bad.append('hs_from')
+    # Phien ban duoc dau tien (26/09/2026: T+3 theo tai khoan anh Son). hard stop cung tu phien do.
+    if int(C.get('hs_from', 2) or 2) != int(C.get('sell_from', 2) or 2): bad.append('hs_from != sell_from')
     if float(C.get('fill_ratio', 1.0) or 1.0) != 1.0: bad.append('fill_ratio')
     if float(C.get('slip') or 0) > 0: bad.append('slip')
     if C.get('use_market_gate') is False: bad.append('use_market_gate=False')
@@ -316,8 +317,8 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
         # quy doi gia von THO sang thang gia DIEU CHINH hien tai
         k_adj = adj[i0] / raw[i0] if raw[i0] else 1.0
         epx_adj = p['cost_px'] * k_adj           # = engine2 epx (gom phi mua)
-        if p.get('void') and (len(ngays) - 1 - i0) < 2:
-            # T+2: co phieu chua ve, chua ban duoc — huy o phien ban duoc dau tien
+        if p.get('void') and (len(ngays) - 1 - i0) < int(C.get('sell_from', 2) or 2):
+            # chua toi phien ban duoc dau tien — huy o phien ban duoc dau tien
             p.update(held=len(ngays) - 1 - i0, last=round(raw[-1] / 1000, 2),
                      last_val=round(adj[-1] / k_adj, 2), k_adj=round(k_adj, 6), last_day=ngays[-1])
             con_lai.append(p)
@@ -351,11 +352,11 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
                      last_val=round(px / k_adj, 2), k_adj=round(k_adj, 6),
                      pnl=round((px * (1 - C['fee_sell']) / epx_adj - 1) * 100, 2),
                      last_done=ngays[i])
-            if held < 2:                       # T+2: chua ve hang, chua ban duoc
+            if held < int(C.get('sell_from', 2) or 2):    # chua toi phien ban duoc dau tien (T+3 tu 26/09)
                 continue
             r = None; phan = 1.0
             if p.get('probe_fail'):
-                # = engine2 stage 3: lenh do truot DK9 ban o dong cua T+2 (T+2,5), truoc moi luat khac
+                # = engine2 stage 3: lenh do truot DK9 ban o dong cua phien ban duoc dau tien, truoc moi luat khac
                 r = 'Cond9 không xác nhận — bán lệnh thăm dò'
             elif C['use_hard_stop'] and gain <= C['hard_stop']:        r = 'Hard stop −10%'
             # Momentum sau breakout (PROD 25/09/2026) — CUNG thu tu uu tien voi engine2
@@ -445,7 +446,7 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
             last=round(px / 1000, 2), last_day=ses, pnl=0.0))
         if h.get('_probe_fail'):
             nhat_ky.append(f"MUA DÒ {h['sym']} lúc ATC — tối ĐK9 = {h.get('ordimb')} < {C.get('ordimb_min', 1.4)}: "
-                           "không xác nhận, bán ATC T+2 khi hàng về")
+                           f"không xác nhận, bán ATC T+{int(C.get('sell_from', 2) or 2)}")
         nhat_ky.append(f"MUA {h['sym']} {px/1000:.2f} × {sh:,} cp ({chi/nav*100:.1f}% NAV · "
                        f"lý thuyết {A['theoretical']/nav*100:.1f}% · đèn {TEN_DEN.get(light, light)} · "
                        f"OrdImb {h.get('ordimb')})")
