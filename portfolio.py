@@ -34,6 +34,7 @@ import requests
 
 from live_scan import BASE, H, gio_vn
 import allocator as AL
+import exit_rules as ER   # luat thoat dung chung voi engine2 / live_scan / trang web (26/09/2026)
 
 FILE = 'portfolio.json'
 BOOK_ID = 'LIVE_PAPER'
@@ -43,7 +44,7 @@ TEN_DEN = {'XANH': 'Xanh', 'VANG': 'Vàng', 'CAM': 'Cam', 'DO': 'Đỏ'}
 # Mac dinh = PROD tai 23/09/2026 (25/09: them momentum mo_by/mo_need, doc tu cfg). Gia tri THAT doc tu thresholds.json['cfg']
 # (xuat tu produce2.PROD) — xem cfg() ben duoi.
 DEF = dict(fee_buy=0.0015, fee_sell=0.0025, hard_stop=-0.10, stop=-0.07,
-           be_trigger=0.08, be_level=0.01, use_be=True, t_valve=4, big_win=0.19,
+           be_trigger=0.08, be_level=0.01, use_be=False, profit_lock=None, t_valve=4, big_win=0.19,
            conf=2, trail_fast=10, trail_ma=30, use_orange_cut=True,
            orange_cut_only_if_worse=True, use_pyramid=True, use_hard_stop=True)
 
@@ -68,6 +69,11 @@ def cfg(T):
     # Phien ban duoc dau tien (26/09/2026: T+3 theo tai khoan anh Son). hard stop cung tu phien do.
     if int(C.get('hs_from', 2) or 2) != int(C.get('sell_from', 2) or 2): bad.append('hs_from != sell_from')
     if float(C.get('fill_ratio', 1.0) or 1.0) != 1.0: bad.append('fill_ratio')
+    # S1 khoa lai (26/09/2026): so ghi tien chi ho tro dang [[dinh, san], ...] cua exit_rules
+    try:
+        ER.tiers(C)
+    except Exception:
+        bad.append('profit_lock')
     if float(C.get('slip') or 0) > 0: bad.append('slip')
     if C.get('use_market_gate') is False: bad.append('use_market_gate=False')
     if bad:
@@ -155,6 +161,7 @@ def dong_vi_the(P, p, ly_do, ngay, px_adj, px_raw, k_adj, C, phan=1.0):
         pnl_pct=round((thu / von - 1) * 100, 2),
         pnl_vnd=round(thu - von),
         reason=ly_do, peak=round(p.get('peak', 0) * 100, 1),
+        profit_floor=(None if p.get('_floor') is None else round(p['_floor'] * 100, 2)),
         light=p.get('light', ''), phan=round(phan, 3)))
     p['sh'] -= sh
     if phan < 1:
@@ -352,29 +359,14 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
                      last_val=round(px / k_adj, 2), k_adj=round(k_adj, 6),
                      pnl=round((px * (1 - C['fee_sell']) / epx_adj - 1) * 100, 2),
                      last_done=ngays[i])
-            if held < int(C.get('sell_from', 2) or 2):    # chua toi phien ban duoc dau tien (T+3 tu 26/09)
-                continue
-            r = None; phan = 1.0
-            if p.get('probe_fail'):
-                # = engine2 stage 3: lenh do truot DK9 ban o dong cua phien ban duoc dau tien, truoc moi luat khac
-                r = 'Cond9 không xác nhận — bán lệnh thăm dò'
-            elif C['use_hard_stop'] and gain <= C['hard_stop']:        r = 'Hard stop −10%'
-            # Momentum sau breakout (PROD 25/09/2026) — CUNG thu tu uu tien voi engine2
-            elif (C.get('mo_stop') is not None and held <= C.get('mo_stop_until', 99)
-                  and gain <= C['mo_stop']):                            r = 'Momentum: cắt sớm %.1f%%' % (C['mo_stop'] * 100)
-            elif (C.get('mo_by') and C['mo_by'] <= held <= C.get('mo_window', 99)
-                  and peak < C.get('mo_need', 0.0)):
-                r = 'Momentum: không chạy (T+%d chưa lên %.0f%%)' % (C['mo_by'], C['mo_need'] * 100)
-            elif held >= 3 and gain <= C['stop']:                       r = 'Cắt lỗ −7%'
-            elif C['use_be'] and peak >= C['be_trigger'] and gain <= C['be_level']:
-                r = 'Về bờ (đã lãi %d%%)' % int(C['be_trigger'] * 100)
-            elif held >= C['t_valve'] and gain <= C.get('valve_min', 0.0): r = f"Van thời gian T+{C['t_valve']}"
-            elif peak >= C['big_win'] and b10 >= C['conf']:             r = f"Trailing MA{C['trail_fast']} (lãi lớn)"
-            elif b20 >= C['conf']:                                      r = f"Trailing MA{C['trail_ma']}"
-            elif (C['use_orange_cut'] and ngays[i] == ses and light == 'CAM' and not p.get('part')
-                  and (not C['orange_cut_only_if_worse'] or p.get('light') in ('XANH', 'VANG'))):
-                r, phan = 'Đèn Cam — hạ 1/3', 1 / 3
+            # MOT DINH NGHIA DUY NHAT: exit_rules.decide (= engine2, cung thu tu uu tien). Truoc
+            # T+sell_from khong ban gi ca (tra ve rule=None, pending = luat dang cham).
+            dq = ER.decide(C, gain, peak, held, probe_fail=bool(p.get('probe_fail')), b10=b10, b20=b20,
+                           light_today=(light if ngays[i] == ses else None), light_entry=p.get('light'),
+                           part=bool(p.get('part')))
+            r, phan = dq['rule'], dq['phan']
             if r:
+                p['_floor'] = dq['floor']
                 het = dong_vi_the(P, p, r, ngays[i], px, raw[i], k_adj, C, phan)
                 nhat_ky.append(f"BÁN {p['sym']} {raw[i]/1000:.2f} (lãi/lỗ sau phí {P['closed'][0]['pnl_pct']:+.2f}%) — {r}")
                 if het:
@@ -383,6 +375,17 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
         if not da_dong and p.get('sh', 0) > 0:
             p['_hi10'] = max(ahi[max(0, len(ahi) - 10):]) if ahi else None
             p['_gain'] = adj[-1] / epx_adj - 1
+            # TRANG THAI CUA RA sau phien (S1): dinh lai luu BEN VUNG trong `peak` (mang sang
+            # lan chay sau qua last_done), san dang bat, ban duoc chua, luat dang cham.
+            _h = len(ngays) - 1 - i0; _sf = int(C.get('sell_from', 2) or 2)
+            p.update(ER.status(C, p['_gain'], float(p.get('peak') or 0.0), _h,
+                               probe_fail=bool(p.get('probe_fail')), b10=int(p.get('b10') or 0),
+                               b20=int(p.get('b20') or 0), light_today=(light if ngays[-1] == ses else None),
+                               light_entry=p.get('light'), part=bool(p.get('part'))))
+            p['earliest_sell'] = ngays[i0 + _sf] if i0 + _sf < len(ngays) else f"T+{_sf}"
+            p['cost_basis'] = 'cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1'
+            # 30 gia dong cua dieu chinh gan nhat: de lop quet trong phien tinh MA10/MA30 voi gia hom nay
+            p['tail_adj'] = [round(x, 2) for x in adj[-30:]]
             con_lai.append(p)
     P['open'] = con_lai
 

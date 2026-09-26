@@ -73,7 +73,7 @@ class PortfolioGate(unittest.TestCase):
     def setUp(self):
         self.cwd = os.getcwd()
         self.tmp = tempfile.mkdtemp()
-        for f in ('live_scan.py', 'portfolio.py', 'signal_spec.py', 'allocator.py'):
+        for f in ('live_scan.py', 'portfolio.py', 'signal_spec.py', 'allocator.py', 'exit_rules.py'):
             shutil.copy(os.path.join(ROOT, f), self.tmp)
         os.chdir(self.tmp)
         sys.path.insert(0, self.tmp)
@@ -132,7 +132,7 @@ class MomentumExit(unittest.TestCase):
 
     def setUp(self):
         self.cwd = os.getcwd(); self.tmp = tempfile.mkdtemp()
-        for f in ('live_scan.py', 'portfolio.py', 'signal_spec.py', 'allocator.py'):
+        for f in ('live_scan.py', 'portfolio.py', 'signal_spec.py', 'allocator.py', 'exit_rules.py'):
             shutil.copy(os.path.join(ROOT, f), self.tmp)
         os.chdir(self.tmp); sys.path.insert(0, self.tmp)
         for m in ('portfolio', 'live_scan'):
