@@ -275,7 +275,7 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None):
         tr = [h for h in hits if h.get('truot9') and 'X:' + h['sym'] not in cu]
         if tr:
             dong = [f"\u26AA *KHÔNG ĐẠT ĐIỀU KIỆN 9* — phiên {ses}", '']
-            dong += [f"*{h['sym']}* dòng tiền {h['ordimb']}× (< {h['ordimb_min']}) → *bán ATC T+{int(((T or {}).get('cfg') or {}).get('sell_from', 2) or 2)}* nếu đã mua dò" for h in tr]
+            dong += [f"*{h['sym']}* dòng tiền {h['ordimb']}× (< {h['ordimb_min']}) → *bán TOÀN BỘ (100%) lệnh dò lúc ATC T+{int(((T or {}).get('cfg') or {}).get('sell_from', 2) or 2)}* nếu đã mua dò" for h in tr]
             if _post('\n'.join(dong)):
                 da_gui += ['X:' + h['sym'] for h in tr]
 
@@ -359,7 +359,14 @@ def danh_gia_thoat(P, rows, CF, ses, now):
             b20 = b20 + 1 if (m30 is not None and px_adj < m30) else 0
         st = ER.status(CF, gain, peak, held, probe_fail=bool(p.get('probe_fail')), b10=b10, b20=b20,
                        light_today=None, light_entry=p.get('light'), part=bool(p.get('part')))
+        # TY TRONG BAN (27/09/2026): bao nhieu co phieu, bao nhieu % vi the, bao nhieu % NAV so
+        _ph = float(st.get('exit_phan') or 1.0)
+        _sh = int(p['sh'] * _ph // 100 * 100) if _ph < 1 else int(p['sh'])
+        _nav = float(P.get('nav') or 0)
         out.append(dict(sym=p['sym'], entry=p.get('entry'), price=round(raw / 1000, 2), held=held,
+                        sh=int(p['sh']), sell_sh=_sh, sell_pct_pos=round(100 * _sh / p['sh'], 1) if p['sh'] else None,
+                        sell_pct_nav=round(100 * _sh * raw / _nav, 2) if _nav > 0 else None,
+                        cond9=p.get('cond9'), ordimb=p.get('ordimb'),
                         asof=now.isoformat(timespec='seconds'), provisional=now.hour + now.minute / 60 < 14.75, **st))
     return out
 
@@ -386,8 +393,12 @@ def gui_telegram_thoat(ex, P, ses, cu, now, T):
         cho = [x for x in ex if x.get('pending_exit') and 'W:' + x['sym'] not in cu]
         if ban or cho:
             dong = [f"🔻 LUẬT THOÁT — sổ ghi tiến, phiên {ses} (giá {now:%H:%M}, tạm tính giá đóng cửa)", '']
-            dong += [f"{x['sym']}: {x['action']}" for x in ban]
-            dong += [f"{x['sym']}: {x['action']}" for x in cho]
+            def _w(x):
+                if x.get('sell_sh') is None: return ''
+                return (f"\n   → bán {x['sell_pct_pos']:.0f}% vị thế = {x['sell_sh']:,} cp"
+                        + (f" ≈ {x['sell_pct_nav']:.1f}% NAV sổ" if x.get('sell_pct_nav') is not None else ''))
+            dong += [f"{x['sym']}: {x['action']}{_w(x)}" for x in ban]
+            dong += [f"{x['sym']}: {x['action']}{_w(x)}" for x in cho]
             dong += ['', 'Luật tính bằng giá ĐÓNG CỬA, bán ATC — không phải lệnh dừng trong phiên. Sổ chốt theo giá đóng cửa thật.']
             if _post('\n'.join(dong)):
                 da += ['T:' + x['sym'] for x in ban] + ['W:' + x['sym'] for x in cho]

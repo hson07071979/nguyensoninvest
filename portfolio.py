@@ -147,6 +147,10 @@ def dong_vi_the(P, p, ly_do, ngay, px_adj, px_raw, k_adj, C, phan=1.0):
     sh = int(p['sh'] * phan // 100 * 100) if phan < 1 else p['sh']
     if sh <= 0:
         return False
+    # TY TRONG BAN (27/09/2026): phan cua vi the + % NAV cua so ngay truoc khi ban
+    _g = lambda q: q.get('last_val') or (q.get('last') or 0) * 1000 or q['entry_px']
+    _nav = P['cash'] + sum(q['sh'] * _g(q) for q in P['open'] if q.get('sh', 0) > 0)
+    _gia_tri = sh * (px_adj / k_adj)
     thu = sh * (px_adj / k_adj) * (1 - C['fee_sell'])
     cp = cost_px(p, C)
     P['cash'] += thu
@@ -162,7 +166,10 @@ def dong_vi_the(P, p, ly_do, ngay, px_adj, px_raw, k_adj, C, phan=1.0):
         pnl_vnd=round(thu - von),
         reason=ly_do, peak=round(p.get('peak', 0) * 100, 1),
         profit_floor=(None if p.get('_floor') is None else round(p['_floor'] * 100, 2)),
-        light=p.get('light', ''), phan=round(phan, 3)))
+        light=p.get('light', ''), phan=round(phan, 3),
+        sh_before=p['sh'], pct_pos=round(100 * sh / p['sh'], 1) if p['sh'] else None,
+        pct_nav=round(100 * _gia_tri / _nav, 2) if _nav > 0 else None,
+        cond9=p.get('cond9')))
     p['sh'] -= sh
     if phan < 1:
         p['part'] = True
@@ -319,6 +326,10 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
     for p in mo:
         p.setdefault('book_id', BOOK_ID); p.setdefault('position_source', 'live_scan')
         p.setdefault('nav_source', 'portfolio.json')
+        if 'cond9' not in p:     # vi the mo truoc 27/09: suy tu OrdImb da ghi luc mua
+            p['cond9'] = ('CHUA_CO' if p.get('ordimb') is None else
+                          ('TRUOT' if (p.get('probe_fail') or p['ordimb'] < C.get('ordimb_min', 1.4)) else 'DAT'))
+            p.setdefault('ordimb_min', C.get('ordimb_min', 1.4))
         if 'cost_px' not in p:
             p['cost_px'] = cost_px(p, C)
         b = hist.get(p['sym']) or []
@@ -378,7 +389,9 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
             if r:
                 p['_floor'] = dq['floor']
                 het = dong_vi_the(P, p, r, ngays[i], px, raw[i], k_adj, C, phan)
-                nhat_ky.append(f"BÁN {p['sym']} {raw[i]/1000:.2f} (lãi/lỗ sau phí {P['closed'][0]['pnl_pct']:+.2f}%) — {r}")
+                _c = P['closed'][0]
+                nhat_ky.append(f"BÁN {p['sym']} {raw[i]/1000:.2f} — {_c['pct_pos']:.0f}% vị thế = {_c['sh']:,} cp ≈ "
+                               f"{_c['pct_nav']:.1f}% NAV (lãi/lỗ sau phí {_c['pnl_pct']:+.2f}%) — {r}")
                 if het:
                     da_dong = True
                     break
@@ -454,6 +467,9 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
             peak=0.0, b10=0, b20=0, part=False, pyr=False, held=0,
             light=light, score=h.get('score'), ordimb=h.get('ordimb'),
             probe_fail=h.get('_probe_fail', False),
+            # DK9 tu so toi ngay mua: DAT / TRUOT / CHUA_CO (27/09/2026 — cot DK9 o Danh muc)
+            cond9=('CHUA_CO' if h.get('ordimb') is None else ('DAT' if h['ordimb'] >= C.get('ordimb_min', 1.4) else 'TRUOT')),
+            ordimb_min=C.get('ordimb_min', 1.4),
             prod_config_hash=T.get('prod_config_hash'),
             size_theo=round(A['theoretical'] / nav * 100, 2), size_reasons=A['reasons'],
             last=round(px / 1000, 2), last_day=ses, pnl=0.0))

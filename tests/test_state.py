@@ -102,3 +102,19 @@ class DoiSoat(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class SellWeight(S1T.Book):
+    """27/09/2026: moi lenh BAN ghi bao nhieu % vi the / so co / % NAV; vi the mang nhan DK9."""
+    def test_sell_log_has_weight_and_cond9(self):
+        P = self.run_to(DAYS[3], [ENTRY, px(0.09), px(0.06), px(0.018)])
+        c = P['closed'][0]
+        self.assertEqual(c['pct_pos'], 100.0)
+        self.assertGreater(c['pct_nav'], 0)
+        self.assertEqual(c['cond9'], 'DAT')
+        line = [i for d in P['log'] for i in d['items'] if i.startswith('BÁN')][0]
+        self.assertIn('100% vị thế', line); self.assertIn('% NAV', line)
+
+    def test_open_position_has_cond9(self):
+        P = self.run_to(DAYS[1], [ENTRY, px(0.02)])
+        self.assertEqual(P['open'][0]['cond9'], 'DAT')
