@@ -1,5 +1,5 @@
 // ĐỒNG HỒ ẢO — Nguyễn Sơn Invest (28/09/2026)
-// Cloudflare Worker, Cron Trigger "*/5 * * * 1-5" (mỗi 5 phút, T2–T6). Cron của GitHub nổ muộn
+// Cloudflare Worker, Cron Trigger "*/5 1-14 * * MON-FRI" + "0 14 * * *" (21:00 VN mỗi tối) (mỗi 5 phút, T2–T6). Cron của GitHub nổ muộn
 // hoặc bỏ nhịp; Cloudflare nổ đúng phút. Mỗi lần nổ, Worker xem giờ VN và gọi đúng workflow
 // qua GitHub API (workflow_dispatch).
 //
@@ -22,6 +22,7 @@ function lich(h, m) {
     out.push([PUB, 'nhip.yml']);
   if (t === 14 * 60 + 15 || t === 14 * 60 + 30) out.push([PUB, 'gac.yml']);          // báo CHƯA QUÉT
   if (t === 16 * 60 + 30 || t === 19 * 60 + 30 || t === 21 * 60 + 30) out.push([PRIV, 'daily.yml']); // bản dựng tối
+  if (t === 21 * 60) out.push([PRIV, 'daily.yml', 'moi-toi']);   // 21:00 MỖI TỐI, cả T7/CN (anh Sơn 28/09)
   return out;
 }
 
@@ -47,9 +48,11 @@ async function goi(env, repo, wf) {
 export default {
   async scheduled(event, env, ctx) {
     const { h, m, thu } = gioVN(new Date(event.scheduledTime));
-    if (thu === 0 || thu === 6) return;
+    // ngày thường, cron '*/5' đã phủ 21:00 -> cron '0 14 * * *' chỉ làm việc cho T7/CN (không gọi trùng)
+    if (event.cron === '0 14 * * *' && thu >= 1 && thu <= 5) return;
     const m5 = m - (m % 5);                                     // cron có thể trễ vài giây
-    const viec = lich(h, m5);
+    let viec = lich(h, m5);
+    if (thu === 0 || thu === 6) viec = viec.filter(x => x[2] === 'moi-toi');   // cuối tuần: chỉ bản dựng 21:00
     if (!viec.length) return;
     const kq = await Promise.all(viec.map(([r, w]) => goi(env, r, w)));
     console.log(`${h}:${String(m5).padStart(2, '0')} VN →`, kq.join(' | '));
@@ -59,10 +62,10 @@ export default {
     const dong = [];
     for (let t = 9 * 60; t <= 21 * 60 + 30; t += 5) {
       const v = lich(Math.floor(t / 60), t % 60);
-      if (v.length) dong.push(`${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}  ${v.map(x => x.join('/')).join(', ')}`);
+      if (v.length) dong.push(`${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}  ${v.map(x => x.slice(0, 2).join('/') + (x[2] ? ' (mỗi tối)' : '')).join(', ')}`);
     }
     const coToken = env.GH_TOKEN ? 'có GH_TOKEN ✓' : 'CHƯA có GH_TOKEN ✗';
-    return new Response(`Đồng hồ ảo Nguyễn Sơn Invest — ${coToken}\nLịch (giờ VN, T2–T6):\n${dong.join('\n')}\n\nKiểm tra: Cloudflare → Worker → Settings → Trigger Events → nút thử cron; log ở tab Logs.\n`,
+    return new Response(`Đồng hồ ảo Nguyễn Sơn Invest — ${coToken}\nLịch (giờ VN, T2–T6; riêng 21:00 chạy cả T7/CN):\n${dong.join('\n')}\n\nKiểm tra: Cloudflare → Worker → Settings → Trigger Events → nút thử cron; log ở tab Logs.\n`,
       { headers: { 'content-type': 'text/plain; charset=utf-8' } });
   },
 };
