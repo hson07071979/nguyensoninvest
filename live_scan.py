@@ -37,9 +37,20 @@ BASE = 'https://www.fireant.vn/api/Data'
 # KHONG phai lenh. Nguyen tac vao lenh khong doi mot chu.
 DE_MAT_PCT = 2.5
 
-VOL_CURVE = [(9.25, 0.02), (9.50, 0.10), (10.00, 0.24), (10.50, 0.34), (11.00, 0.44),
-             (11.50, 0.55), (13.00, 0.55), (13.50, 0.67), (14.00, 0.79), (14.25, 0.86),
-             (14.50, 0.92), (14.75, 1.00)]
+# Hieu chinh 28/09/2026 bang 25 lan quet that x 88 ma (trung vi KL luy ke / KL ca ngay):
+# 09:40 0,13 · 10:01 0,22 · 11:24 0,48 · 11:45 0,51 · 13:29 0,65 · 13:50 0,76 · 14:11 0,84 ·
+# 14:23 0,89 · 14:29 0,92 · 14:35-14:41 0,95 (lenh ATC chua khop) · 15:08 1,00.
+VOL_CURVE = [(9.25, 0.02), (9.50, 0.10), (10.00, 0.22), (10.50, 0.31), (11.00, 0.40),
+             (11.50, 0.51), (13.00, 0.53), (13.50, 0.65), (14.00, 0.80), (14.25, 0.87),
+             (14.50, 0.92), (14.70, 0.95), (14.75, 1.00)]
+
+# ---- MUA DO THEO KHOI LUONG DU PHONG (anh Son duyet 28/09/2026) ----
+# Dieu kien KL >= 2,0x cua bo may cham bang KL CA NGAY, nhung lenh phai dat truoc/trong ATC.
+# Mo phong toan ky voi ty le KL trong phien do that 28/09: chi xet KL hien tai -> bat 65-73%
+# tin hieu, backtest trung vi +320-348% (so +957%). Luat duoi: bat 93-95%, +815-932%, bao nham
+# ~6-8 lan/nam (T+3 TB ~0%, toi xac nhan truot thi ban T+3 nhu lenh do).
+MUA_DO_TU, MUA_DO_DEN = 14.0, 14.75          # 14:00-14:45 gio VN (anh Son: bao tu 14h)
+KL_NOW_K, KL_PROJ_K = 0.75, 0.90             # x vol_floor: KL hien tai >= 1,5x va du phong >= 1,8x
 
 
 def gio_vn():
@@ -226,12 +237,13 @@ def co_lenh(h, T, den):
         return None, None, [], None, None
 
 
-def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None):
+def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_nhan=(), nhac=()):
     # Chuong ve dien thoai chi keu TRONG PHIEN, tu 09h00 den 15h00 gio VN.
     # 09h00-15h00: chuong trong phien. 15h00-21h30: XAC NHAN SAU PHIEN — Dieu kien 9 chi co
     # so sau khi dong cua, nen MUA that su (du ca 9 dieu kien) thuong chi xuat hien luc nay.
     now_bao = gio_vn()
     t_bao = now_bao.hour + now_bao.minute / 60
+    t_bao_s = now_bao.strftime("%H:%M")
     if now_bao.weekday() >= 5 or not (9.0 <= t_bao <= 21.5):
         print('ngoai gio bao chuong (09h00-21h30 T2-T6) - bo qua')
         return
@@ -256,20 +268,49 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None):
             print('telegram loi:', type(e).__name__, e)
             return False
 
-    # (1) MUA DO trong cua so ATC 14h00-14h50: du DK1-8, DK9 chua co so
-    if 14.0 <= t_bao <= 14.84:
+    sf = int(((T or {}).get('cfg') or {}).get('sell_from', 3) or 3)
+    dtt = (den_tt or {}).get('light')
+    # (1) MUA DO 14h00-14h45: du DK1-8 (KL/GTGD co the theo DU PHONG), DK9 chua co so
+    if MUA_DO_TU <= t_bao <= MUA_DO_DEN:
         do = [h for h in hits if h.get('mua_do') and 'D:' + h['sym'] not in cu]
         if do:
-            dong = [f"\U0001F7E0 *MUA DÒ lúc ATC* — {len(do)} mã đủ ĐK1–8, phiên {ses}", '']
+            dong = [f"\U0001F7E0 *MUA DÒ* — {len(do)} mã, phiên {ses} · {t_bao_s}", '']
             for h in do:
                 theo, thuc, ly, tien, nav = co_lenh(h, T or {}, den)
                 size = (f"cỡ *{thuc:.1f}% NAV*" if thuc is not None else "")
                 if tien and nav:
                     size += f" ≈ *{tien/1e6:,.0f} triệu*"
-                dong.append(f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · vol {h['volr']}× · điểm {h['score']:.0f}  {size}")
-            dong += ['', f"Tối ~18–19h có Điều kiện 9: đạt → giữ; không đạt → bán ATC T+{int(((T or {}).get('cfg') or {}).get('sell_from', 2) or 2)} (phiên đầu tiên bán được)."]
+                if dtt and dtt != den:
+                    t2, th2, _, ti2, _ = co_lenh(h, T or {}, dtt)
+                    if th2 is not None and (thuc is None or abs(th2 - thuc) > 0.05):
+                        size += (f"\n   ⚠ đèn tạm tính hôm nay *{dtt}* (hôm qua {den}) → cỡ theo đèn mới *{th2:.1f}% NAV*"
+                                 + (f" ≈ {ti2/1e6:,.0f} triệu" if ti2 else '') + " — bộ máy dùng đèn lúc đóng cửa")
+                kl = (f"vol {h['volr']}× → dự phóng *{h.get('volr_proj_curve')}×* (KL mới có {frac*100:.0f}% phiên)"
+                      if h.get('mua_do_du_phong') else f"vol {h['volr']}×")
+                dong.append(f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · {kl} · điểm {h['score']:.0f}\n   {size}")
+            dong += ['', "Đặt lệnh NGAY (LO), đừng chờ ATC nếu giá đang sát/ở trần — ATC trần rất khó khớp.",
+                     f"Tối ~18–19h xác nhận ĐK1–8 bằng số đóng cửa + Điều kiện 9: đạt → giữ; không đạt → bán 100% ATC T+{sf}."]
             if _post('\n'.join(dong)):
                 da_gui += ['D:' + h['sym'] for h in do]
+    # (1b) NHAC BAN lenh mua do truot DK1-8 (ma khong co trong so ghi tien -> khong co chuong thoat)
+    today_ = (gio_vn().date().isoformat())
+    if 14.0 <= t_bao <= 14.75:
+        can = [x for x in (nhac or []) if x.get('ban') == today_ and f"NB:{x['sym']}:{x['ban']}" not in cu]
+        if can:
+            dong = [f"\U0001F53B *BÁN ATC HÔM NAY* — lệnh mua dò không được xác nhận", '']
+            dong += [f"*{x['sym']}* (mua {x['mua'][8:10]}/{x['mua'][5:7]}) → bán *100%* ATC · {x['ly_do']}" for x in can]
+            if _post('\n'.join(dong)):
+                da_gui += [f"NB:{x['sym']}:{x['ban']}" for x in can]
+    # (1c) Toi: ket qua xac nhan DK1-8 cho lenh mua do
+    if sau_phien:
+        tr = [x for x in (xac_nhan or []) if x['ket_qua'] == 'TRUOT_DK18' and 'X8:' + x['sym'] not in cu]
+        if tr:
+            L_ = (T or {}).get('cfg') or {}
+            dong = [f"\u26AA *MUA DÒ KHÔNG ĐỦ ĐK1–8 LÚC ĐÓNG CỬA* — phiên {ses}", '']
+            lb_ = SP.labels(L_) if L_ else {}
+            dong += [f"*{x['sym']}* thiếu {', '.join(lb_.get(k, k) for k in x['thieu'])} → *bán TOÀN BỘ (100%) ATC ngày {x['ban'][8:10]}/{x['ban'][5:7]}* (T+{sf}, dự kiến) nếu đã mua. Sẽ nhắc lại lúc 14h hôm đó." for x in tr]
+            if _post('\n'.join(dong)):
+                da_gui += ['X8:' + x['sym'] for x in tr]
     # (2) Sau phien: DK9 truot -> ban lenh do ATC T+2
     if sau_phien:
         tr = [h for h in hits if h.get('truot9') and 'X:' + h['sym'] not in cu]
@@ -320,7 +361,7 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None):
         return da_gui
 
 
-def danh_gia_thoat(P, rows, CF, ses, now):
+def danh_gia_thoat(P, rows, CF, ses, now, light_today=None):
     """LUAT THOAT TRONG PHIEN cho so ghi tien (26/09/2026, TOP110 + S1).
 
     Dung DUNG exit_rules.decide nhu portfolio.py. Gia hien tai = gia DONG CUA TAM TINH
@@ -357,8 +398,9 @@ def danh_gia_thoat(P, rows, CF, ses, now):
             m10, m30 = ma(int(CF.get('trail_fast', 10))), ma(int(CF.get('trail_ma', 30)))
             b10 = b10 + 1 if (m10 is not None and px_adj < m10) else 0
             b20 = b20 + 1 if (m30 is not None and px_adj < m30) else 0
+        # den TAM TINH cua hom nay (regime_live): luat "Den Cam — ha 1/3" nay moi bao duoc trong phien
         st = ER.status(CF, gain, peak, held, probe_fail=bool(p.get('probe_fail')), b10=b10, b20=b20,
-                       light_today=None, light_entry=p.get('light'), part=bool(p.get('part')))
+                       light_today=light_today, light_entry=p.get('light'), part=bool(p.get('part')))
         # TY TRONG BAN (27/09/2026): bao nhieu co phieu, bao nhieu % vi the, bao nhieu % NAV so
         _ph = float(st.get('exit_phan') or 1.0)
         _sh = int(p['sh'] * _ph // 100 * 100) if _ph < 1 else int(p['sh'])
@@ -451,6 +493,71 @@ def quotes_snapshot(syms, chunk=40):
     return out
 
 
+def du_phong_ok(res, CF, volr, tv, frac):
+    """MUA DO THEO KL DU PHONG: moi dieu kien PROD da dat, CHI con thieu ĐK9 (chua co so) va
+    KL / GTGD (chua het phien). KL hien tai >= KL_NOW_K x san VA KL du phong >= KL_PROJ_K x san;
+    GTGD du phong >= san. Tra ve (ok, volr_proj)."""
+    miss = set(res.get('missing') or [])
+    rest = miss - {'ordimb'}
+    if not rest or not rest <= {'vol', 'gtgd'} or (res.get('values') or {}).get('ordimb_available'):
+        return False, None
+    ff = max(float(frac or 0), 0.05)
+    vf = float(CF.get('vol_floor', 2.0))
+    proj = volr / ff
+    ok_v = ('vol' not in rest) or (volr >= KL_NOW_K * vf and proj >= KL_PROJ_K * vf)
+    ok_g = ('gtgd' not in rest) or (tv / ff >= float(CF.get('gtgd_min', 15e9)))
+    return bool(ok_v and ok_g), round(proj, 2)
+
+
+def phien_cong(ses, n):
+    """Ngay cua phien T+n (bo thu 7, CN; ngay le chua tru — ghi 'du kien')."""
+    d = dt.date.fromisoformat(ses)
+    while n > 0:
+        d += dt.timedelta(days=1)
+        if d.weekday() < 5:
+            n -= 1
+    return d.isoformat()
+
+
+def vni_dnse():
+    """VN-Index 1D tu DNSE (CUNG nguon bo may dung buoi toi); trong phien nen hom nay dang chay."""
+    to = int(time.time())
+    r = requests.get('https://api.dnse.com.vn/chart-api/v2/ohlcs/index',
+                     params={'symbol': 'VNINDEX', 'resolution': '1D', 'from': to - 10 * 86400, 'to': to}, timeout=30)
+    j = r.json()
+    return [(dt.datetime.utcfromtimestamp(t).date().isoformat(), float(c), float(v))
+            for t, c, v in zip(j.get('t') or [], j.get('c') or [], j.get('v') or [])]
+
+
+def den_tam_tinh(T, ses, frac):
+    """Den thi truong CUA PHIEN HOM NAY, tinh bang dung luat regime2 (regime_live.step) voi so
+    tam tinh. None neu thieu du lieu — khi do moi thu lui ve den hom truoc nhu cu."""
+    RLS = T.get('regime_live') or {}
+    st = RLS.get('state') or {}
+    if not st or st.get('session') != T.get('asof'):
+        return None
+    import regime_live as RL
+    q = quotes_snapshot(list(RLS.get('g1_syms') or []))
+    q = {k: v for k, v in q.items() if str(v.get('Date', ''))[:10] == ses}
+    eq, n = RL.g1_return(q, RLS.get('g1_syms') or [])
+    bars = {d_: (c_, v_) for d_, c_, v_ in vni_dnse()}
+    if eq is None or ses not in bars:
+        return None
+    c_, v_ = bars[ses]
+    v_proj = v_ / max(float(frac or 0), 0.05)
+    light, _, info = RL.step(RL.state_from_export(st), eq, c_, v_proj)
+    info.update(light=light, n_g1=n, g1_cover=round(n / max(1, len(RLS.get('g1_syms') or [])), 3),
+                vni_vol=v_, vni_vol_proj=round(v_proj), light_prev=T.get('light'))
+    return info
+
+
+def doc_nhac_ban():
+    try:
+        return list(json.load(open('live.json', encoding='utf-8')).get('nhac_ban') or [])
+    except Exception:
+        return []
+
+
 def _hash_ok(T):
     return bool(T.get('prod_config_hash')) and isinstance(T.get('cfg'), dict)
 
@@ -485,7 +592,8 @@ def main():
     if not os.path.exists('thresholds.json'):
         sys.exit('HONG: khong co thresholds.json — repo private chua day sang')
     T = json.load(open('thresholds.json', encoding='utf-8'))
-    CF = dict(T.get('cfg') or {})
+    # null trong cfg = dung mac dinh (giong portfolio.cfg va erG cua trang) — loi 24-28/09: mo_window=None
+    CF = {k: v for k, v in (T.get('cfg') or {}).items() if v is not None}
     # Dieu kien 9 la dieu kien PROD: cfg thieu khoa use_ordimb thi van BAT BUOC (fail safe).
     if CF:
         CF.setdefault('use_ordimb', True)
@@ -633,7 +741,19 @@ def main():
             X, xsec = None, dict(status='ERROR', error=f'{type(e).__name__}: {e}')
         print('cat ngang phien:', {k: v for k, v in xsec.items() if k != 'unknown_syms'})
 
-    hits = []
+    # ---- DEN TAM TINH (regime_live, 28/09/2026) ----
+    den_tt = None
+    if spec_for_session and ses == today:
+        try:
+            den_tt = den_tam_tinh(T, ses, frac)
+            if den_tt:
+                print(f"den tam tinh: {den_tt['light']} (hom truoc {T.get('light')}) · G1 {den_tt['n_g1']} ma "
+                      f"· VNI {den_tt['vni']} · ngay phan phoi {den_tt['dcount']}")
+        except Exception as e:
+            print('den tam tinh loi:', type(e).__name__, e)
+    den_live = (den_tt or {}).get('light')
+
+    hits = []; res_by = {}
     for s, r in fresh.items():
         t = syms[s]
         sp = t.get('spec')
@@ -660,6 +780,13 @@ def main():
                                    ordimb_available=ordimb_of(r) is not None, score=t.get('score')))
             lvl, why = (None, 'SPEC_MISSING')
         dang_cam = bool(t.get('dang_cam'))
+        if spec_ok and sp:
+            res_by[s] = res
+        du_phong, vproj_ = (False, None)
+        if spec_ok and sp and CF.get('stage1') is not None and phien_mo and not dang_cam:
+            du_phong, vproj_ = du_phong_ok(res, CF, float(res['values'].get('volr') or volr), tv, frac)
+            if du_phong and lvl != 'MUA':
+                lvl, why = 'SAP_DU', 'MUA_DO_DU_PHONG'
         if lvl == 'MUA' and dang_cam:
             lvl, why = 'THEO_DOI', 'ALREADY_HELD'
         if lvl is None and pct * 100 >= DE_MAT_PCT and t.get('state') in ('cho', 'fa'):
@@ -690,8 +817,11 @@ def main():
             undetermined_conditions=res.get('undetermined', []),
             prod_ok=bool(res.get('all_ok')),
             # MUA DO (PROD stage1, 25/09/2026): du DK1-8, DK9 chua co so -> mua ATC, toi xac nhan
-            mua_do=bool(CF.get('stage1') is not None and not dang_cam
-                        and set(res.get('missing', [])) == {'ordimb'} and not v.get('ordimb_available')),
+            mua_do=bool((CF.get('stage1') is not None and not dang_cam
+                         and set(res.get('missing', [])) == {'ordimb'} and not v.get('ordimb_available')) or du_phong),
+            # KL/GTGD chua du luc quet nhung DU PHONG cuoi phien du (toi xac nhan bang so dong cua)
+            mua_do_du_phong=bool(du_phong and set(res.get('missing', [])) != {'ordimb'}),
+            volr_proj_curve=vproj_,
             # sau phien: da co so DK9 nhung truot -> lenh do phai ban ATC T+2
             truot9=bool(CF.get('stage1') is not None and not dang_cam
                         and set(res.get('missing', [])) == {'ordimb'} and v.get('ordimb_available')),
@@ -728,13 +858,40 @@ def main():
                n_de_mat=sum(1 for h in hits if h['level'] == 'DE_MAT'),
                n_cho_dong_tien=sum(1 for h in hits if h.get('reason') == 'WAITING_FOR_FLOW_CONFIRMATION'),
                n_mua_do=sum(1 for h in hits if h.get('mua_do')))
-    da_keu = gui_telegram(hits, ses, cu_mua, cu_ses, T.get('light', 'VANG'), frac, T) or []
+    # ---- TOI XAC NHAN LENH MUA DO (28/09/2026) ----
+    # Moi ma da bao MUA DO trong phien ('D:' trong alerted): sau 15h15 cham lai bang so DONG CUA.
+    # Truot ĐK1-8 (vd KL cuoi phien < 2,0x) -> bo may KHONG co lenh nay -> so ghi tien khong co ->
+    # khong co chuong thoat -> phai nhac rieng: ban 100% ATC phien T+sell_from (nhac_ban).
+    t_now = now.hour + now.minute / 60
+    nhac = [x for x in doc_nhac_ban() if (x.get('ban') or '') >= today]
+    xac_nhan = []
+    if ses == today and t_now >= 15.25 and cu_ses == ses:
+        for key in sorted(k for k in cu_mua if k.startswith('D:')):
+            s_ = key[2:]
+            res_ = res_by.get(s_)
+            if not res_:
+                continue
+            m18 = [k for k in (res_.get('missing') or []) if k != 'ordimb']
+            if m18:
+                ngay_ban = phien_cong(ses, int(CF.get('sell_from', 3) or 3))
+                if not any(x.get('sym') == s_ and x.get('mua') == ses for x in nhac):
+                    nhac.append(dict(sym=s_, mua=ses, ban=ngay_ban, ly_do='không đủ ĐK1–8 lúc đóng cửa: ' +
+                                     ', '.join(SP.labels(CF).get(k, k) for k in m18)))
+                xac_nhan.append(dict(sym=s_, ket_qua='TRUOT_DK18', thieu=m18, ban=ngay_ban))
+            else:
+                xac_nhan.append(dict(sym=s_, ket_qua='DAT_DK18'))
+    da_keu = gui_telegram(hits, ses, cu_mua, cu_ses, T.get('light', 'VANG'), frac, T, den_tt=den_tt,
+                          xac_nhan=xac_nhan, nhac=nhac) or []
     try:
-        out['exits'] = danh_gia_thoat(PF, {**rows_pf, **rows}, CF, ses, now)
+        out['exits'] = danh_gia_thoat(PF, {**rows_pf, **rows}, CF, ses, now, light_today=den_live)
         da_keu += gui_telegram_thoat(out['exits'], PF, ses, (cu_mua if cu_ses == ses else set()), now, T) or []
     except Exception as e:
         print('luat thoat trong phien loi:', type(e).__name__, e)
     out['alerted'] = dict(session=ses, syms=sorted((cu_mua if cu_ses == ses else set()) | set(da_keu)))
+    out['nhac_ban'] = nhac
+    out['xac_nhan_mua_do'] = xac_nhan
+    out['den_tam_tinh'] = den_tt
+    out['n_mua_do'] = sum(1 for h in hits if h.get('mua_do'))
     json.dump(out, open('live.json', 'w', encoding='utf-8'), ensure_ascii=False)
     print(f"quét {len(fresh)}/{len(syms)} mã ({cov:.0%}) · phiên {ses} · đã đi {frac*100:.0f}% "
           f"· dòng tiền có {obs['ordimb']}/{len(fresh)} · {out['n_mua']} MUA · "
