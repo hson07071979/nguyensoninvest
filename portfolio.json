@@ -3,10 +3,10 @@
  "book_id": "LIVE_PAPER",
  "nav_source": "portfolio.json",
  "nav0": 1000000000.0,
- "cash": 742443402.5,
- "nav": 997003402,
- "session_done": "2026-09-25",
- "updated": "2026-09-25T21:29:52",
+ "cash": 830542602.5,
+ "nav": 1014542602,
+ "session_done": "2026-09-28",
+ "updated": "2026-09-28T19:43:15",
  "open": [
   {
    "book_id": "LIVE_PAPER",
@@ -18,41 +18,40 @@
    "entry": "2026-09-14",
    "entry_px": 68000.0,
    "cost_px": 68102.0,
-   "sh": 3700,
+   "sh": 2500,
    "cost": 251977400,
-   "peak": 0.04255381633432198,
-   "b10": 1,
+   "peak": 0.08073184341135353,
+   "b10": 0,
    "b20": 0,
-   "part": false,
+   "part": true,
    "pyr": false,
-   "held": 9,
+   "held": 10,
    "light": "VANG",
    "score": 63.8,
    "ordimb": 1.414,
    "prod_config_hash": "89c720ebf701",
    "size_theo": 25.2,
    "size_reasons": [],
-   "last": 68.8,
-   "last_day": "2026-09-25",
-   "pnl": 0.77,
-   "last_adj": 68.8,
-   "last_val": 68800.0,
+   "last": 73.6,
+   "last_day": "2026-09-28",
+   "pnl": 7.8,
+   "last_adj": 73.6,
+   "last_val": 73600.0,
    "k_adj": 1.0,
-   "last_done": "2026-09-25",
-   "peak_gain": 4.26,
-   "gain": 1.02,
-   "profit_lock_active": false,
-   "profit_floor": null,
-   "profit_trigger": null,
+   "last_done": "2026-09-28",
+   "peak_gain": 8.07,
+   "gain": 8.07,
+   "profit_lock_active": true,
+   "profit_floor": 2.0,
+   "profit_trigger": 8.0,
    "sellable": true,
    "exit_reason": null,
    "pending_exit": null,
    "exit_phan": 1.0,
-   "action": "GIỮ",
+   "action": "GIỮ — khoá lãi đang bật: đỉnh +8,1%, sàn bảo vệ +2% (hiện +8,1%)",
    "earliest_sell": "2026-09-17",
    "cost_basis": "cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1",
    "tail_adj": [
-    66800.0,
     65500.0,
     65000.0,
     68500.0,
@@ -81,12 +80,40 @@
     69700.0,
     69300.0,
     69200.0,
-    68800.0
+    68800.0,
+    73600.0
    ],
-   "cfg_hash_state": "a657b4464743"
+   "cfg_hash_state": "a657b4464743",
+   "cond9": "DAT",
+   "ordimb_min": 1.4,
+   "_floor": 0.02
   }
  ],
  "closed": [
+  {
+   "book_id": "LIVE_PAPER",
+   "position_source": "engine_signal",
+   "sym": "BVH",
+   "name": "Tập đoàn Bảo Việt",
+   "sector": "Bảo hiểm",
+   "entry": "2026-09-14",
+   "exit": "2026-09-28",
+   "entry_px": 68.0,
+   "exit_px": 73.6,
+   "sh": 1200,
+   "held": 10,
+   "pnl_pct": 7.8,
+   "pnl_vnd": 6376800,
+   "reason": "Đèn Cam — hạ 1/3",
+   "peak": 8.1,
+   "profit_floor": 2.0,
+   "light": "VANG",
+   "phan": 0.333,
+   "sh_before": 3700,
+   "pct_pos": 32.4,
+   "pct_nav": 8.7,
+   "cond9": "DAT"
+  },
   {
    "book_id": "LIVE_PAPER",
    "position_source": "engine_signal",
@@ -127,6 +154,12 @@
   }
  ],
  "log": [
+  {
+   "date": "2026-09-28",
+   "items": [
+    "BÁN BVH 73.60 — 32% vị thế = 1,200 cp ≈ 8.7% NAV (lãi/lỗ sau phí +7.80%) — Đèn Cam — hạ 1/3"
+   ]
+  },
   {
    "date": "2026-09-25",
    "items": [
@@ -234,7 +267,7 @@
   "session_done": "2026-09-24"
  },
  "dung_lai_2409": true,
- "light": "VANG",
+ "light": "CAM",
  "prod_config_hash": "a657b4464743",
  "checks": {
   "nav_identity": true,
@@ -245,19 +278,19 @@
   "sector_cap_ok": true,
   "pyr_sector_over": [],
   "now": {
-   "max_pos_pct": 25.53,
-   "max_sector_pct": 25.53,
-   "total_pct": 25.53
+   "max_pos_pct": 18.14,
+   "max_sector_pct": 18.14,
+   "total_pct": 18.14
   },
   "pnl_reconcile_ok": true,
   "ok": true
  },
  "stats": {
   "n_open": 1,
-  "n_closed": 2,
-  "winrate": 0.0,
-  "total_return": -0.3,
-  "best": -1.73,
+  "n_closed": 3,
+  "winrate": 33.3,
+  "total_return": 1.45,
+  "best": 7.8,
   "worst": -1.87,
   "since": "2026-09-14"
  },
