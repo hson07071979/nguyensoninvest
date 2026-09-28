@@ -1,0 +1,61 @@
+name: Gác 14h15 — báo CHƯA QUÉT
+
+# Đồng hồ ảo gọi lúc 14:15 và 14:30 giờ VN (ngày thường). Nếu hôm nay thị trường có mở mà
+# live.json chưa có nhịp nào trong 20 phút gần nhất -> Telegram: bộ quét KHÔNG chạy, tự xem
+# bảng giá; đồng thời tự gọi một nhịp quét.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  gac:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kiểm độ tươi của live.json
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT:  ${{ secrets.TELEGRAM_CHAT }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, time, datetime as dt, urllib.request, urllib.parse
+          now = dt.datetime.utcnow() + dt.timedelta(hours=7)
+          today = now.date().isoformat()
+          try:
+              L = json.load(open('live.json', encoding='utf-8'))
+          except Exception:
+              L = {}
+          # thi truong co mo hom nay? (DNSE da co nen ngay hom nay)
+          mo = False
+          try:
+              to = int(time.time())
+              u = f'https://api.dnse.com.vn/chart-api/v2/ohlcs/index?symbol=VNINDEX&resolution=1D&from={to-5*86400}&to={to}'
+              j = json.load(urllib.request.urlopen(u, timeout=30))
+              mo = any(dt.datetime.utcfromtimestamp(t).date().isoformat() == today for t in j.get('t', []))
+          except Exception as e:
+              print('DNSE loi', e); mo = now.weekday() < 5
+          asof = L.get('asof') or ''
+          tuoi = None
+          if asof[:10] == today:
+              t = dt.datetime.fromisoformat(asof[:19])
+              tuoi = (now - t).total_seconds() / 60
+          print('hom nay', today, 'mo', mo, 'live.json asof', asof, 'tuoi (phut)', tuoi)
+          if mo and (tuoi is None or tuoi > 20):
+              msg = (f"⚠️ BỘ QUÉT CHƯA CHẠY — {now:%H:%M} phiên {today}\n"
+                     f"Lần quét gần nhất: {asof or 'không có'}. Chuông MUA DÒ / luật thoát có thể KHÔNG tới.\n"
+                     "Tự xem bảng giá + trang Chuông báo. Đang tự gọi lại một nhịp quét.")
+              tok, chat = os.environ.get('TELEGRAM_TOKEN'), os.environ.get('TELEGRAM_CHAT')
+              if tok and chat:
+                  data = urllib.parse.urlencode({'chat_id': chat, 'text': msg}).encode()
+                  urllib.request.urlopen(f'https://api.telegram.org/bot{tok}/sendMessage', data=data, timeout=20)
+              os.system('gh workflow run nhip.yml -R "$GITHUB_REPOSITORY" -f nguon=gac || true')
+              print('DA BAO CHUA QUET')
+          else:
+              print('OK — bo quet dang chay')
+          PY

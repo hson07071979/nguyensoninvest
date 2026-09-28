@@ -83,6 +83,11 @@ def decide(C, gain, peak, held, probe_fail=False, b10=0, b20=0, light_today=None
     Returns dict(rule, phan, sellable, pending, floor, trigger, lock_active, sell_from).
     `rule` is the engine reason string when a sale is EXECUTABLE now; when the position is
     not yet sellable, `pending` names the rule that is currently breached (if any)."""
+    # Gia tri null trong cfg (thresholds.json ghi PROD.get(k) = None cho nut khong dung, vd
+    # mo_window) = DUNG MAC DINH, giong erG() cua ban JS. Truoc 28/09 live_scan truyen thang
+    # cfg co None -> 'int <= None' -> chuong luat thoat trong phien hong tu 24/09.
+    if isinstance(C, dict):
+        C = {k: v for k, v in C.items() if v is not None}
     sf = int(C.get('sell_from', 2) or 2)
     hs_from = int(C.get('hs_from', sf) or sf)
     trig, floor = profit_floor(peak, C)

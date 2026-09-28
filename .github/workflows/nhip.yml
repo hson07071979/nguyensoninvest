@@ -1,0 +1,53 @@
+name: Nhịp quét (đồng hồ ảo)
+
+# ĐỒNG HỒ ẢO (28/09/2026): cron của GitHub nổ muộn / bỏ nhịp (đo 14–25/09: lần quét đầu
+# trong cửa sổ ATC là 14:21–14:43, 21/09 không có lần nào). Một Cloudflare Worker (xem
+# dong-ho/worker.js) gọi workflow này ĐÚNG GIỜ qua API: mỗi lần chạy = MỘT nhịp quét.
+#   09:00–11:30 mỗi 20' · 13:00–13:55 mỗi 15' · 14:00–14:45 mỗi 5' · 15:00–20:45 mỗi 15'
+# Vòng lặp cũ (live.yml) vẫn giữ làm DỰ PHÒNG: thấy live.json vừa được nhịp này ghi trong
+# 8 phút thì nó tự bỏ qua, nên hai bên không giẫm lên nhau.
+
+on:
+  workflow_dispatch:
+    inputs:
+      nguon:
+        description: 'Ai gọi (dong-ho / tay)'
+        required: false
+        default: 'tay'
+
+concurrency:
+  group: nhip-quet
+  cancel-in-progress: false      # nhịp sau XẾP HÀNG sau nhịp trước, không huỷ
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests==2.33.1
+      - name: Một nhịp quét
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT:  ${{ secrets.TELEGRAM_CHAT }}
+        run: |
+          git config user.name  "Bot Nguyễn Sơn Invest"
+          git config user.email "bot@users.noreply.github.com"
+          echo "gọi bởi: ${{ github.event.inputs.nguon }} · $(TZ=Asia/Ho_Chi_Minh date '+%H:%M:%S') giờ VN"
+          for lan in 1 2 3; do
+            git fetch -q origin main && git reset -q --hard origin/main
+            python live_scan.py || { echo "!! live_scan.py lỗi"; exit 0; }
+            mkdir -p obs
+            git add live.json obs/ 2>/dev/null || true
+            if git diff --cached --quiet; then echo "không có gì đổi"; exit 0; fi
+            git commit -q -m "Nhịp đồng hồ $(TZ=Asia/Ho_Chi_Minh date '+%d/%m %H:%M')"
+            # có người vừa ghi live.json (vòng dự phòng) -> quét lại trên bản mới nhất, KHÔNG gộp tay
+            if git push -q origin HEAD:main; then echo "đã đẩy"; exit 0; fi
+            echo "đẩy lỗi (lần $lan) — quét lại trên bản mới nhất"; sleep 5
+          done

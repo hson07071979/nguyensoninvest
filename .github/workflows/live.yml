@@ -69,7 +69,18 @@ jobs:
 
             # Một nhịp hỏng KHÔNG được làm chết cả vòng lặp: FireAnt chặn tạm là
             # chuyện thường, nhịp sau tự khỏi. Đây là lý do không dùng `set -e`.
-            python live_scan.py || echo "!! live_scan.py lỗi — bỏ qua nhịp này"
+            # DỰ PHÒNG CHO ĐỒNG HỒ ẢO (28/09/2026): luôn quét trên bản live.json MỚI NHẤT (giữ
+            # đúng danh sách đã báo, không báo trùng), và nếu nhịp đồng hồ vừa chạy < 8 phút thì
+            # nhường — vòng này chỉ gánh khi đồng hồ ảo im lặng.
+            git fetch -q origin main && git reset -q --hard origin/main
+            LAST_MSG=$(git log -1 --format=%s origin/main -- live.json)
+            LAST_TS=$(git log -1 --format=%ct origin/main -- live.json)
+            TUOI=$(( $(date +%s) - ${LAST_TS:-0} ))
+            if [[ "$LAST_MSG" == Nhịp\ đồng\ hồ* ]] && [ "$TUOI" -lt 480 ]; then
+              echo "  đồng hồ ảo vừa quét $(( TUOI / 60 )) phút trước — nhường nhịp này"
+            else
+              python live_scan.py || echo "!! live_scan.py lỗi — bỏ qua nhịp này"
+            fi
             # So ghi tien KHONG con chay o day: no vao so dung cac lenh cua bo may,
             # sau ban dung toi (daily.yml repo rieng) — cung den, cung du lieu.
 
@@ -82,8 +93,7 @@ jobs:
             else
               git commit -m "Quét phiên $(TZ=Asia/Ho_Chi_Minh date '+%d/%m %H:%M')" || true
               # nhánh có thể đã đổi do lần chạy khác — kéo về rồi đẩy lại
-              git pull --rebase --autostash || true
-              git push || echo "!! push lỗi — nhịp sau đẩy lại"
+              git push -q origin HEAD:main || { echo "!! push lỗi (đồng hồ ảo vừa ghi) — bỏ nhịp này, nhịp sau quét lại"; git fetch -q origin main; git reset -q --hard origin/main; }
             fi
 
             # 10# để bash không hiểu "0907" là số bát phân
