@@ -1,4 +1,4 @@
-// ĐỒNG HỒ ẢO — Nguyễn Sơn Invest (28/09/2026)
+// ĐỒNG HỒ ẢO — Nguyễn Sơn Invest (28/09/2026; sửa 29/09: bản dựng tối chỉ còn 21:00, gửi nhãn nguon)
 // Cloudflare Worker, Cron Trigger "*/5 1-14 * * MON-FRI" + "0 14 * * *" (21:00 VN mỗi tối) (mỗi 5 phút, T2–T6). Cron của GitHub nổ muộn
 // hoặc bỏ nhịp; Cloudflare nổ đúng phút. Mỗi lần nổ, Worker xem giờ VN và gọi đúng workflow
 // qua GitHub API (workflow_dispatch).
@@ -21,10 +21,9 @@ function lich(h, m) {
       moi(15 * 60, 20 * 60 + 45, 15))           // 15:00–20:45 mỗi 15' ← chờ Điều kiện 9
     out.push([PUB, 'nhip.yml']);
   if (t === 14 * 60 + 15 || t === 14 * 60 + 30) out.push([PUB, 'gac.yml']);          // báo CHƯA QUÉT
-  // bản dựng tối. BỎ nhịp 16:30 (anh Sơn 29/09): lúc đó FireAnt chưa có dòng tiền phiên
-  // (HOSE 36%, HNX 0%) -> verify_build chặn đăng, chạy 14 phút vô ích (run #96 ngày 29/09).
-  if (t === 19 * 60 + 30 || t === 21 * 60 + 30) out.push([PRIV, 'daily.yml']);
-  if (t === 21 * 60) out.push([PRIV, 'daily.yml', 'moi-toi']);   // 21:00 MỖI TỐI, cả T7/CN (anh Sơn 28/09)
+  // bản dựng tối: MỘT lượt duy nhất 21:00 mỗi tối, cả T7/CN (anh Sơn 29/09). Đã bỏ 16:30 (FireAnt
+  // chưa có dòng tiền -> verify_build chặn, 14 phút vô ích), 19:30 và 21:30 (dựng lại trùng).
+  if (t === 21 * 60) out.push([PRIV, 'daily.yml', 'moi-toi']);
   return out;
 }
 
@@ -33,9 +32,12 @@ function gioVN(d) {
   return { h: x.getUTCHours(), m: x.getUTCMinutes(), thu: x.getUTCDay() };
 }
 
-async function goi(env, repo, wf) {
+async function goi(env, repo, wf, nhan) {
   const body = { ref: 'main' };
   if (wf === 'nhip.yml') body.inputs = { nguon: 'dong-ho' };
+  // daily.yml (29/09): gửi nhãn để bước `kiem` được BỎ QUA khi trang đã mới — 19:30 đăng xong
+  // thì 21:00 / 21:30 chỉ tốn ~30 giây. Bấm tay ở tab Actions (nhãn 'tay') vẫn luôn chạy.
+  if (wf === 'daily.yml') body.inputs = { nguon: nhan === 'moi-toi' ? 'moi-toi' : 'dong-ho' };
   const r = await fetch(`https://api.github.com/repos/${OWNER}/${repo}/actions/workflows/${wf}/dispatches`, {
     method: 'POST',
     headers: {
@@ -56,7 +58,7 @@ export default {
     let viec = lich(h, m5);
     if (thu === 0 || thu === 6) viec = viec.filter(x => x[2] === 'moi-toi');   // cuối tuần: chỉ bản dựng 21:00
     if (!viec.length) return;
-    const kq = await Promise.all(viec.map(([r, w]) => goi(env, r, w)));
+    const kq = await Promise.all(viec.map(([r, w, n]) => goi(env, r, w, n)));
     console.log(`${h}:${String(m5).padStart(2, '0')} VN →`, kq.join(' | '));
   },
   // Mở URL của Worker để xem lịch hôm nay (KHÔNG gọi gì, không lộ token).
