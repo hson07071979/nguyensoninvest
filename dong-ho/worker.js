@@ -21,7 +21,9 @@ function lich(h, m) {
       moi(15 * 60, 20 * 60 + 45, 15))           // 15:00–20:45 mỗi 15' ← chờ Điều kiện 9
     out.push([PUB, 'nhip.yml']);
   if (t === 14 * 60 + 15 || t === 14 * 60 + 30) out.push([PUB, 'gac.yml']);          // báo CHƯA QUÉT
-  if (t === 16 * 60 + 30 || t === 19 * 60 + 30 || t === 21 * 60 + 30) out.push([PRIV, 'daily.yml']); // bản dựng tối
+  // bản dựng tối. BỎ nhịp 16:30 (anh Sơn 29/09): lúc đó FireAnt chưa có dòng tiền phiên
+  // (HOSE 36%, HNX 0%) -> verify_build chặn đăng, chạy 14 phút vô ích (run #96 ngày 29/09).
+  if (t === 19 * 60 + 30 || t === 21 * 60 + 30) out.push([PRIV, 'daily.yml']);
   if (t === 21 * 60) out.push([PRIV, 'daily.yml', 'moi-toi']);   // 21:00 MỖI TỐI, cả T7/CN (anh Sơn 28/09)
   return out;
 }
