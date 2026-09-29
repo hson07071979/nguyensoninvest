@@ -892,6 +892,13 @@ def main():
     out['xac_nhan_mua_do'] = xac_nhan
     out['den_tam_tinh'] = den_tt
     out['n_mua_do'] = sum(1 for h in hits if h.get('mua_do'))
+    # TELEGRAM CO DUOC CAI KHONG (29/09/2026): tu 18/09 hai secret TELEGRAM_TOKEN / TELEGRAM_CHAT
+    # deu RONG trong moi lan chay -> khong mot chuong mua / ban nao toi dien thoai ma khong ai biet.
+    # Ghi co nay vao live.json de trang web bao do, va in to trong log.
+    out['telegram_cai'] = bool(os.environ.get('TELEGRAM_TOKEN', '').strip() and os.environ.get('TELEGRAM_CHAT', '').strip())
+    if not out['telegram_cai']:
+        print('!! THIEU TELEGRAM_TOKEN / TELEGRAM_CHAT — chuong Telegram KHONG gui duoc. '
+              'Cai o Settings -> Secrets and variables -> Actions cua repo nay.')
     json.dump(out, open('live.json', 'w', encoding='utf-8'), ensure_ascii=False)
     print(f"quét {len(fresh)}/{len(syms)} mã ({cov:.0%}) · phiên {ses} · đã đi {frac*100:.0f}% "
           f"· dòng tiền có {obs['ordimb']}/{len(fresh)} · {out['n_mua']} MUA · "
