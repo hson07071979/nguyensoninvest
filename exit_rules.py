@@ -20,8 +20,10 @@ Definitions (identical everywhere, = engine2 convention, research R21):
   still at or below the floor. There is NO intraday stop — a stock that gaps through the floor
   in one session is sold at that session's close, wherever it is.
 
-S1 profit lock (cfg['profit_lock'] = [[0.08, 0.02], [0.12, 0.05]]):
-  peak >= 8%  -> floor +2%;   peak >= 12% -> floor +5% (supersedes +2%).   sell if gain <= floor.
+S1 profit lock (cfg['profit_lock'] = [[0.08, 0.04], [0.10, 0.05], [0.12, 0.06]] since 29/09/2026;
+26-29/09 it was [[0.08, 0.02], [0.12, 0.05]]):
+  peak >= 8% -> floor +4%;  peak >= 10% -> floor +5%;  peak >= 12% -> floor +6%.
+  The highest reached tier wins.   sell if gain <= floor.
   No 15% / 19% tiers. MA10 (peak >= big_win) stays the large-winner trend exit.
 
 Pure python, standard library only.

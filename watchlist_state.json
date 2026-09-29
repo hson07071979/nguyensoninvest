@@ -3,19 +3,19 @@
  "members": {
   "GMD": {
    "added": "2026-08-28",
-   "score": 84.1,
+   "score": 89.0,
    "status": "đạt",
    "note": ""
   },
   "HCM": {
    "added": "2026-08-28",
-   "score": 83.1,
+   "score": 77.9,
    "status": "đạt",
    "note": ""
   },
   "HDB": {
    "added": "2026-08-28",
-   "score": 79.1,
+   "score": 79.0,
    "status": "đạt",
    "note": ""
   },
@@ -27,43 +27,43 @@
   },
   "MBB": {
    "added": "2026-08-28",
-   "score": 57.7,
+   "score": 57.5,
    "status": "đạt",
    "note": ""
   },
   "MSN": {
    "added": "2026-08-28",
-   "score": 67.5,
+   "score": 67.6,
    "status": "đạt",
    "note": ""
   },
   "VCB": {
    "added": "2026-08-28",
-   "score": 57.2,
+   "score": 57.3,
    "status": "đạt",
    "note": ""
   },
   "MBS": {
    "added": "2026-08-28",
-   "score": 60.9,
+   "score": 55.7,
    "status": "đạt",
    "note": ""
   },
   "IDC": {
    "added": "2026-08-28",
-   "score": 62.1,
+   "score": 57.1,
    "status": "đạt",
    "note": ""
   },
   "PVD": {
    "added": "2026-08-28",
-   "score": 57.1,
+   "score": 52.7,
    "status": "đạt",
    "note": ""
   },
   "HPG": {
    "added": "2026-08-28",
-   "score": 56.4,
+   "score": 51.4,
    "status": "đạt",
    "note": ""
   },
@@ -87,25 +87,25 @@
   },
   "BVH": {
    "added": "2026-09-16",
-   "score": 64.6,
+   "score": 64.7,
    "status": "đạt",
    "note": ""
   },
   "PLX": {
    "added": "2026-09-16",
-   "score": 58.1,
+   "score": 58.9,
    "status": "đạt",
    "note": ""
   },
   "DIG": {
    "added": "2026-09-16",
-   "score": 55.7,
+   "score": 50.9,
    "status": "đạt",
    "note": ""
   },
   "VGC": {
    "added": "2026-09-18",
-   "score": 49.1,
+   "score": 49.2,
    "status": "đạt",
    "note": ""
   },
@@ -115,33 +115,21 @@
    "status": "đạt",
    "note": ""
   },
-  "PVP": {
-   "added": "2026-09-21",
-   "score": 74.7,
-   "status": "đạt",
-   "note": ""
-  },
   "TCH": {
    "added": "2026-09-21",
-   "score": 51.3,
+   "score": 46.5,
    "status": "đạt",
    "note": ""
   },
   "DHC": {
    "added": "2026-09-23",
-   "score": 84.5,
-   "status": "đạt",
-   "note": ""
-  },
-  "PVT": {
-   "added": "2026-09-25",
-   "score": 64.7,
+   "score": 89.7,
    "status": "đạt",
    "note": ""
   },
   "HAH": {
    "added": "2026-09-25",
-   "score": 54.2,
+   "score": 59.3,
    "status": "đạt",
    "note": ""
   },
@@ -153,42 +141,64 @@
   },
   "LPB": {
    "added": "2026-09-25",
-   "score": 66.3,
+   "score": 51.1,
    "status": "đạt",
    "note": ""
   },
   "GAS": {
    "added": "2026-09-25",
-   "score": 59.5,
-   "status": "đạt",
-   "note": ""
-  },
-  "NAB": {
-   "added": "2026-09-25",
-   "score": 47.4,
+   "score": 59.6,
    "status": "đạt",
    "note": ""
   },
   "CTG": {
    "added": "2026-09-25",
-   "score": 56.6,
-   "status": "đạt",
-   "note": ""
-  },
-  "AAA": {
-   "added": "2026-09-25",
-   "score": 48.9,
-   "status": "đạt",
-   "note": ""
-  },
-  "VSC": {
-   "added": "2026-09-28",
-   "score": 45.3,
+   "score": 51.6,
    "status": "đạt",
    "note": ""
   }
  },
  "log": [
+  {
+   "date": "2026-09-29",
+   "size": 26,
+   "added_ct": [],
+   "removed_ct": [
+    {
+     "sym": "PVP",
+     "why": "nền 29.7% > 24%",
+     "score": 79.8
+    },
+    {
+     "sym": "PVT",
+     "why": "nền 25.1% > 24%",
+     "score": 69.8
+    },
+    {
+     "sym": "NAB",
+     "why": "điểm 42 < 45",
+     "score": 42.3
+    },
+    {
+     "sym": "AAA",
+     "why": "điểm 44 < 45",
+     "score": 44.0
+    },
+    {
+     "sym": "VSC",
+     "why": "điểm 40 < 45",
+     "score": 40.3
+    }
+   ],
+   "added": [],
+   "removed": [
+    "PVP",
+    "PVT",
+    "NAB",
+    "AAA",
+    "VSC"
+   ]
+  },
   {
    "date": "2026-09-28",
    "size": 31,
