@@ -1,4 +1,4 @@
-// ĐỒNG HỒ ẢO — Nguyễn Sơn Invest (28/09/2026; sửa 29/09: bỏ 16:30, daily.yml gửi nhãn nguon)
+// ĐỒNG HỒ ẢO — Nguyễn Sơn Invest (28/09/2026; sửa 29/09: bản dựng tối chỉ còn 21:00, gửi nhãn nguon)
 // Cloudflare Worker, Cron Trigger "*/5 1-14 * * MON-FRI" + "0 14 * * *" (21:00 VN mỗi tối) (mỗi 5 phút, T2–T6). Cron của GitHub nổ muộn
 // hoặc bỏ nhịp; Cloudflare nổ đúng phút. Mỗi lần nổ, Worker xem giờ VN và gọi đúng workflow
 // qua GitHub API (workflow_dispatch).
@@ -21,10 +21,9 @@ function lich(h, m) {
       moi(15 * 60, 20 * 60 + 45, 15))           // 15:00–20:45 mỗi 15' ← chờ Điều kiện 9
     out.push([PUB, 'nhip.yml']);
   if (t === 14 * 60 + 15 || t === 14 * 60 + 30) out.push([PUB, 'gac.yml']);          // báo CHƯA QUÉT
-  // bản dựng tối. BỎ nhịp 16:30 (anh Sơn 29/09): lúc đó FireAnt chưa có dòng tiền phiên
-  // (HOSE 36%, HNX 0%) -> verify_build chặn đăng, chạy 14 phút vô ích (run #96 ngày 29/09).
-  if (t === 19 * 60 + 30 || t === 21 * 60 + 30) out.push([PRIV, 'daily.yml']);
-  if (t === 21 * 60) out.push([PRIV, 'daily.yml', 'moi-toi']);   // 21:00 MỖI TỐI, cả T7/CN (anh Sơn 28/09)
+  // bản dựng tối: MỘT lượt duy nhất 21:00 mỗi tối, cả T7/CN (anh Sơn 29/09). Đã bỏ 16:30 (FireAnt
+  // chưa có dòng tiền -> verify_build chặn, 14 phút vô ích), 19:30 và 21:30 (dựng lại trùng).
+  if (t === 21 * 60) out.push([PRIV, 'daily.yml', 'moi-toi']);
   return out;
 }
 
