@@ -9,7 +9,7 @@
   },
   "HCM": {
    "added": "2026-08-28",
-   "score": 77.9,
+   "score": 82.8,
    "status": "đạt",
    "note": ""
   },
@@ -27,61 +27,55 @@
   },
   "MBB": {
    "added": "2026-08-28",
-   "score": 57.5,
+   "score": 57.6,
    "status": "đạt",
    "note": ""
   },
   "MSN": {
    "added": "2026-08-28",
-   "score": 67.6,
-   "status": "đạt",
-   "note": ""
-  },
-  "VCB": {
-   "added": "2026-08-28",
-   "score": 57.3,
+   "score": 67.7,
    "status": "đạt",
    "note": ""
   },
   "MBS": {
    "added": "2026-08-28",
-   "score": 55.7,
+   "score": 55.6,
    "status": "đạt",
    "note": ""
   },
   "IDC": {
    "added": "2026-08-28",
-   "score": 57.1,
+   "score": 62.5,
    "status": "đạt",
    "note": ""
   },
   "PVD": {
    "added": "2026-08-28",
-   "score": 52.7,
+   "score": 52.3,
    "status": "đạt",
    "note": ""
   },
   "HPG": {
    "added": "2026-08-28",
-   "score": 51.4,
+   "score": 56.4,
    "status": "đạt",
    "note": ""
   },
   "VHM": {
    "added": "2026-09-16",
-   "score": 77.2,
+   "score": 76.8,
    "status": "đạt",
    "note": ""
   },
   "VPI": {
    "added": "2026-09-16",
-   "score": 74.4,
+   "score": 74.3,
    "status": "đạt",
    "note": ""
   },
   "MWG": {
    "added": "2026-09-16",
-   "score": 67.0,
+   "score": 67.2,
    "status": "đạt",
    "note": ""
   },
@@ -93,55 +87,55 @@
   },
   "PLX": {
    "added": "2026-09-16",
-   "score": 58.9,
+   "score": 58.8,
    "status": "đạt",
    "note": ""
   },
   "DIG": {
    "added": "2026-09-16",
-   "score": 50.9,
+   "score": 51.0,
    "status": "đạt",
    "note": ""
   },
   "VGC": {
    "added": "2026-09-18",
-   "score": 49.2,
+   "score": 54.5,
    "status": "đạt",
    "note": ""
   },
   "DGW": {
    "added": "2026-09-21",
-   "score": 74.6,
+   "score": 79.6,
    "status": "đạt",
    "note": ""
   },
   "TCH": {
    "added": "2026-09-21",
-   "score": 46.5,
+   "score": 46.6,
    "status": "đạt",
    "note": ""
   },
   "DHC": {
    "added": "2026-09-23",
-   "score": 89.7,
+   "score": 84.7,
    "status": "đạt",
    "note": ""
   },
   "HAH": {
    "added": "2026-09-25",
-   "score": 59.3,
+   "score": 54.2,
    "status": "đạt",
    "note": ""
   },
   "AST": {
    "added": "2026-09-25",
-   "score": 73.9,
+   "score": 72.6,
    "status": "đạt",
    "note": ""
   },
   "LPB": {
    "added": "2026-09-25",
-   "score": 51.1,
+   "score": 56.3,
    "status": "đạt",
    "note": ""
   },
@@ -153,12 +147,28 @@
   },
   "CTG": {
    "added": "2026-09-25",
-   "score": 51.6,
+   "score": 51.7,
    "status": "đạt",
    "note": ""
   }
  },
  "log": [
+  {
+   "date": "2026-09-30",
+   "size": 25,
+   "added_ct": [],
+   "removed_ct": [
+    {
+     "sym": "VCB",
+     "why": "không còn đạt ngưỡng",
+     "score": 57.4
+    }
+   ],
+   "added": [],
+   "removed": [
+    "VCB"
+   ]
+  },
   {
    "date": "2026-09-29",
    "size": 26,
