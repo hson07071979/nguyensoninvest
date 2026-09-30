@@ -529,26 +529,60 @@ def vni_dnse():
             for t, c, v in zip(j.get('t') or [], j.get('c') or [], j.get('v') or [])]
 
 
-def den_tam_tinh(T, ses, frac):
+def vni_dnse_trong_phien(ses):
+    """VN-Index TRONG PHIEN tu nen 5 phut cua DNSE: (gia hien tai, KL cong don hom nay) hoac None.
+    Nen ngay (1D) cua DNSE co the chi hien sau gio dong cua — 29-30/09 den tam tinh rong ca phien."""
+    to = int(time.time())
+    r = requests.get('https://api.dnse.com.vn/chart-api/v2/ohlcs/index',
+                     params={'symbol': 'VNINDEX', 'resolution': '5', 'from': to - 2 * 86400, 'to': to}, timeout=30)
+    j = r.json()
+    hn = [(c, v) for t, c, v in zip(j.get('t') or [], j.get('c') or [], j.get('v') or [])
+          if (dt.datetime.utcfromtimestamp(t) + dt.timedelta(hours=7)).date().isoformat() == ses]
+    if not hn:
+        return None
+    return float(hn[-1][0]), float(sum(v for _, v in hn))
+
+
+def den_tam_tinh(T, ses, frac, rows=None, phien_mo=False):
     """Den thi truong CUA PHIEN HOM NAY, tinh bang dung luat regime2 (regime_live.step) voi so
-    tam tinh. None neu thieu du lieu — khi do moi thu lui ve den hom truoc nhu cu."""
+    tam tinh. Tra ve (info, None) hoac (None, ly_do) — ly do ghi vao live.json de biet vi sao
+    khong co den (truoc 30/09 tra None im lang: den tam tinh RONG suot gio giao dich 29-30/09).
+    Nguon G1: dong HistoricalQuotes cua chinh phien (rows, da co ngay = ses) + FireAnt
+    Markets/Quotes cho ma con thieu (trong phien chap nhan ca dong chua gan ngay hom nay: gia la
+    gia hien tai, gia tham chieu la gia hom qua). VN-Index: nen ngay DNSE, thieu thi nen 5 phut."""
     RLS = T.get('regime_live') or {}
     st = RLS.get('state') or {}
-    if not st or st.get('session') != T.get('asof'):
-        return None
+    if not st:
+        return None, 'thresholds.json chua co trang thai regime_live'
+    if st.get('session') != T.get('asof'):
+        return None, f"trang thai regime_live {st.get('session')} != asof {T.get('asof')}"
     import regime_live as RL
-    q = quotes_snapshot(list(RLS.get('g1_syms') or []))
-    q = {k: v for k, v in q.items() if str(v.get('Date', ''))[:10] == ses}
-    eq, n = RL.g1_return(q, RLS.get('g1_syms') or [])
+    g1 = list(RLS.get('g1_syms') or [])
+    q = {s_: r_ for s_, r_ in (rows or {}).items() if s_ in set(g1) and str(r_.get('Date', ''))[:10] == ses}
+    thieu = [s_ for s_ in g1 if s_ not in q]
+    if thieu:
+        for s_, r_ in quotes_snapshot(thieu).items():
+            d_ = str(r_.get('Date', ''))[:10]
+            if d_ == ses or (phien_mo and d_ < ses):
+                q[s_] = r_
+    eq, n = RL.g1_return(q, g1)
+    cov = n / max(1, len(g1))
+    if eq is None or cov < 0.5:
+        return None, f'G1 thieu gia hom nay: {n}/{len(g1)} ma'
     bars = {d_: (c_, v_) for d_, c_, v_ in vni_dnse()}
-    if eq is None or ses not in bars:
-        return None
-    c_, v_ = bars[ses]
+    nguon_vni = 'DNSE 1D'
+    if ses in bars:
+        c_, v_ = bars[ses]
+    else:
+        tp = vni_dnse_trong_phien(ses)
+        if not tp:
+            return None, 'DNSE chua co nen VN-Index hom nay (ca 1D lan 5 phut)'
+        (c_, v_), nguon_vni = tp, 'DNSE 5 phut'
     v_proj = v_ / max(float(frac or 0), 0.05)
     light, _, info = RL.step(RL.state_from_export(st), eq, c_, v_proj)
-    info.update(light=light, n_g1=n, g1_cover=round(n / max(1, len(RLS.get('g1_syms') or [])), 3),
-                vni_vol=v_, vni_vol_proj=round(v_proj), light_prev=T.get('light'))
-    return info
+    info.update(light=light, n_g1=n, g1_cover=round(cov, 3), vni_vol=v_, vni_vol_proj=round(v_proj),
+                light_prev=T.get('light'), nguon_vni=nguon_vni)
+    return info, None
 
 
 def doc_nhac_ban():
@@ -742,15 +776,20 @@ def main():
         print('cat ngang phien:', {k: v for k, v in xsec.items() if k != 'unknown_syms'})
 
     # ---- DEN TAM TINH (regime_live, 28/09/2026) ----
-    den_tt = None
+    den_tt = None; den_loi = None
     if spec_for_session and ses == today:
         try:
-            den_tt = den_tam_tinh(T, ses, frac)
+            den_tt, den_loi = den_tam_tinh(T, ses, frac, rows=fresh, phien_mo=phien_mo)
             if den_tt:
                 print(f"den tam tinh: {den_tt['light']} (hom truoc {T.get('light')}) · G1 {den_tt['n_g1']} ma "
-                      f"· VNI {den_tt['vni']} · ngay phan phoi {den_tt['dcount']}")
+                      f"· VNI {den_tt['vni']} ({den_tt.get('nguon_vni')}) · ngay phan phoi {den_tt['dcount']}")
+            else:
+                print('!! den tam tinh KHONG CO:', den_loi)
         except Exception as e:
-            print('den tam tinh loi:', type(e).__name__, e)
+            den_loi = f'{type(e).__name__}: {e}'
+            print('!! den tam tinh loi:', den_loi)
+    else:
+        den_loi = 'khong phai phien hom nay / dac ta toi khong danh cho phien nay'
     den_live = (den_tt or {}).get('light')
 
     hits = []; res_by = {}
@@ -891,6 +930,7 @@ def main():
     out['nhac_ban'] = nhac
     out['xac_nhan_mua_do'] = xac_nhan
     out['den_tam_tinh'] = den_tt
+    out['den_tam_tinh_loi'] = None if den_tt else den_loi
     out['n_mua_do'] = sum(1 for h in hits if h.get('mua_do'))
     # TELEGRAM CO DUOC CAI KHONG (29/09/2026): tu 18/09 hai secret TELEGRAM_TOKEN / TELEGRAM_CHAT
     # deu RONG trong moi lan chay -> khong mot chuong mua / ban nao toi dien thoai ma khong ai biet.
