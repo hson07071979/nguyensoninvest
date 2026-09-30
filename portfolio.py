@@ -45,7 +45,7 @@ TEN_DEN = {'XANH': 'Xanh', 'VANG': 'Vàng', 'CAM': 'Cam', 'DO': 'Đỏ'}
 # (xuat tu produce2.PROD) — xem cfg() ben duoi.
 DEF = dict(fee_buy=0.0015, fee_sell=0.0025, hard_stop=-0.10, stop=-0.07,
            be_trigger=0.08, be_level=0.01, use_be=False, profit_lock=None, t_valve=4, big_win=0.19,
-           conf=2, trail_fast=10, trail_ma=30, use_orange_cut=True,
+           conf=2, trail_fast=10, trail_ma=30, use_orange_cut=False,
            orange_cut_only_if_worse=True, use_pyramid=True, use_hard_stop=True)
 
 # Lenh da vao so theo LUAT CU, nay chung minh la sai luat PROD -> dong mot lan,
@@ -176,6 +176,53 @@ def dong_vi_the(P, p, ly_do, ngay, px_adj, px_raw, k_adj, C, phan=1.0):
     return p['sh'] <= 0
 
 
+LY_DO_CAM = 'Đèn Cam — hạ 1/3'
+
+
+def hoan_tac_ha_cam(P, C, ses):
+    """BO LUAT DEN CAM (anh Son 30/09/2026): den tam tinh khong chac co trong phien -> khong the
+    ha 1/3 trong phien -> luat bi go khoi PROD. Khi use_orange_cut tat, moi lan "Den Cam — ha 1/3"
+    con nam trong so ma VI THE VAN MO duoc HOAN TAC: tra so co ve vi the, tru lai dung so tien da
+    thu (= gia von + lai da chot), xoa dong lai da chot, bo co part. Chay mot lan (dong da xoa thi
+    lan sau khong con gi). Vi the da dong het thi khong dung toi (ghi canh bao). Tra ve nhat ky."""
+    if C.get('use_orange_cut'):
+        return []
+    nk, giu = [], []
+    for c in P.get('closed') or []:
+        if c.get('reason') != LY_DO_CAM:
+            giu.append(c); continue
+        p = next((q for q in P['open'] if q['sym'] == c['sym'] and q['entry'] == c['entry']), None)
+        if not p:
+            giu.append(c)
+            nk.append(f"CẢNH BÁO: {c['sym']} (mua {c['entry']}) đã hạ 1/3 ngày {c['exit']} nhưng vị thế đã đóng hết — giữ nguyên lịch sử")
+            continue
+        thu = c['sh'] * cost_px(p, C) + c['pnl_vnd']
+        P['cash'] -= thu
+        p['sh'] += int(c['sh']); p['part'] = False
+        nk.append(f"HOÀN TÁC hạ 1/3 {c['sym']} ngày {c['exit']} (luật Đèn Cam đã bỏ 30/09): trả {c['sh']:,} cp về vị thế "
+                  f"→ {p['sh']:,} cp; bỏ lãi đã chốt {c['pnl_vnd']/1e6:+.2f} tr; trừ tiền {thu/1e6:,.2f} tr")
+    if nk:
+        P['closed'] = giu
+        mv = sum(q['sh'] * (q.get('last_val') or (q.get('last') or 0) * 1000 or q['entry_px']) for q in P['open'])
+        P['nav'] = round(P['cash'] + mv)
+        P['log'].insert(0, dict(date=ses, items=nk))
+        P['stats'] = tinh_stats(P, ses)
+        print('\n'.join(nk))
+    return nk
+
+
+def tinh_stats(P, ses):
+    tong_ = P['closed']
+    thang = [c for c in tong_ if c['pnl_pct'] > 0]
+    return dict(
+        n_open=len(P['open']), n_closed=len(tong_),
+        winrate=round(100 * len(thang) / len(tong_), 1) if tong_ else None,
+        total_return=round((P['nav'] / NAV0 - 1) * 100, 2),
+        best=max((c['pnl_pct'] for c in tong_), default=None),
+        worst=min((c['pnl_pct'] for c in tong_), default=None),
+        since=min([p['entry'] for p in P['open']] + [c['entry'] for c in P['closed']] or [ses]))
+
+
 def main():
     if not os.path.exists('thresholds.json'):
         sys.exit('HONG: chua co thresholds.json — ban dung toi chua dang')
@@ -210,6 +257,7 @@ def main():
         P['log'] = [dict(date=ses, items=['DỰNG LẠI SỔ: sổ cũ (15–23/09) do lớp quét live cũ ghi — bỏ sót BVH 14/09, '
                                           'vào sai PVP 22/09 (Điều kiện 9 = 1,381 < 1,40). Sổ mới vào đúng các lệnh của '
                                           'bộ máy từ 14/09, vốn 1 tỷ. Bản cũ lưu trong "so_cu".'])]
+    _hoan_tac = hoan_tac_ha_cam(P, C, ses)
     if P.get('session_done') == ses and not os.environ.get('LAM_LAI'):
         # PHIEN DA VAO SO — nhung neu cau hinh PROD vua doi (hash khac) hoac vi the thieu
         # truong cua luat thoat dang chay thi phai NANG CAP TRANG THAI, khong duoc im lang
@@ -217,6 +265,9 @@ def main():
         # BVH thieu profit_floor/sellable/action).
         if can_nang_cap(P, T):
             nang_cap(P, T, C, ses, now)
+            json.dump(P, open(FILE, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+        elif _hoan_tac:
+            P['checks'] = doi_soat(P, C, T.get('cfg') or {})
             json.dump(P, open(FILE, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
         else:
             print(f'phien {ses} da vao so roi')
@@ -284,15 +335,7 @@ def main():
     P['log'].sort(key=lambda x: x['date'], reverse=True)
     P['log'] = P['log'][:120]
     P['checks'] = doi_soat(P, C, T.get('cfg') or {})
-    tong_ = P['closed']
-    thang = [c for c in tong_ if c['pnl_pct'] > 0]
-    P['stats'] = dict(
-        n_open=len(P['open']), n_closed=len(tong_),
-        winrate=round(100 * len(thang) / len(tong_), 1) if tong_ else None,
-        total_return=round((P['nav'] / NAV0 - 1) * 100, 2),
-        best=max((c['pnl_pct'] for c in tong_), default=None),
-        worst=min((c['pnl_pct'] for c in tong_), default=None),
-        since=min([p['entry'] for p in P['open']] + [c['entry'] for c in P['closed']] or [ses]))
+    P['stats'] = tinh_stats(P, ses)
     json.dump(P, open(FILE, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     kiem_sau(P, T)
     print(f"so lenh · phien {ses} · den {light} · NAV {P['nav']/1e9:.4f} ty "

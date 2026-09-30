@@ -20,10 +20,10 @@ Definitions (identical everywhere, = engine2 convention, research R21):
   still at or below the floor. There is NO intraday stop — a stock that gaps through the floor
   in one session is sold at that session's close, wherever it is.
 
-S1 profit lock (cfg['profit_lock'] = [[0.08, 0.04], [0.10, 0.05], [0.12, 0.06]] since 29/09/2026;
-26-29/09 it was [[0.08, 0.02], [0.12, 0.05]]):
-  peak >= 8% -> floor +4%;  peak >= 10% -> floor +5%;  peak >= 12% -> floor +6%.
-  The highest reached tier wins.   sell if gain <= floor.
+S1 profit lock (cfg['profit_lock'] = [[0.08, 0.02], [0.12, 0.06], [0.15, 0.08]] since 30/09/2026 — chosen after
+R32/R33 Monte Carlo per year; 26-29/09 [[0.08,0.02],[0.12,0.05]]; 29/09 one night [[0.08,0.04],[0.10,0.05],[0.12,0.06]]):
+  peak >= 8% -> floor +2%;  peak >= 12% -> floor +6%;  peak >= 15% -> floor +8%.
+  The highest reached tier wins.  sell if gain <= floor.
   No 15% / 19% tiers. MA10 (peak >= big_win) stays the large-winner trend exit.
 
 Pure python, standard library only.
@@ -116,7 +116,7 @@ def decide(C, gain, peak, held, probe_fail=False, b10=0, b20=0, light_today=None
             return 'Trailing MA%d (lãi lớn)' % C.get('trail_fast', 10), 1.0
         if b20 >= C.get('conf', 2):
             return 'Trailing MA%d' % C.get('trail_ma', 30), 1.0
-        if (C.get('use_orange_cut', True) and light_today == 'CAM' and not part
+        if (C.get('use_orange_cut', False) and light_today == 'CAM' and not part
                 and (not C.get('orange_cut_only_if_worse', True) or light_entry in ('XANH', 'VANG'))):
             return 'Đèn Cam — hạ 1/3', 1.0 / 3
         return None, 1.0
