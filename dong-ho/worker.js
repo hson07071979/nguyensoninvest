@@ -1,15 +1,17 @@
-// ĐỒNG HỒ ẢO — Nguyễn Sơn Invest (28/09/2026; sửa 29/09: bản dựng tối chỉ còn 21:00, gửi nhãn nguon)
-// Cloudflare Worker, Cron Trigger "*/5 1-14 * * MON-FRI" + "0 14 * * *" (21:00 VN mỗi tối) (mỗi 5 phút, T2–T6). Cron của GitHub nổ muộn
+// ĐỒNG HỒ ẢO — Nguyễn Sơn Invest (28/09/2026; sửa 29/09: bản dựng tối chỉ còn 21:00, gửi nhãn nguon;
+// sửa 01/10: thêm bản tin sáng nsi-tin 07:00 / 07:45 / 08:15)
+// Cloudflare Worker, Cron Trigger "*/5 0-14 * * MON-FRI" + "0 14 * * *" (21:00 VN mỗi tối) (mỗi 5 phút, T2–T6). Cron của GitHub nổ muộn
 // hoặc bỏ nhịp; Cloudflare nổ đúng phút. Mỗi lần nổ, Worker xem giờ VN và gọi đúng workflow
 // qua GitHub API (workflow_dispatch).
 //
 // Bí mật cần đặt trong Cloudflare (Settings → Variables and Secrets):
-//   GH_TOKEN  = fine-grained token, repo nguyensoninvest + nsi-bot, quyền "Actions: Read and write"
+//   GH_TOKEN  = fine-grained token, repo nguyensoninvest + nsi-bot + nsi-tin, quyền "Actions: Read and write"
 // Không có bí mật nào khác. Worker không đọc / ghi dữ liệu giao dịch.
 
 const OWNER = 'hson07071979';
 const PUB = 'nguyensoninvest';      // bộ quét trong phiên (nhip.yml, gac.yml)
 const PRIV = 'nsi-bot';             // bản dựng tối (daily.yml)
+const TIN = 'nsi-tin';              // bản tin sáng (sang.yml)
 
 // Lịch theo giờ VN (phút trong ngày). Trả về danh sách [repo, workflow].
 function lich(h, m) {
@@ -24,6 +26,9 @@ function lich(h, m) {
   // bản dựng tối: MỘT lượt duy nhất 21:00 mỗi tối, cả T7/CN (anh Sơn 29/09). Đã bỏ 16:30 (FireAnt
   // chưa có dòng tiền -> verify_build chặn, 14 phút vô ích), 19:30 và 21:30 (dựng lại trùng).
   if (t === 21 * 60) out.push([PRIV, 'daily.yml', 'moi-toi']);
+  // bản tin sáng (01/10): 07:00 chạy; 07:45 và 08:15 gác — chưa có bản đạt thì chạy lại (hạn 8h30)
+  if (t === 7 * 60) out.push([TIN, 'sang.yml', 'chay']);
+  if (t === 7 * 60 + 45 || t === 8 * 60 + 15) out.push([TIN, 'sang.yml', 'gac']);
   return out;
 }
 
@@ -37,6 +42,7 @@ async function goi(env, repo, wf, nhan) {
   if (wf === 'nhip.yml') body.inputs = { nguon: 'dong-ho' };
   // daily.yml (29/09): gửi nhãn để bước `kiem` được BỎ QUA khi trang đã mới — 19:30 đăng xong
   // thì 21:00 / 21:30 chỉ tốn ~30 giây. Bấm tay ở tab Actions (nhãn 'tay') vẫn luôn chạy.
+  if (wf === 'sang.yml') body.inputs = { che_do: nhan || 'chay' };
   if (wf === 'daily.yml') body.inputs = { nguon: nhan === 'moi-toi' ? 'moi-toi' : 'dong-ho' };
   const r = await fetch(`https://api.github.com/repos/${OWNER}/${repo}/actions/workflows/${wf}/dispatches`, {
     method: 'POST',
@@ -64,9 +70,9 @@ export default {
   // Mở URL của Worker để xem lịch hôm nay (KHÔNG gọi gì, không lộ token).
   async fetch(req, env) {
     const dong = [];
-    for (let t = 9 * 60; t <= 21 * 60 + 30; t += 5) {
+    for (let t = 7 * 60; t <= 21 * 60 + 30; t += 5) {
       const v = lich(Math.floor(t / 60), t % 60);
-      if (v.length) dong.push(`${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}  ${v.map(x => x.slice(0, 2).join('/') + (x[2] ? ' (mỗi tối)' : '')).join(', ')}`);
+      if (v.length) dong.push(`${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}  ${v.map(x => x.slice(0, 2).join('/') + (x[2] === 'moi-toi' ? ' (mỗi tối)' : x[2] ? ` (${x[2]})` : '')).join(', ')}`);
     }
     const coToken = env.GH_TOKEN ? 'có GH_TOKEN ✓' : 'CHƯA có GH_TOKEN ✗';
     return new Response(`Đồng hồ ảo Nguyễn Sơn Invest — ${coToken}\nLịch (giờ VN, T2–T6; riêng 21:00 chạy cả T7/CN):\n${dong.join('\n')}\n\nKiểm tra: Cloudflare → Worker → Settings → Trigger Events → nút thử cron; log ở tab Logs.\n`,
