@@ -1009,7 +1009,7 @@ function pageOverview(root){
     <th style="text-align:right">Khoa Nguyen Invest</th><th style="text-align:right">VN-Index</th></tr></thead><tbody id="peer"></tbody></table>
   <p class="muted" style="margin:12px 0 0"><b style="color:var(--text-primary)">Đọc bảng này cho đúng — chỗ này quan trọng.</b> Tỷ lệ thắng và R:R ở trên đếm theo <b>deal</b> (một mã mua vào rồi bán ra trọn vẹn), không đếm theo lệnh. Hệ thống bán từng phần nên nếu đếm theo lệnh sẽ ra ${M.trades} lệnh với tỷ lệ thắng ${pct(M.winrate)} — con số đó không so sánh được với anh Khoa. Gom lại đúng chuẩn deal thì <b>tỷ lệ thắng ${pct((P.deal_metrics||{}).winrate||0)} so với 35% và R:R ${(P.deal_metrics||{}).rr} so với 5,2</b> — gần như trùng khít. Chất lượng tín hiệu của hai hệ là một; khác biệt duy nhất còn lại là <b>số deal ${(P.deal_metrics||{}).deals} so với 237</b>, tức anh Khoa đánh nhiều hơn.<br><br>
   Cùng cách tính phí: 0,15% mua · 0,25% bán, không tính trượt giá — đúng như trang Khoa Nguyen công bố. Nếu tính thêm trượt giá 0,2%/chiều cho sát thực tế, hệ thống cho <b>${sg(D.presets.thucte.metrics.total_return)}</b> với drawdown ${pct(D.presets.thucte.metrics.maxdd)} (bấm nút "Có trượt giá" ở biểu đồ trên).<br><br>
-  <b>Lưu ý về tính trung thực:</b> con số của Khoa Nguyen lấy từ ảnh chụp trang chủ anh Sơn gửi (+462,8% · 237 deal · WR 35% · R:R 5,2). Trang đó render bằng JavaScript nên công cụ của em không đọc trực tiếp được nguyên tắc chi tiết — phần so sánh luật lấy từ bảng cross-check trong tài liệu <i>Hệ Thống Giao Dịch Hợp Nhất v1.0</i>.</p></div>
+  <b>Lưu ý về tính trung thực:</b> con số của Khoa Nguyen lấy từ ảnh chụp trang chủ của Khoa Nguyen (+462,8% · 237 deal · WR 35% · R:R 5,2). Trang đó render bằng JavaScript nên không đọc tự động được nguyên tắc chi tiết — phần so sánh luật lấy từ bảng cross-check trong tài liệu <i>Hệ Thống Giao Dịch Hợp Nhất v1.0</i>.</p></div>
 
   <h2>Ba phiên bản của chính hệ thống này</h2>
   <div class="card"><table><thead><tr><th>Chỉ số</th><th style="text-align:right">Bản 1 (DNSE, 311 mã)</th><th style="text-align:right">Bản 2 (FireAnt, ${D.universe_n} mã)</th><th style="text-align:right">VN-Index</th></tr></thead><tbody id="cmpv"></tbody></table>
@@ -1408,7 +1408,7 @@ function pageSystem(root){
    [6,'Lọc ngành','Danh mục có bị dồn quá nhiều vào một ngành không?','Trần 30% NAV cho một nhóm ngành ICB khi MỞ lệnh mới. Lệnh nhồi chỉ xét trần mã 50% + tiền mặt nên ngành có thể vượt 30% (lịch sử: 2 lần — TCM 11/2020 lên 48,5%, GEE 10/2025 lên 39,9%).','B'],
    [7,'Cỡ vị thế','Nên bỏ bao nhiêu tiền vào?',`<b>${cpSo(cpV('base_size',0.42)*100)}% NAV</b> × hệ số đèn (Xanh 1,0 · Vàng 0,6 · Cam 0,35 · Đỏ 0,2) × hệ số nền (1,2 / 1,0) × hệ số rủi ro (cờ vàng 0,5), rồi cắt bởi các trần: <b>${cpSo(cpV('max_pos',0.5)*100)}% NAV</b> một mã, <b>${cpSo(cpV('sector_cap',0.30)*100)}% NAV</b> một ngành, <b>${cpSo(cpV('max_total',1)*100)}% NAV</b> toàn danh mục, tiền mặt, tối đa <b>${cpV('max_pos_n',12)} mã</b>, sàn ${cpSo(cpV('min_size',0.02)*100)}% NAV. <b style="color:var(--warn)">Thực tế: trần ngành ${cpSo(cpV('sector_cap',0.30)*100)}% luôn cắt trước khi đèn Xanh cho ra ${cpSo(cpV('base_size',0.42)*100)}% — lệnh mới lớn nhất là ${cpSo(Math.min(cpV('base_size',0.42),cpV('sector_cap',0.30))*100)}% NAV.</b> Cùng một bộ chia vốn (allocator.py) dùng cho backtest, sổ paper, chuông Telegram và trang này.`,'A'],
    [8,'Bộ thoát','Khi nào thì ra?','Kiểm tra theo đúng thứ tự ưu tiên. Đây là nơi tiền thực sự được kiếm — xem bảng bên dưới.','A'],
-   [9,'Pyramid','Có nên gia tăng vị thế không?','Phiên 4–7 sau điểm mua, đang lãi ≥ 10%, giá ≥ 99,9% đỉnh 10 phiên, chỉ 1 lần, chỉ khi đèn Xanh. Thêm 50% vị thế gốc nếu sau khi nhồi mã đó vẫn ≤ trần mỗi mã (50% NAV) và đủ tiền mặt. <b>Trần ngành 30% chỉ áp cho lệnh mới, không áp cho lệnh nhồi</b> — đó là luật đang chạy (đo lại 26/09 trên TOP110 + S1: bắt lệnh nhồi tôn trọng cả trần ngành thì +957,2% còn +859,0%, DD không đổi 11,74%, do chặn đúng 2 lệnh nhồi trong 7,7 năm; anh Sơn giữ luật cũ). Mỗi lệnh vào/nhồi đều ghi tỷ trọng mã / ngành / tổng trên NAV sau khi khớp.','B'],
+   [9,'Pyramid','Có nên gia tăng vị thế không?','Phiên 4–7 sau điểm mua, đang lãi ≥ 10%, giá ≥ 99,9% đỉnh 10 phiên, chỉ 1 lần, chỉ khi đèn Xanh. Thêm 50% vị thế gốc nếu sau khi nhồi mã đó vẫn ≤ trần mỗi mã (50% NAV) và đủ tiền mặt. <b>Trần ngành 30% chỉ áp cho lệnh mới, không áp cho lệnh nhồi</b> — đó là luật đang chạy (đo lại 26/09 trên TOP110 + S1: bắt lệnh nhồi tôn trọng cả trần ngành thì +957,2% còn +859,0%, DD không đổi 11,74%, do chặn đúng 2 lệnh nhồi trong 7,7 năm; Nguyễn Sơn giữ luật cũ). Mỗi lệnh vào/nhồi đều ghi tỷ trọng mã / ngành / tổng trên NAV sau khi khớp.','B'],
   ];
   // Đọc thẳng từ cấu hình bộ máy (D.cfg_prod). Cột cuối nói luật nào ĐANG CHẠY,
   // luật nào ĐÃ TẮT — bản cũ liệt kê cả luật đã tắt như thể đang chạy, người đọc
@@ -1430,7 +1430,7 @@ function pageSystem(root){
   const cf = cpV('conf', 2);
   const exits=[
    ['0','Lệnh dò trượt ĐK9',`Mua dò ĐỦ lệnh lúc ATC khi đạt ĐK1–8 (ĐK9 chỉ có số sau giờ đóng cửa). Tối ~18–19h: ĐK9 ≥ ${cpDTvi()} → giữ; không đạt → bán ATC T+${cpV('sell_from',2)}, phiên đầu tiên bán được. Đứng trước mọi luật thoát khác`,'A',cpV('stage1',null)!=null],
-   ['1',`Hard stop ${cpSo(cpV('hard_stop',-0.10)*100)}%`,`Bán hết, xét từ phiên T+${cpV('sell_from',2)} — phiên đầu tiên bán được theo tài khoản của anh Sơn; trước đó không bán dù chạm luật nào. Mọi luật thoát đều tính bằng giá đóng cửa (ATC) từ T+${cpV('sell_from',2)} trở đi. Đứng trước mọi luật thoát khác`,'B',cpBat('use_hard_stop',true)],
+   ['1',`Hard stop ${cpSo(cpV('hard_stop',-0.10)*100)}%`,`Bán hết, xét từ phiên T+${cpV('sell_from',2)} — phiên đầu tiên bán được theo tài khoản của Nguyễn Sơn; trước đó không bán dù chạm luật nào. Mọi luật thoát đều tính bằng giá đóng cửa (ATC) từ T+${cpV('sell_from',2)} trở đi. Đứng trước mọi luật thoát khác`,'B',cpBat('use_hard_stop',true)],
    ['2','Cây nến bảo vệ','Đóng cửa dưới low của nến breakout → bán hết. Cắt sớm kiểu này làm mất quá nhiều lệnh về sau thành lãi lớn','C',cpBat('use_protective_candle',false)],
    ['2b',`Momentum T+${cpV('mo_by',3)}`,`Tới phiên T+${cpV('mo_by',3)} mà chưa từng đóng cửa lãi ≥ ${cpSo(cpV('mo_need',0.01)*100)}% (đã tính phí mua) → bán hết. Breakout thật thì phải chạy ngay (thêm 25/09/2026)`,'A',!!cpV('mo_by',0)],
    ['3',`Cắt lỗ ${cpSo(cpV('stop',-0.07)*100)}%`,'Từ phiên 3 trở đi → bán hết','A',true],
@@ -1544,7 +1544,7 @@ function pageWatchlist(root){
   ${(typeof ghimThuCong === 'function' && ghimThuCong().length) ? `
   <div class="card tblwrap" style="margin-bottom:14px"><table><thead><tr>
     <th>Mã</th><th>Doanh nghiệp</th><th style="text-align:right">Giá</th>
-    <th>Trạng thái hệ thống</th><th>Ghi chú của anh Sơn</th><th>Ngày thêm</th></tr></thead><tbody>
+    <th>Trạng thái hệ thống</th><th>Ghi chú của Nguyễn Sơn</th><th>Ngày thêm</th></tr></thead><tbody>
     ${ghimThuCong().map(w => `<tr>
       <td class="sym">${esc(w.sym)}${w.chuaDang ? '<span class="tag A" style="margin-left:6px">Chưa đăng</span>' : ''}</td>
       <td class="muted" style="font-size:13px">${((w.look && w.look.name) || '').slice(0, 34)}</td>
@@ -3084,7 +3084,7 @@ function pageNotebook(root){
       .filter(x => !daAn.includes(x.sym));
     const sel = document.getElementById('anSel');
     sel.innerHTML = dang.length
-      ? dang.map(x => `<option value="${esc(x.sym)}">${esc(x.sym)} — ${x.nguon === 'auto' ? 'Hệ thống' : x.nguon === 'ghitien' ? 'Sổ ghi tiến' : 'Anh Sơn nhập'}${
+      ? dang.map(x => `<option value="${esc(x.sym)}">${esc(x.sym)} — ${x.nguon === 'auto' ? 'Hệ thống' : x.nguon === 'ghitien' ? 'Sổ ghi tiến' : 'Nguyễn Sơn nhập'}${
           x.entry ? ' · mua ' + ddmm(x.entry) : ''}${x.sh ? ' · ' + x.sh.toLocaleString('vi') + ' cp' : ''}</option>`).join('')
       : '<option value="">(danh mục đang trống)</option>';
     document.getElementById('anAdd').disabled = !dang.length;
@@ -4410,7 +4410,7 @@ function lichSuThat() {
     entry_px: +t.buy_px, exit_px: +t.sell_px,
     pnl: laiSauPhi(t.buy_px, t.sell_px) * 100,
     pnl_vnd: t.sh ? Math.round(t.sh * ((+t.sell_px) * 1000 * (1 - PHI_BAN) - (+t.buy_px) * 1000 * (1 + PHI_MUA))) : null,
-    held: null, reason: t.note || 'Anh Sơn tự đóng', peak: null,
+    held: null, reason: t.note || 'Nguyễn Sơn tự đóng', peak: null,
     nguon: t.chuaDang ? 'nhap' : 'tay',
   }));
   out.sort((a, b) => String(b.exit).localeCompare(String(a.exit)));
@@ -4539,7 +4539,7 @@ function nhanNguon(n) {
   if (n === 'auto') return '<span class="tag B" style="margin-left:6px">Hệ thống</span>';
   if (n === 'ghitien') return '<span class="tag B" style="margin-left:6px" title="Sổ ghi tiến (portfolio.json) — NAV riêng của sổ này">Sổ ghi tiến</span>';
   if (n === 'nhap') return '<span class="tag A" style="margin-left:6px" title="Mới nhập trong máy anh, khách hàng chưa thấy — nhớ bấm Đăng lên trang">Chưa đăng</span>';
-  return '<span class="tag C" style="margin-left:6px">Anh Sơn nhập</span>';
+  return '<span class="tag C" style="margin-left:6px">Nguyễn Sơn nhập</span>';
 }
 
 function pageSoLenh(root) {
@@ -5308,7 +5308,7 @@ function pageKiemDinh(root) {
     <td style="text-align:right">${x.n_ngat}</td></tr>`).join('')}
   </tbody></table></div>
   <div class="note info" style="margin-top:10px"><b>Ngắt mạch đang TẮT trong cấu hình chạy thật.</b>
-  Bảng trên chỉ là thí nghiệm. Bật hay không là quyết định của anh Sơn, không phải của bot —
+  Bảng trên chỉ là thí nghiệm. Bật hay không là quyết định của Nguyễn Sơn, không phải của bot —
   và nếu nó làm lợi nhuận giảm mà mức sụt không giảm tương xứng thì đừng bật.</div>
 
   <h2>8 · Kẹt thanh khoản T+2.5</h2>
