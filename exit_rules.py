@@ -164,3 +164,79 @@ def status(C, gain, peak, held, **kw):
                 profit_trigger=(None if d['trigger'] is None else round(d['trigger'] * 100, 2)),
                 sellable=d['sellable'], exit_reason=d['rule'], pending_exit=d['pending'],
                 exit_phan=round(d['phan'], 4), action=action_text(d))
+
+
+# =============================================================================
+# KẾ HOẠCH BÁN CHO PHIÊN KẾ TIẾP (03/10/2026, anh Sơn: "mỗi ngày mỗi mã đang cầm phải có
+# việc cụ thể — giá bao nhiêu thì bán"). KHÔNG thêm luật mới: chỉ hỏi decide() ở trên với
+# từng mức giá đóng cửa giả định của phiên tới, rồi tìm mức giá CAO NHẤT mà luật thoát
+# đã bật -> "đóng cửa ≤ X thì BÁN HẾT ATC". Các luật vẫn tính bằng giá ĐÓNG CỬA.
+# Đơn vị giá: giá ĐIỀU CHỈNH cùng thang với cost (giá vốn đã gồm phí mua, như engine2).
+# =============================================================================
+def _ban_tai(C, cost, peak, held, prev, b10, b20, c, probe_fail=False, part=False):
+    gain = c / cost - 1
+    pk = max(float(peak), gain)
+    nf, ns = int(C.get('trail_fast', 10)), int(C.get('trail_ma', 30))
+    seq = list(prev) + [c]
+    m10 = sum(seq[-nf:]) / nf if len(seq) >= nf else None
+    m30 = sum(seq[-ns:]) / ns if len(seq) >= ns else None
+    nb10 = b10 + 1 if (m10 is not None and c < m10) else 0
+    nb20 = b20 + 1 if (m30 is not None and c < m30) else 0
+    return decide(C, gain, pk, held, probe_fail=probe_fail, b10=nb10, b20=nb20, part=part)
+
+
+def buoc_gia(px):
+    """Bước giá HOSE (đ): <10.000 -> 10; <50.000 -> 50; còn lại 100."""
+    return 10 if px < 10000 else (50 if px < 50000 else 100)
+
+
+def ke_hoach_ban(C, cost, peak, held_next, prev_closes, b10=0, b20=0, probe_fail=False, part=False, fx=1.0):
+    """Kế hoạch cho phiên tới của MỘT vị thế.
+    cost: giá vốn (đ/cp, đã gồm phí mua, thang điều chỉnh); peak: đỉnh lãi theo giá đóng cửa
+    tới phiên gần nhất (phân số); held_next: số phiên đã giữ TÍNH CẢ phiên tới; prev_closes:
+    giá đóng cửa điều chỉnh các phiên trước (cũ -> mới, >= 30 phiên nếu có); b10/b20: số phiên
+    liên tiếp đóng dưới MA10/MA30 tới phiên gần nhất.
+    Trả về dict:
+      viec: 'BAN' (bán ATC bất kể giá) | 'NGUONG' (bán nếu đóng cửa <= nguong) | 'CHUA_BAN_DUOC' | 'GIU'
+      nguong: giá đóng cửa cao nhất vẫn kích hoạt luật bán (None nếu không có)
+      ly_do: luật sẽ bật ở ngay dưới ngưỡng
+      moc: các mốc tham khảo {khoa_lai, cat_lo, ma10, ma30, momentum}
+    """
+    if isinstance(C, dict):
+        C = {k: v for k, v in C.items() if v is not None}
+    prev = [float(x) for x in prev_closes if x == x]
+    sf = int(C.get('sell_from', 2) or 2)
+    f = lambda c: _ban_tai(C, cost, peak, held_next, prev, b10, b20, c, probe_fail, part)
+    hi, lo = cost * 3.0, cost * 0.3
+    out = dict(viec='GIU', nguong=None, ly_do=None, held=int(held_next), sell_from=sf, moc={})
+    d_hi = f(hi)
+    if d_hi.get('rule'):
+        out.update(viec='BAN', ly_do=d_hi['rule'])
+    elif not f(lo).get('rule'):
+        out['viec'] = 'CHUA_BAN_DUOC' if held_next < sf else 'GIU'
+        if probe_fail:
+            out['ly_do'] = R_PROBE
+    else:
+        a, b = lo, hi          # f(a) ban, f(b) giu
+        for _ in range(60):
+            m = (a + b) / 2
+            if f(m).get('rule'): a = m
+            else: b = m
+            if b - a < cost * 1e-6: break
+        out.update(viec='NGUONG', nguong=a, ly_do=f(a)['rule'])
+        # ngưỡng theo GIÁ THỰC (fx = giá thô / giá điều chỉnh hôm nay), làm tròn theo bước giá:
+        # mức cao nhất trên lưới bước giá mà luật vẫn bật.
+        raw = a * fx; t = buoc_gia(raw)
+        up = (int(raw // t) + 1) * t
+        out['nguong_raw'] = up if f(up / fx).get('rule') else int(raw // t) * t
+    # moc tham khao (chi de hien, quyet dinh van la decide() o tren)
+    trig, floor = profit_floor(peak, C)
+    if floor is not None: out['moc']['khoa_lai'] = cost * (1 + floor)
+    out['moc']['cat_lo'] = cost * (1 + C.get('stop', -0.07))
+    nf, ns = int(C.get('trail_fast', 10)), int(C.get('trail_ma', 30))
+    if len(prev) >= nf - 1: out['moc']['ma10'] = sum(prev[-(nf - 1):]) / (nf - 1)
+    if len(prev) >= ns - 1: out['moc']['ma30'] = sum(prev[-(ns - 1):]) / (ns - 1)
+    if C.get('mo_by') and peak < C.get('mo_need', 0.0) and held_next <= C.get('mo_window', 99):
+        out['moc']['momentum'] = cost * (1 + C.get('mo_need', 0.0))
+    out['b10'], out['b20'], out['peak'] = int(b10), int(b20), float(peak)
+    return out
