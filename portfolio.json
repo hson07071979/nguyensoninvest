@@ -83,7 +83,7 @@
     74500.0,
     75800.0
    ],
-   "cfg_hash_state": "9759d1f3cf18",
+   "cfg_hash_state": "ef51d3e39611",
    "cond9": "DAT",
    "ordimb_min": 1.4,
    "_floor": 0.02
@@ -154,6 +154,13 @@
   }
  ],
  "log": [
+  {
+   "date": "2026-10-02",
+   "items": [
+    "NÂNG CẤP TRẠNG THÁI SỔ: cấu hình 6bf793e930f7 → ef51d3e39611 (không mua/bán lại, không sửa lịch sử)",
+    "NÂNG CẤP BVH: đỉnh +11.30% · hiện +11.30% · sàn +2.00% · GIỮ — khoá lãi đang bật: đỉnh +11,3%, sàn bảo vệ +2% (hiện +11,3%)"
+   ]
+  },
   {
    "date": "2026-10-02",
    "items": [
@@ -294,7 +301,7 @@
  },
  "dung_lai_2409": true,
  "light": "CAM",
- "prod_config_hash": "6bf793e930f7",
+ "prod_config_hash": "ef51d3e39611",
  "checks": {
   "nav_identity": true,
   "pnl_reconcile_gap_vnd": 1,
@@ -321,6 +328,13 @@
   "since": "2026-09-14"
  },
  "migrations": [
+  {
+   "at": "2026-10-03T19:52:48",
+   "session": "2026-10-02",
+   "from_hash": "6bf793e930f7",
+   "to_hash": "ef51d3e39611",
+   "n_open": 1
+  },
   {
    "at": "2026-09-29T03:24:40",
    "session": "2026-09-28",

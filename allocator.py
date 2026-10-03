@@ -31,7 +31,22 @@ DEFAULTS = dict(base_size=0.42, max_pos=0.50, max_total=1.0, max_pos_n=12,
 REASON_VI = {'theoretical': 'cỡ lý thuyết', 'max_pos': 'trần mỗi mã',
              'max_total': 'trần tổng vốn', 'sector_cap': 'trần ngành',
              'cash': 'tiền mặt', 'max_pos_n': 'đủ số mã', 'min_size': 'dưới cỡ tối thiểu',
-             'light': 'đèn chặn', 'liquidity': 'thanh khoản'}
+             'light': 'đèn chặn', 'liquidity': 'thanh khoản',
+             'max_unconf': 'đang có lệnh dò chưa xác nhận ĐK9'}
+
+
+def probe_hanging(p, sell_from=3, days_ahead=0):
+    """Lenh do 'treo' (luat max_unconf, 03/10/2026): DA truot DK9 nhung chua toi phien ban duoc.
+    p: dict co 'probe_fail' va 'held' (so phien da giu tinh toi phien cua p). days_ahead=1 khi
+    p lay tu so cua phien TRUOC (vd live_scan doc book toi qua) va dang xet phien hom nay:
+    lenh toi phien ban (held+days_ahead >= sell_from) se ban ATC chinh phien do -> khong con treo."""
+    return bool(p.get('probe_fail')) and (int(p.get('held') or 0) + int(days_ahead)) < int(sell_from or 2)
+
+
+def unconf_blocked(n_hanging, cfg=None):
+    """True = da du so lenh do treo cho phep -> khong mo lenh do moi. Khong co max_unconf -> False."""
+    lim = (cfg or {}).get('max_unconf')
+    return lim is not None and int(n_hanging) >= int(lim)
 
 
 def _num(x):
