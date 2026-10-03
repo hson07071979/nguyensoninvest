@@ -237,6 +237,53 @@ def co_lenh(h, T, den):
         return None, None, [], None, None
 
 
+# =============================================================================
+# KENH BAO (03/10/2026): Telegram (neu co TELEGRAM_TOKEN/CHAT) VA app ntfy (neu co NTFY_TOPIC).
+# ntfy = app mien phi (Android/iOS), khong can tai khoan: dang ky dung ten "topic" bi mat la nhan.
+# =============================================================================
+def _tg():
+    return os.environ.get('TELEGRAM_TOKEN', '').strip(), os.environ.get('TELEGRAM_CHAT', '').strip()
+
+
+def _ntfy_topic():
+    return os.environ.get('NTFY_TOPIC', '').strip()
+
+
+def kenh_co():
+    tok, chat = _tg()
+    return bool((tok and chat) or _ntfy_topic())
+
+
+def gui_tin(text, md=True, prio=4, tags=None):
+    """Gui mot tin ra MOI kenh dang cai. Tra True neu it nhat mot kenh nhan."""
+    ok = False
+    tok, chat = _tg()
+    if tok and chat:
+        try:
+            body = {'chat_id': chat, 'text': text, 'disable_web_page_preview': True}
+            if md:
+                body['parse_mode'] = 'Markdown'
+            r = requests.post(f'https://api.telegram.org/bot{tok}/sendMessage', json=body, timeout=20)
+            print('telegram:', 'da gui' if r.ok else f'HONG {r.status_code} {r.text[:120]}')
+            ok = ok or r.ok
+        except Exception as e:
+            print('telegram loi:', type(e).__name__, e)
+    topic = _ntfy_topic()
+    if topic:
+        try:
+            plain = text.replace('*', '') if md else text
+            dong = plain.strip().split('\n')
+            r = requests.post(os.environ.get('NTFY_URL', 'https://ntfy.sh').rstrip('/'),
+                              json={'topic': topic, 'title': dong[0][:200],
+                                    'message': ('\n'.join(dong[1:]).strip() or dong[0])[:3900],
+                                    'priority': int(prio), 'tags': list(tags or [])}, timeout=20)
+            print('ntfy:', 'da gui' if r.ok else f'HONG {r.status_code} {r.text[:120]}')
+            ok = ok or r.ok
+        except Exception as e:
+            print('ntfy loi:', type(e).__name__, e)
+    return ok
+
+
 def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_nhan=(), nhac=()):
     # Chuong ve dien thoai chi keu TRONG PHIEN, tu 09h00 den 15h00 gio VN.
     # 09h00-15h00: chuong trong phien. 15h00-21h30: XAC NHAN SAU PHIEN — Dieu kien 9 chi co
@@ -249,24 +296,14 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
         return
     sau_phien = t_bao > 15.0
 
-    tok = os.environ.get('TELEGRAM_TOKEN', '').strip()
-    chat = os.environ.get('TELEGRAM_CHAT', '').strip()
-    if not tok or not chat:
+    if not kenh_co():
         return
 
     cu = cu_mua if cu_ses == ses else set()
     da_gui = []
 
-    def _post(text):
-        try:
-            r = requests.post(f'https://api.telegram.org/bot{tok}/sendMessage',
-                              json={'chat_id': chat, 'text': text, 'parse_mode': 'Markdown',
-                                    'disable_web_page_preview': True}, timeout=20)
-            print('telegram:', 'da gui' if r.ok else f'HONG {r.status_code} {r.text[:120]}')
-            return r.ok
-        except Exception as e:
-            print('telegram loi:', type(e).__name__, e)
-            return False
+    def _post(text, prio=4, tags=None):
+        return gui_tin(text, md=True, prio=prio, tags=tags)
 
     sf = int(((T or {}).get('cfg') or {}).get('sell_from', 3) or 3)
     dtt = (den_tt or {}).get('light')
@@ -369,17 +406,8 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
         dong += ["Bộ máy ghi nhận lệnh ở giá đóng cửa hôm nay. Vào thực tế: đầu phiên sau, "
                  "giá có thể đã khác — xem giá trước khi đặt."]
 
-    try:
-        r = requests.post(
-            f'https://api.telegram.org/bot{tok}/sendMessage',
-            json={'chat_id': chat, 'text': '\n'.join(dong),
-                  'parse_mode': 'Markdown', 'disable_web_page_preview': True},
-            timeout=20)
-        print('telegram:', 'da gui' if r.ok else f'HONG {r.status_code} {r.text[:120]}')
-        return da_gui + ([h['sym'] for h in moi] if r.ok else [])
-    except Exception as e:
-        print('telegram loi:', type(e).__name__, e)
-        return da_gui
+    ok = _post('\n'.join(dong), prio=5, tags=['green_circle'])
+    return da_gui + ([h['sym'] for h in moi] if ok else [])
 
 
 def danh_gia_thoat(P, rows, CF, ses, now, light_today=None):
@@ -437,20 +465,13 @@ def danh_gia_thoat(P, rows, CF, ses, now, light_today=None):
 def gui_telegram_thoat(ex, P, ses, cu, now, T):
     """(1) 14:00-14:50: vi the co luat thoat BAN DUOC theo gia tam tinh -> nhac dat ATC.
     (2) Sau 15:30 khi so ghi tien da chot phien: gui DUNG cac dong BAN cua so (cung ly do)."""
-    tok = os.environ.get('TELEGRAM_TOKEN', '').strip(); chat = os.environ.get('TELEGRAM_CHAT', '').strip()
     t = now.hour + now.minute / 60
-    if not tok or not chat or now.weekday() >= 5:
+    if not kenh_co() or now.weekday() >= 5:
         return []
     da = []
 
     def _post(text):
-        try:
-            r = requests.post(f'https://api.telegram.org/bot{tok}/sendMessage',
-                              json={'chat_id': chat, 'text': text, 'disable_web_page_preview': True}, timeout=20)
-            print('telegram thoat:', 'da gui' if r.ok else f'HONG {r.status_code}')
-            return r.ok
-        except Exception as e:
-            print('telegram thoat loi:', e); return False
+        return gui_tin(text, md=False, prio=5, tags=['small_red_triangle_down'])
     if 14.0 <= t <= 14.84:
         ban = [x for x in ex if x.get('exit_reason') and 'T:' + x['sym'] not in cu]
         cho = [x for x in ex if x.get('pending_exit') and 'W:' + x['sym'] not in cu]
@@ -473,6 +494,102 @@ def gui_telegram_thoat(ex, P, ses, cu, now, T):
         else:
             da.append('S:' + ses)
     return da
+
+
+def _ke_hoach(T):
+    """Ke hoach ban phien toi do bo may tinh moi toi (thresholds.json): so he thong + So tay."""
+    ds = [(p['ke_hoach'], 'Hệ thống') for p in (((T or {}).get('book') or {}).get('positions') or []) if p.get('ke_hoach')]
+    ds += [(k, 'Sổ tay') for k in ((T or {}).get('ke_hoach_so_tay') or [])]
+    return ds
+
+
+def _so(v):
+    return ('%.2f' % float(v)).replace('.', ',') if v is not None else '—'
+
+
+def _dong_ke_hoach(k, nguon, px=None):
+    ly = k.get('ly_do') or ''
+    v = k.get('viec')
+    if v == 'BAN':
+        return f"{k['sym']} ({nguon}): BÁN HẾT ATC — {ly}"
+    if v == 'CHUA_BAN_DUOC':
+        return f"{k['sym']} ({nguon}): GIỮ — chưa bán được (từ phiên thứ {k.get('sell_from', 3)})"
+    if v == 'NGUONG' and k.get('nguong') is not None:
+        dau = f"giá {_so(px)} · " if px is not None else ''
+        return f"{k['sym']} ({nguon}): {dau}GIỮ — đóng cửa ≤ {_so(k['nguong'])} thì BÁN HẾT ATC ({ly})"
+    return f"{k['sym']} ({nguon}): GIỮ"
+
+
+def gui_nhac_atc(T, rows, ses, cu, now):
+    """14:00-14:45: ma nao cua so he thong / So tay phai BAN ATC hom nay theo ke hoach toi qua
+    (viec BAN, hoac gia hien tai da <= nguong). Mot tin / ma / phien."""
+    t = now.hour + now.minute / 60
+    if not kenh_co() or now.weekday() >= 5 or not (14.0 <= t <= 14.75):
+        return []
+    if (T.get('asof') or '') >= ses:      # ke hoach la cho phien SAU T.asof
+        return []
+    dong, da = [], []
+    for k, ng in _ke_hoach(T):
+        key = f"A:{ng[:2]}:{k['sym']}"
+        if key in cu:
+            continue
+        r = rows.get(k['sym'])
+        px = None
+        if r and str(r.get('Date', ''))[:10] == ses:
+            try: px = float(r.get('PriceClose') or 0) / 1000 or None
+            except Exception: px = None
+        if k.get('viec') == 'BAN' or (k.get('viec') == 'NGUONG' and px is not None and px <= float(k['nguong'])):
+            dong.append(f"{k['sym']} ({ng}) giá {_so(px)} → BÁN HẾT ATC" + (f" · ngưỡng {_so(k.get('nguong'))}" if k.get('nguong') else '')
+                        + f" — {k.get('ly_do') or ''}")
+            da.append(key)
+    if dong and gui_tin('\n'.join([f"🔻 ĐẶT LỆNH BÁN ATC — phiên {ses[8:10]}/{ses[5:7]} · {now:%H:%M}", ''] + dong
+                                   + ['', 'Luật tính bằng giá đóng cửa: đặt ATC trước 14:45.']), md=False, prio=5,
+                       tags=['rotating_light']):
+        return da
+    return []
+
+
+def gui_tom_tat(T, PF, ses, cu, now):
+    """Toi (sau khi bo may dung xong phien `ses`): tom tat cuoi ngay + xac nhan GIU/BAN cho phien toi."""
+    t = now.hour + now.minute / 60
+    if not kenh_co() or now.weekday() >= 5 or t < 15.5 or t > 21.5:
+        return []
+    key = 'TT:' + ses
+    if key in cu or (T.get('asof') or '') != ses:
+        return []
+    import datetime as _d
+    nx = _d.date.fromisoformat(ses)
+    while True:
+        nx += _d.timedelta(days=1)
+        if nx.weekday() < 5: break
+    L = [f"📊 Tóm tắt phiên {ses[8:10]}/{ses[5:7]} — kế hoạch phiên {nx:%d/%m}", '']
+    # lenh MUA / BAN hom nay cua so giao dich thuc te (ngan gon)
+    mb = []
+    for d in (PF.get('log') or []):
+        if d.get('date') != ses: continue
+        for it in d.get('items') or []:
+            it = str(it)
+            if it.startswith('MUA ') and ' × ' in it:
+                p_ = it.split()
+                mb.append(f"MUA {p_[1]} {p_[2].replace('.', ',')}")
+            elif it.startswith('BÁN '):
+                p_ = it.split(); import re as _re
+                m = _re.search(r'lãi/lỗ sau phí ([-+]?[\d.]+)%', it)
+                mb.append(f"BÁN {p_[1]} {p_[2].replace('.', ',')}" + (f" · {'lãi +' if float(m.group(1)) >= 0 else 'lỗ '}{float(m.group(1)):.1f}%".replace('.', ',') if m else ''))
+    L.append('Hôm nay: ' + (' · '.join(mb) if mb else 'không mua bán'))
+    if PF.get('nav'):
+        L.append(f"Tài khoản sổ thực tế: {float(PF['nav'])/1e9:.3f} tỷ".replace('.', ','))
+    # lenh mua thu hom nay: xac nhan / khong
+    st = [x for x in (T.get('signals_today') or []) if x.get('probe')]
+    for x in st:
+        L.append(f"{x['sym']}: " + ("lệnh mua lớn hơn lệnh bán ✅ → GIỮ" if x.get('cond9_ok')
+                                    else f"lệnh mua KHÔNG lớn hơn lệnh bán → bán ATC phiên thứ {(T.get('cfg') or {}).get('sell_from', 3)}"))
+    L += ['', 'Việc phiên tới:']
+    kh = _ke_hoach(T)
+    L += [_dong_ke_hoach(k, ng) for k, ng in kh] if kh else ['Không cầm mã nào.']
+    if gui_tin('\n'.join(L), md=False, prio=3, tags=['bar_chart']):
+        return [key]
+    return []
 
 
 def loai_so_tay():
@@ -673,6 +790,7 @@ def main():
     except Exception:
         PF = {}
     them = [p['sym'] for p in (PF.get('open') or []) if p.get('sym') and p['sym'] not in syms]
+    them += [k['sym'] for k, _ in _ke_hoach(T) if k.get('sym') and k['sym'] not in syms and k['sym'] not in them]
     rows_pf = {}   # rieng: khong tron vao do phu / tin hieu cua vu tru
     with ThreadPoolExecutor(max_workers=8) as ex:
         for s, r in zip(them, ex.map(lambda s: latest_row(s, frm, today), them)):
@@ -947,6 +1065,16 @@ def main():
         da_keu += gui_telegram_thoat(out['exits'], PF, ses, (cu_mua if cu_ses == ses else set()), now, T) or []
     except Exception as e:
         print('luat thoat trong phien loi:', type(e).__name__, e)
+    # 03/10/2026: nhac ATC theo ke hoach ban (so he thong + So tay) va tom tat cuoi ngay
+    _cu = (cu_mua if cu_ses == ses else set())
+    try:
+        da_keu += gui_nhac_atc(T, {**rows_pf, **rows}, ses, _cu, now) or []
+    except Exception as e:
+        print('nhac ATC loi:', type(e).__name__, e)
+    try:
+        da_keu += gui_tom_tat(T, PF, ses, _cu, now) or []
+    except Exception as e:
+        print('tom tat loi:', type(e).__name__, e)
     out['alerted'] = dict(session=ses, syms=sorted((cu_mua if cu_ses == ses else set()) | set(da_keu)))
     out['nhac_ban'] = nhac
     out['xac_nhan_mua_do'] = xac_nhan
@@ -957,7 +1085,8 @@ def main():
     # deu RONG trong moi lan chay -> khong mot chuong mua / ban nao toi dien thoai ma khong ai biet.
     # Ghi co nay vao live.json de trang web bao do, va in to trong log.
     out['telegram_cai'] = bool(os.environ.get('TELEGRAM_TOKEN', '').strip() and os.environ.get('TELEGRAM_CHAT', '').strip())
-    if not out['telegram_cai']:
+    out['ntfy_cai'] = bool(_ntfy_topic())
+    if not out['telegram_cai'] and not out['ntfy_cai']:
         print('!! THIEU TELEGRAM_TOKEN / TELEGRAM_CHAT — chuong Telegram KHONG gui duoc. '
               'Cai o Settings -> Secrets and variables -> Actions cua repo nay.')
     json.dump(out, open('live.json', 'w', encoding='utf-8'), ensure_ascii=False)
