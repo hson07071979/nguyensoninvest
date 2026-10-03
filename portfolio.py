@@ -486,6 +486,14 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
         px = float(h['price']) * 1000
         if px <= 0:
             continue
+        # TOI DA 1 LENH DO TREO (PROD 03/10/2026, R31) — cung dinh nghia engine2 stage 1/3:
+        # lenh mua trong phien nay (chua co DK9 luc ATC) + lenh da truot DK9 chua ban (buoc 1 da
+        # ban cac lenh toi T+3, nen probe_fail con trong so = con treo).
+        n_treo = sum(1 for p in P['open'] if p.get('entry') == ses or p.get('probe_fail'))
+        if AL.unconf_blocked(n_treo, C):
+            nhat_ky.append(f"BỎ QUA {h['sym']} — {AL.REASON_VI.get('max_unconf')} "
+                           f"({n_treo} lệnh treo, tối đa {C.get('max_unconf')})")
+            continue
         th = syms_th.get(h['sym'], {})
         sp = dict(rmul=h.get('rmul', 1.0), base=h.get('base'))
         nganh = h.get('sector') or th.get('sector') or 'Khác'

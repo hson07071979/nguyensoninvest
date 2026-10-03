@@ -273,9 +273,30 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
     # (1) MUA DO 14h00-14h45: du DK1-8 (KL/GTGD co the theo DU PHONG), DK9 chua co so
     if MUA_DO_TU <= t_bao <= MUA_DO_DEN:
         do = [h for h in hits if h.get('mua_do') and 'D:' + h['sym'] not in cu]
+        # TOI DA 1 LENH DO TREO (PROD 03/10/2026, R31): dem lenh da truot DK9 con giu hom nay
+        # (so he thong toi qua, +1 phien) roi xet tung ma theo diem giam dan nhu engine2.
+        _cf = (T or {}).get('cfg') or {}
+        _treo = None
+        if _cf.get('max_unconf') is not None:
+            try:
+                import allocator as _AL
+                _op = ((T or {}).get('book') or {}).get('positions')
+                if _op is None:
+                    _P = json.load(open('portfolio.json', encoding='utf-8')) if os.path.exists('portfolio.json') else {}
+                    _op = [p for p in (_P.get('open') or []) if (p.get('sh') or 0) > 0]
+                _treo = sum(1 for p in _op if _AL.probe_hanging(p, sf, days_ahead=1))
+            except Exception as e:
+                print('dem lenh do treo loi:', e); _treo = None
+            do = sorted(do, key=lambda h: (-(h.get('score') or 0), h['sym']))
         if do:
             dong = [f"\U0001F7E0 *MUA DÒ* — {len(do)} mã, phiên {ses} · {t_bao_s}", '']
             for h in do:
+                if _treo is not None:
+                    if _treo >= int(_cf['max_unconf']):
+                        dong.append(f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f}\n"
+                                    f"   ⛔ *KHÔNG MUA* — đang có {_treo} lệnh dò chưa xác nhận ĐK9 (tối đa {_cf['max_unconf']})")
+                        continue
+                    _treo += 1
                 theo, thuc, ly, tien, nav = co_lenh(h, T or {}, den)
                 size = (f"cỡ *{thuc:.1f}% NAV*" if thuc is not None else "")
                 if tien and nav:
