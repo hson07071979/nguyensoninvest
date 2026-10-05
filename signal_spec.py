@@ -342,6 +342,58 @@ def _score(pts_static, N, S, L, I, mom):
     return add32(float(ints), mp), mp
 
 
+def buoc_gia(px, exch):
+    """Buoc gia (dong). HOSE: <10.000 -> 10; 10.000-49.950 -> 50; >=50.000 -> 100.
+    HNX / UPCoM: 100 (co phieu)."""
+    if str(exch).upper() not in ('HOSE', 'HSX'):
+        return 100.0
+    return 10.0 if px < 10000 else (50.0 if px < 50000 else 100.0)
+
+
+def gia_can(ref, thr, exch):
+    """Gia dong cua NHO NHAT (dung buoc gia) qua dieu kien bien do:
+    ret32(gia, ref) >= f32(thr) — dung phep so sanh cua evaluate().
+    ref = GIA THAM CHIEU cua phien (dong). Ngay khong huong quyen (co tuc, chia
+    tach) tham chieu khac gia dong cua phien truoc — phai dung tham chieu
+    (loi DGW 05/10/2026: nguong 48,15 cao hon ca gia tran 47,70)."""
+    ref = float(ref)
+    if not ref > 0:
+        return None
+    x = ref * (1.0 + float(thr))
+    b = buoc_gia(x, exch)
+    p = math.ceil(round(x / b, 6)) * b
+    for _ in range(3):                      # bu sai so float32 cua phep so sanh
+        if ret32(f32(p), f32(ref)) >= f32(thr):
+            break
+        p += buoc_gia(p, exch)
+    while p - buoc_gia(p - 1, exch) > 0 and ret32(f32(p - buoc_gia(p - 1, exch)), f32(ref)) >= f32(thr):
+        p -= buoc_gia(p - 1, exch)
+    return p
+
+
+def kl_can(sp, vol_floor):
+    """Khoi luong phien NHO NHAT qua dieu kien 2: vol / TB20(19 phien truoc + hom nay)
+    >= vol_floor — dung mean20() + ge32() cua evaluate(). None khi thieu du lieu."""
+    s19, c19 = sp.get('vol_s19'), sp.get('vol_c19')
+    if s19 is None or not c19:
+        return None
+    n, f = c19 + 1, float(vol_floor)
+    if n <= f:
+        return None
+    v = int(f * float(s19) / (n - f))
+    for _ in range(50):
+        vma = mean20(s19, c19, f32(float(v)))
+        if ge32(div32(f32(float(v)), pos_or_nan(vma)), f):
+            break
+        v += 1
+    while v > 0:
+        vma = mean20(s19, c19, f32(float(v - 1)))
+        if not ge32(div32(f32(float(v - 1)), pos_or_nan(vma)), f):
+            break
+        v -= 1
+    return v
+
+
 def evaluate(sp, row, U, cfg, X=None):
     """sp  : per-symbol spec exported for this session (spec_export.export)
     row : FireAnt HistoricalQuotes row of the session (raw prices, VND)
