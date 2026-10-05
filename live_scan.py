@@ -21,6 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
+import math
 import signal_spec as SP
 from signal_spec import ordimb_of
 
@@ -51,6 +52,30 @@ VOL_CURVE = [(9.25, 0.02), (9.50, 0.10), (10.00, 0.22), (10.50, 0.31), (11.00, 0
 # ~6-8 lan/nam (T+3 TB ~0%, toi xac nhan truot thi ban T+3 nhu lenh do).
 MUA_DO_TU, MUA_DO_DEN = 14.0, 14.75          # 14:00-14:45 gio VN (anh Son: bao tu 14h)
 KL_NOW_K, KL_PROJ_K = 0.75, 0.90             # x vol_floor: KL hien tai >= 1,5x va du phong >= 1,8x
+
+
+
+def nguong_gia(basic, t, sp):
+    """Nguong gia dong cua cua CHINH phien dang quet, tinh tu GIA THAM CHIEU (PriceBasic)
+    — dung phep so cua signal_spec.evaluate. thresholds.json['need_px'] tinh tu gia dong
+    cua phien truoc, nen ngay khong huong quyen bi sai (DGW 05/10/2026: 48,15 > gia tran
+    47,70; dung la 47,10)."""
+    thr = (sp or {}).get('thr')
+    if thr is None and t.get('thr') is not None:
+        thr = float(t['thr']) / 100.0
+    try:
+        g = SP.gia_can(basic, thr, t.get('exch', 'HOSE')) if hasattr(SP, 'gia_can') else None
+    except Exception:
+        g = None
+    if g is None:
+        if thr is None:
+            return t.get('need_px')
+        b = 100.0 if str(t.get('exch', 'HOSE')).upper() not in ('HOSE', 'HSX') else None
+        x = basic * (1.0 + thr)
+        if b is None:
+            b = 10.0 if x < 10000 else (50.0 if x < 50000 else 100.0)
+        g = math.ceil(round(x / b, 6)) * b
+    return round(g / 1000.0, 2)
 
 
 def gio_vn():
@@ -977,7 +1002,7 @@ def main():
             sym=s, name=t['name'], level=lvl, reason=why, fa=(t.get('state') == 'fa'),
             fund=t.get('fund'),
             price=round(close / 1000, 2), ref=round(basic / 1000, 2),
-            pct=round(pct * 100, 2), need_px=t['need_px'],
+            pct=round(pct * 100, 2), need_px=nguong_gia(basic, t, sp),
             volr=round(v.get('volr') or volr, 2), volr_proj=round(volr_proj, 2),
             need_vol=t['need_vol'], vol=int(vol),
             gtgd=round(tv / 1e9, 1), gtgd_proj=round(tv_proj / 1e9, 1),
