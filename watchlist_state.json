@@ -3,79 +3,79 @@
  "members": {
   "GMD": {
    "added": "2026-08-28",
-   "score": 88.7,
+   "score": 88.9,
    "status": "đạt",
    "note": ""
   },
   "HCM": {
    "added": "2026-08-28",
-   "score": 82.7,
+   "score": 77.8,
    "status": "đạt",
    "note": ""
   },
   "HDB": {
    "added": "2026-08-28",
-   "score": 78.9,
+   "score": 84.0,
    "status": "đạt",
    "note": ""
   },
   "MBB": {
    "added": "2026-08-28",
-   "score": 57.0,
+   "score": 62.3,
    "status": "đạt",
    "note": ""
   },
   "MSN": {
    "added": "2026-08-28",
-   "score": 69.0,
+   "score": 69.1,
    "status": "đạt",
    "note": ""
   },
   "MBS": {
    "added": "2026-08-28",
-   "score": 55.4,
+   "score": 60.4,
    "status": "đạt",
    "note": ""
   },
   "IDC": {
    "added": "2026-08-28",
-   "score": 77.8,
+   "score": 78.0,
    "status": "đạt",
    "note": ""
   },
   "PVD": {
    "added": "2026-08-28",
-   "score": 57.0,
+   "score": 52.2,
    "status": "đạt",
    "note": ""
   },
   "HPG": {
    "added": "2026-08-28",
-   "score": 56.6,
+   "score": 51.6,
    "status": "đạt",
    "note": ""
   },
   "VHM": {
    "added": "2026-09-16",
-   "score": 76.9,
+   "score": 77.1,
    "status": "đạt",
    "note": ""
   },
   "VPI": {
    "added": "2026-09-16",
-   "score": 73.9,
+   "score": 78.7,
    "status": "đạt",
    "note": ""
   },
   "MWG": {
    "added": "2026-09-16",
-   "score": 72.6,
+   "score": 88.0,
    "status": "đạt",
    "note": ""
   },
   "BVH": {
    "added": "2026-09-16",
-   "score": 69.8,
+   "score": 59.8,
    "status": "đạt",
    "note": ""
   },
@@ -87,7 +87,7 @@
   },
   "DIG": {
    "added": "2026-09-16",
-   "score": 50.7,
+   "score": 55.8,
    "status": "đạt",
    "note": ""
   },
@@ -99,25 +99,25 @@
   },
   "DGW": {
    "added": "2026-09-21",
-   "score": 89.7,
+   "score": 84.8,
    "status": "đạt",
    "note": ""
   },
   "TCH": {
    "added": "2026-09-21",
-   "score": 46.4,
+   "score": 51.6,
    "status": "đạt",
    "note": ""
   },
   "DHC": {
    "added": "2026-09-23",
-   "score": 84.7,
+   "score": 89.7,
    "status": "đạt",
    "note": ""
   },
   "HAH": {
    "added": "2026-09-25",
-   "score": 69.0,
+   "score": 54.1,
    "status": "đạt",
    "note": ""
   },
@@ -129,13 +129,13 @@
   },
   "GAS": {
    "added": "2026-09-25",
-   "score": 59.4,
+   "score": 59.2,
    "status": "đạt",
    "note": ""
   },
   "CTG": {
    "added": "2026-09-25",
-   "score": 51.5,
+   "score": 56.6,
    "status": "đạt",
    "note": ""
   },
@@ -147,12 +147,64 @@
   },
   "NAB": {
    "added": "2026-10-01",
-   "score": 57.3,
+   "score": 62.8,
+   "status": "đạt",
+   "note": ""
+  },
+  "VNM": {
+   "added": "2026-10-06",
+   "score": 64.1,
+   "status": "đạt",
+   "note": ""
+  },
+  "DPR": {
+   "added": "2026-10-06",
+   "score": 62.9,
+   "status": "đạt",
+   "note": ""
+  },
+  "HHP": {
+   "added": "2026-10-06",
+   "score": 49.8,
    "status": "đạt",
    "note": ""
   }
  },
  "log": [
+  {
+   "date": "2026-10-06",
+   "size": 28,
+   "added_ct": [
+    {
+     "sym": "VNM",
+     "score": 64.1,
+     "sector": "Thực phẩm và đồ uống",
+     "base": 11.5,
+     "rs": 75.0
+    },
+    {
+     "sym": "DPR",
+     "score": 62.9,
+     "sector": "Hóa chất",
+     "base": 5.0,
+     "rs": 73.0
+    },
+    {
+     "sym": "HHP",
+     "score": 49.8,
+     "sector": "Tài nguyên Cơ bản",
+     "base": 18.9,
+     "rs": 98.0
+    }
+   ],
+   "removed_ct": [],
+   "added": [
+    "VNM",
+    "DPR",
+    "HHP"
+   ],
+   "removed": []
+  },
   {
    "date": "2026-10-05",
    "size": 25,
