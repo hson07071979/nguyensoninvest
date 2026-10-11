@@ -3,49 +3,49 @@
  "members": {
   "GMD": {
    "added": "2026-08-28",
-   "score": 84.3,
+   "score": 84.2,
    "status": "đạt",
    "note": ""
   },
   "HCM": {
    "added": "2026-08-28",
-   "score": 63.0,
+   "score": 53.0,
    "status": "đạt",
    "note": ""
   },
   "HDB": {
    "added": "2026-08-28",
-   "score": 84.0,
+   "score": 84.3,
    "status": "đạt",
    "note": ""
   },
   "MBB": {
    "added": "2026-08-28",
-   "score": 57.0,
+   "score": 57.1,
    "status": "đạt",
    "note": ""
   },
   "MSN": {
    "added": "2026-08-28",
-   "score": 69.4,
+   "score": 69.3,
    "status": "đạt",
    "note": ""
   },
   "MBS": {
    "added": "2026-08-28",
-   "score": 55.4,
+   "score": 60.4,
    "status": "đạt",
    "note": ""
   },
   "IDC": {
    "added": "2026-08-28",
-   "score": 74.1,
+   "score": 74.2,
    "status": "đạt",
    "note": ""
   },
   "PVD": {
    "added": "2026-08-28",
-   "score": 57.8,
+   "score": 51.8,
    "status": "đạt",
    "note": ""
   },
@@ -57,67 +57,67 @@
   },
   "VHM": {
    "added": "2026-09-16",
-   "score": 76.8,
+   "score": 82.1,
    "status": "đạt",
    "note": ""
   },
   "VPI": {
    "added": "2026-09-16",
-   "score": 73.8,
+   "score": 72.9,
    "status": "đạt",
    "note": ""
   },
   "MWG": {
    "added": "2026-09-16",
-   "score": 88.9,
+   "score": 88.8,
    "status": "đạt",
    "note": ""
   },
   "BVH": {
    "added": "2026-09-16",
-   "score": 69.9,
+   "score": 69.8,
    "status": "đạt",
    "note": ""
   },
   "PLX": {
    "added": "2026-09-16",
-   "score": 64.4,
+   "score": 64.1,
    "status": "đạt",
    "note": ""
   },
   "DIG": {
    "added": "2026-09-16",
-   "score": 50.6,
+   "score": 55.7,
    "status": "đạt",
    "note": ""
   },
   "VGC": {
    "added": "2026-09-18",
-   "score": 54.6,
+   "score": 54.3,
    "status": "đạt",
    "note": ""
   },
   "DGW": {
    "added": "2026-09-21",
-   "score": 84.8,
+   "score": 84.7,
    "status": "đạt",
    "note": ""
   },
   "TCH": {
    "added": "2026-09-21",
-   "score": 46.0,
+   "score": 51.0,
    "status": "đạt",
    "note": ""
   },
   "DHC": {
    "added": "2026-09-23",
-   "score": 84.8,
+   "score": 89.7,
    "status": "đạt",
    "note": ""
   },
   "HAH": {
    "added": "2026-09-25",
-   "score": 54.1,
+   "score": 53.9,
    "status": "đạt",
    "note": ""
   },
@@ -129,48 +129,58 @@
   },
   "GAS": {
    "added": "2026-09-25",
-   "score": 59.5,
+   "score": 59.1,
    "status": "đạt",
    "note": ""
   },
   "CTG": {
    "added": "2026-09-25",
-   "score": 51.7,
+   "score": 51.9,
    "status": "đạt",
    "note": ""
   },
   "BSR": {
    "added": "2026-10-01",
-   "score": 79.7,
+   "score": 79.6,
    "status": "đạt",
    "note": ""
   },
   "VNM": {
    "added": "2026-10-06",
-   "score": 59.0,
+   "score": 58.9,
    "status": "đạt",
    "note": ""
   },
   "DPR": {
    "added": "2026-10-06",
-   "score": 58.6,
-   "status": "đạt",
-   "note": ""
-  },
-  "VSC": {
-   "added": "2026-10-07",
-   "score": 46.1,
+   "score": 62.9,
    "status": "đạt",
    "note": ""
   },
   "NT2": {
    "added": "2026-10-08",
-   "score": 64.3,
+   "score": 64.1,
    "status": "đạt",
    "note": ""
   }
  },
  "log": [
+  {
+   "date": "2026-10-09",
+   "size": 27,
+   "added_ct": [],
+   "removed_ct": [
+    {
+     "sym": "VSC",
+     "why": "điểm 41 < 45",
+     "score": 41.0
+    }
+   ],
+   "added": [],
+   "removed": [
+    "VSC"
+   ]
+  },
   {
    "date": "2026-10-08",
    "size": 28,
@@ -874,5 +884,998 @@
    "removed": [],
    "size": 19
   }
- ]
+ ],
+ "bctc_log": [],
+ "quy": {
+  "DHC": [
+   "2026Q2",
+   89.7,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "MWG": [
+   "2026Q2",
+   88.8,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "FRT": [
+   "2026Q2",
+   84.8,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "DGW": [
+   "2026Q2",
+   84.7,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "HDB": [
+   "2026Q2",
+   84.3,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "GMD": [
+   "2026Q2",
+   84.2,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "VHM": [
+   "2026Q2",
+   82.1,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "GEE": [
+   "2026Q2",
+   81.3,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "NVB": [
+   "2026Q2",
+   79.8,
+   true,
+   "NPL 6.43% > 3%",
+   false,
+   false,
+   false
+  ],
+  "PET": [
+   "2026Q2",
+   79.8,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "BSR": [
+   "2026Q2",
+   79.6,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "PVP": [
+   "2026Q2",
+   74.9,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "CDC": [
+   "2026Q2",
+   74.7,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "IDC": [
+   "2026Q2",
+   74.2,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "AST": [
+   "2026Q2",
+   72.9,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "VPI": [
+   "2026Q2",
+   72.9,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "POW": [
+   "2026Q2",
+   71.5,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "VBB": [
+   "2026Q2",
+   71.4,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "BVH": [
+   "2026Q2",
+   69.8,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "VPB": [
+   "2026Q2",
+   69.6,
+   true,
+   "NPL 3.28% > 3%",
+   false,
+   false,
+   false
+  ],
+  "MSN": [
+   "2026Q2",
+   69.3,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "SJS": [
+   "2026Q2",
+   69.1,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "VTZ": [
+   "2026Q2",
+   68.1,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "PVT": [
+   "2026Q2",
+   64.8,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "NT2": [
+   "2026Q2",
+   64.1,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "PLX": [
+   "2026Q2",
+   64.1,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "DPR": [
+   "2026Q2",
+   62.9,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "MBS": [
+   "2026Q2",
+   60.4,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "GAS": [
+   "2026Q2",
+   59.1,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "DCM": [
+   "2026Q2",
+   59.0,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "VNM": [
+   "2026Q2",
+   58.9,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "VCB": [
+   "2026Q2",
+   57.6,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "MBB": [
+   "2026Q2",
+   57.1,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "DIG": [
+   "2026Q2",
+   55.7,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "BVB": [
+   "2026Q2",
+   55.0,
+   true,
+   "NPL 3.22% > 3%",
+   false,
+   false,
+   false
+  ],
+  "SBT": [
+   "2026Q2",
+   54.4,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "VGC": [
+   "2026Q2",
+   54.3,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "BAF": [
+   "2026Q2",
+   54.0,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "HAH": [
+   "2026Q2",
+   53.9,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "HCM": [
+   "2026Q2",
+   53.0,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "STB": [
+   "2026Q2",
+   52.4,
+   true,
+   "NPL 7.54% > 3%",
+   false,
+   false,
+   false
+  ],
+  "CTG": [
+   "2026Q2",
+   51.9,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "PVD": [
+   "2026Q2",
+   51.8,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "HPG": [
+   "2026Q2",
+   51.5,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "TCH": [
+   "2026Q2",
+   51.0,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "LPB": [
+   "2026Q2",
+   50.7,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "VIC": [
+   "2026Q2",
+   48.9,
+   true,
+   "ICR 0.72 < 1.5",
+   true,
+   false,
+   false
+  ],
+  "DPM": [
+   "2026Q2",
+   47.5,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "VND": [
+   "2026Q2",
+   45.4,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "HHP": [
+   "2026Q2",
+   44.8,
+   false,
+   "",
+   false,
+   false,
+   true
+  ],
+  "VOS": [
+   "2026Q2",
+   44.4,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "GVR": [
+   "2026Q2",
+   44.3,
+   false,
+   "",
+   true,
+   false,
+   true
+  ],
+  "MSB": [
+   "2026Q2",
+   44.3,
+   false,
+   "",
+   false,
+   false,
+   true
+  ],
+  "PVS": [
+   "2026Q2",
+   44.1,
+   false,
+   "",
+   true,
+   false,
+   true
+  ],
+  "MCH": [
+   "2026Q2",
+   44.0,
+   false,
+   "",
+   false,
+   false,
+   true
+  ],
+  "ORS": [
+   "2026Q2",
+   42.6,
+   false,
+   "",
+   false,
+   false,
+   true
+  ],
+  "VJC": [
+   "2026Q2",
+   42.6,
+   true,
+   "ICR 0.98 < 1.5",
+   false,
+   false,
+   false
+  ],
+  "NAB": [
+   "2026Q2",
+   42.1,
+   false,
+   "",
+   false,
+   false,
+   true
+  ],
+  "VRE": [
+   "2026Q2",
+   41.7,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "GEX": [
+   "2026Q2",
+   41.0,
+   false,
+   "",
+   false,
+   false,
+   true
+  ],
+  "VSC": [
+   "2026Q2",
+   41.0,
+   false,
+   "",
+   false,
+   false,
+   true
+  ],
+  "KDH": [
+   "2026Q2",
+   40.4,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "SAB": [
+   "2026Q2",
+   37.8,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "PHR": [
+   "2026Q2",
+   37.5,
+   false,
+   "",
+   true,
+   false,
+   false
+  ],
+  "SSI": [
+   "2026Q2",
+   37.1,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "VCI": [
+   "2026Q2",
+   35.7,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "TCB": [
+   "2026Q2",
+   33.7,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "HAG": [
+   "2026Q2",
+   33.0,
+   true,
+   "ICR 1.01 < 1.5",
+   true,
+   false,
+   false
+  ],
+  "FPT": [
+   "2026Q2",
+   31.7,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "PC1": [
+   "2026Q2",
+   31.5,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "HSG": [
+   "2026Q2",
+   31.2,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "PDR": [
+   "2026Q2",
+   30.9,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "VCG": [
+   "2026Q2",
+   30.6,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "DCL": [
+   "2026Q2",
+   29.8,
+   true,
+   "ICR 0.64 < 1.5",
+   false,
+   false,
+   false
+  ],
+  "SSB": [
+   "2026Q2",
+   29.1,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "VPL": [
+   "2026Q2",
+   27.9,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "VC3": [
+   "2026Q2",
+   27.2,
+   true,
+   "CFO < 0",
+   true,
+   false,
+   false
+  ],
+  "BID": [
+   "2026Q2",
+   26.8,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "OCB": [
+   "2026Q2",
+   26.8,
+   true,
+   "NPL 3.49% > 3%",
+   false,
+   false,
+   false
+  ],
+  "VTP": [
+   "2026Q2",
+   26.6,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "EVF": [
+   "2026Q2",
+   26.4,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "VIX": [
+   "2026Q2",
+   26.0,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "HHV": [
+   "2026Q2",
+   25.9,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "SHB": [
+   "2026Q2",
+   25.6,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "CII": [
+   "2026Q2",
+   25.3,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "CTS": [
+   "2026Q2",
+   25.3,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "SHS": [
+   "2026Q2",
+   25.2,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "KDC": [
+   "2026Q2",
+   23.7,
+   true,
+   "ICR 0.31 < 1.5",
+   true,
+   false,
+   false
+  ],
+  "DBC": [
+   "2026Q2",
+   21.7,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "NVL": [
+   "2026Q2",
+   21.7,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "BCM": [
+   "2026Q2",
+   20.9,
+   true,
+   "CFO < 0",
+   true,
+   false,
+   false
+  ],
+  "HUT": [
+   "2026Q2",
+   20.9,
+   true,
+   "CFO < 0",
+   true,
+   false,
+   false
+  ],
+  "BVS": [
+   "2026Q2",
+   20.6,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "PNJ": [
+   "2026Q2",
+   20.0,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "REE": [
+   "2026Q2",
+   17.7,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "VHC": [
+   "2026Q2",
+   16.8,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "ACB": [
+   "2026Q2",
+   16.4,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "TPB": [
+   "2026Q2",
+   16.4,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "DXG": [
+   "2026Q2",
+   15.7,
+   false,
+   "",
+   true,
+   false,
+   false
+  ],
+  "CEO": [
+   "2026Q2",
+   15.3,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "VIB": [
+   "2026Q2",
+   12.3,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "DGC": [
+   "2026Q2",
+   11.6,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "KBC": [
+   "2026Q2",
+   11.6,
+   true,
+   "CFO < 0",
+   true,
+   false,
+   false
+  ],
+  "NLG": [
+   "2026Q2",
+   11.3,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "EIB": [
+   "2026Q2",
+   11.0,
+   true,
+   "NPL 3.08% > 3%",
+   false,
+   false,
+   false
+  ],
+  "ABB": [
+   null,
+   null,
+   true,
+   "Chưa có BCTC",
+   false,
+   false,
+   false
+  ],
+  "DRI": [
+   null,
+   null,
+   true,
+   "Chưa có BCTC",
+   false,
+   false,
+   false
+  ],
+  "MSR": [
+   null,
+   null,
+   true,
+   "Chưa có BCTC",
+   false,
+   false,
+   false
+  ],
+  "OIL": [
+   null,
+   null,
+   true,
+   "Chưa có BCTC",
+   false,
+   false,
+   false
+  ],
+  "QNS": [
+   null,
+   null,
+   true,
+   "Chưa có BCTC",
+   false,
+   false,
+   false
+  ]
+ }
 }
