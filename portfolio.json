@@ -4,9 +4,9 @@
  "nav_source": "portfolio.json",
  "nav0": 1000000000.0,
  "cash": 733320970.0,
- "nav": 1015260970,
- "session_done": "2026-10-09",
- "updated": "2026-10-11T13:26:14",
+ "nav": 1014520970,
+ "session_done": "2026-10-12",
+ "updated": "2026-10-12T21:28:36",
  "open": [
   {
    "book_id": "LIVE_PAPER",
@@ -25,22 +25,22 @@
    "b20": 0,
    "part": false,
    "pyr": false,
-   "held": 19,
+   "held": 20,
    "light": "VANG",
    "score": 63.8,
    "ordimb": 1.414,
    "prod_config_hash": "89c720ebf701",
    "size_theo": 25.2,
    "size_reasons": [],
-   "last": 76.2,
-   "last_day": "2026-10-09",
-   "pnl": 11.61,
-   "last_adj": 76.2,
-   "last_val": 76200.0,
+   "last": 76.0,
+   "last_day": "2026-10-12",
+   "pnl": 11.32,
+   "last_adj": 76.0,
+   "last_val": 76000.0,
    "k_adj": 1.0,
-   "last_done": "2026-10-09",
+   "last_done": "2026-10-12",
    "peak_gain": 14.39,
-   "gain": 11.89,
+   "gain": 11.6,
    "profit_lock_active": true,
    "profit_floor": 6.0,
    "profit_trigger": 12.0,
@@ -48,11 +48,10 @@
    "exit_reason": null,
    "pending_exit": null,
    "exit_phan": 1.0,
-   "action": "GIỮ — khoá lãi đang bật: đỉnh +14,4%, sàn bảo vệ +6% (hiện +11,9%)",
+   "action": "GIỮ — khoá lãi đang bật: đỉnh +14,4%, sàn bảo vệ +6% (hiện +11,6%)",
    "earliest_sell": "2026-09-17",
    "cost_basis": "cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1",
    "tail_adj": [
-    63000.0,
     63800.0,
     64000.0,
     64100.0,
@@ -81,7 +80,8 @@
     75000.0,
     75500.0,
     77900.0,
-    76200.0
+    76200.0,
+    76000.0
    ],
    "cfg_hash_state": "ef51d3e39611",
    "cond9": "DAT",
@@ -300,7 +300,7 @@
   "session_done": "2026-09-24"
  },
  "dung_lai_2409": true,
- "light": "CAM",
+ "light": "DO",
  "prod_config_hash": "ef51d3e39611",
  "checks": {
   "nav_identity": true,
@@ -311,9 +311,9 @@
   "sector_cap_ok": true,
   "pyr_sector_over": [],
   "now": {
-   "max_pos_pct": 27.77,
-   "max_sector_pct": 27.77,
-   "total_pct": 27.77
+   "max_pos_pct": 27.72,
+   "max_sector_pct": 27.72,
+   "total_pct": 27.72
   },
   "pnl_reconcile_ok": true,
   "ok": true
@@ -322,7 +322,7 @@
   "n_open": 1,
   "n_closed": 3,
   "winrate": 0.0,
-  "total_return": 1.53,
+  "total_return": 1.45,
   "best": -1.73,
   "worst": -6.19,
   "since": "2026-09-14"
