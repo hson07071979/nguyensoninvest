@@ -992,8 +992,12 @@ def main():
                 lvl, why = 'SAP_DU', 'MUA_DO_DU_PHONG'
         if lvl == 'MUA' and dang_cam:
             lvl, why = 'THEO_DOI', 'ALREADY_HELD'
-        if lvl is None and pct * 100 >= DE_MAT_PCT and t.get('state') in ('cho', 'fa'):
-            lvl, why = 'DE_MAT', why
+        # CHUONG VANG (sua 14/10/2026): tu khi co dac ta, SP.classify tra 'THEO_DOI' cho gan nhu
+        # moi ma (thieu >=2 dieu kien) nen dieu kien cu `lvl is None` khong bao gio dung -> chuong
+        # vang chet tu do. Phien 14/10 MBS +2,76% (14:31-14:46, ma trong watchlist, trang thai cho)
+        # van chi hien THEO_DOI. Nang THEO_DOI/None len DE_MAT; khong dung toi MUA/SAP_DU.
+        if lvl in (None, 'THEO_DOI') and pct * 100 >= DE_MAT_PCT and t.get('state') in ('cho', 'fa'):
+            lvl, why = 'DE_MAT', (why or 'WATCHLIST_MOVER')
         if lvl is None:
             continue
         v = res['values']
