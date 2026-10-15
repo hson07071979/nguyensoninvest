@@ -40,5 +40,16 @@ jobs:
             echo "Ảnh không đổi, bỏ qua."
           else
             git commit -m "Vẽ lại ảnh preview"
-            git push
+            if ! git push; then
+              # Hai lần chạy sát nhau: lần kia đã đẩy trước nên lần này bị từ chối.
+              # Nếu main đã có commit mới hơn thì bỏ qua (commit mới đó có index.html
+              # sẽ tự kích hoạt lần vẽ sau). Không rebase để khỏi ghi đè dữ liệu mới
+              # bằng index.html cũ. Lỗi khác (main không đổi) vẫn báo fail.
+              git fetch origin "${GITHUB_REF_NAME}"
+              if git merge-base --is-ancestor "origin/${GITHUB_REF_NAME}" HEAD~1; then
+                echo "::error::Không đẩy được ảnh dù main không có commit mới."
+                exit 1
+              fi
+              echo "::notice::main đã có commit mới hơn (lần chạy khác đã đăng ảnh hoặc có dữ liệu mới). Bỏ qua lần đăng này."
+            fi
           fi
