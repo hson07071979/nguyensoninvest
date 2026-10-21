@@ -37,7 +37,7 @@
    "size_reasons": [],
    "last": 14.65,
    "last_day": "2026-10-21",
-   "pnl": 0.0,
+   "pnl": -0.4,
    "x0": {
     "date": "2026-10-21",
     "pos_pct": 17.49,
@@ -55,7 +55,45 @@
    "pending_exit": null,
    "exit_phan": 1.0,
    "action": "GIỮ",
-   "earliest_sell": "T+3"
+   "earliest_sell": "T+3",
+   "last_adj": 14.65,
+   "last_val": 14650.0,
+   "k_adj": 1.0,
+   "last_done": "2026-10-21",
+   "cost_basis": "cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1",
+   "tail_adj": [
+    13450.0,
+    13000.0,
+    13000.0,
+    13100.0,
+    13100.0,
+    13400.0,
+    13400.0,
+    13200.0,
+    13300.0,
+    13300.0,
+    13400.0,
+    13400.0,
+    13200.0,
+    13200.0,
+    13150.0,
+    13500.0,
+    13350.0,
+    13300.0,
+    13350.0,
+    13350.0,
+    13300.0,
+    13350.0,
+    13400.0,
+    13300.0,
+    13250.0,
+    13450.0,
+    13500.0,
+    13500.0,
+    13700.0,
+    14650.0
+   ],
+   "cfg_hash_state": "a9ad20d69c2f"
   }
  ],
  "closed": [
@@ -147,6 +185,13 @@
   }
  ],
  "log": [
+  {
+   "date": "2026-10-21",
+   "items": [
+    "NÂNG CẤP TRẠNG THÁI SỔ: cấu hình ef51d3e39611 → a9ad20d69c2f (không mua/bán lại, không sửa lịch sử)",
+    "NÂNG CẤP ORS: đỉnh +0.00% · hiện -0.15% · sàn — · GIỮ"
+   ]
+  },
   {
    "date": "2026-10-21",
    "items": [
@@ -306,7 +351,7 @@
  },
  "dung_lai_2409": true,
  "light": "CAM",
- "prod_config_hash": "ef51d3e39611",
+ "prod_config_hash": "a9ad20d69c2f",
  "checks": {
   "nav_identity": true,
   "pnl_reconcile_gap_vnd": 1,
@@ -333,6 +378,13 @@
   "since": "2026-09-14"
  },
  "migrations": [
+  {
+   "at": "2026-10-22T05:07:40",
+   "session": "2026-10-21",
+   "from_hash": "ef51d3e39611",
+   "to_hash": "a9ad20d69c2f",
+   "n_open": 1
+  },
   {
    "at": "2026-10-03T19:52:48",
    "session": "2026-10-02",
