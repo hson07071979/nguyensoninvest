@@ -1490,7 +1490,7 @@ function pageSystem(root){
    [1,'Cổng rủi ro','Doanh nghiệp này có nguy cơ vỡ nợ không?','<b>Quyền phủ quyết tuyệt đối.</b> ICR &lt; 1,5 → chặn. CFO &lt; 0 → chặn. D/E &gt; 4,0 → chặn. Riêng ngân hàng: NPL &gt; 3% hoặc CAR &lt; 8% → chặn. ICR 1,5–2,5 → cờ vàng, cỡ vị thế × 0,5.','A'],
    [2,'Chấm điểm CANSLIM','Nó có đang tăng trưởng thật không?','Thang 100 điểm — <b>cơ bản 55đ + kỹ thuật 45đ</b>. LNST YoY ≥ 25% (15đ) · <b>doanh thu YoY ≥ 15% (15đ — mới)</b> · tăng tốc QoQ (+5đ) · CAGR 3 năm ≥ 20% (10đ) · <b>ROE ≥ 17% (10đ — mới)</b> · cách đỉnh 52 tuần ≤ 15% (10đ) · volume ≥ 1,2× (5đ) · RS ≥ 70 (15đ) · GTGD ≥ 15 tỷ (10đ) · <b>return 3 tháng (tối đa 5đ — mới)</b>. Điểm cao nhất thực tế trong 1.213 mã là 89,2 — thang 100 gần như không ai chạm trần. Điểm <b>không</b> phải điều kiện vào lệnh, chỉ là sàn mềm + xếp hạng.','A'],
    [3,'Nền giá','Giá đã tích luỹ đủ chặt chưa?',`Nền ${cpV('base_len',30)} phiên trước điểm mua, biên độ nền <b>≤ ${cpNen()}%</b>. Nền càng chặt thì cỡ vị thế càng lớn (≤ 10% → × 1,2).`,'A'],
-   [4,'Điểm mua','Hôm nay có phải phiên tiền lớn nhảy vào không?','Phải đạt <b>tất cả các điều kiện đang bật, trong cùng một phiên</b>. Xem bảng bên dưới — bảng ghi rõ luật nào đang chạy, luật nào đã tắt.','A'],
+   [4,'Điểm mua','Hôm nay có phải phiên tiền lớn nhảy vào không?','Phải đạt <b>tất cả các điều kiện đang bật, trong cùng một phiên</b>. Xem bảng bên dưới — bảng ghi rõ luật nào đang chạy, luật nào đã tắt. <b>Nhiều mã cùng đạt một phiên</b> thì xếp ưu tiên 1, 2, 3… theo <b>điểm CANSLIM + Vol/TB20</b> (hạng trong phiên của mỗi yếu tố, cộng lại; từ 22/10/2026). Mỗi lúc chỉ giữ 1 lệnh dò chưa xác nhận, nên mã ưu tiên 1 vào trước.','A'],
    [5,'Cổng thị trường','Thị trường chung có cho phép mua không?','Hệ đèn 4 mức từ ba tín hiệu: G1 (chỉ số đều trọng số vs MA200), G2 (VN-Index vs MA50), G3 (đếm ngày phân phối 25 phiên). <b>Luật vàng: cổng chỉ chặn MỞ LỆNH MỚI</b> — vị thế đang cầm vẫn chạy theo bộ thoát bình thường.','A'],
    [6,'Lọc ngành','Danh mục có bị dồn quá nhiều vào một ngành không?','Trần 30% NAV cho một nhóm ngành ICB khi MỞ lệnh mới. Lệnh nhồi chỉ xét trần mã 50% + tiền mặt nên ngành có thể vượt 30% (lịch sử: 2 lần — TCM 11/2020 lên 48,5%, GEE 10/2025 lên 39,9%).','B'],
    [7,'Cỡ vị thế','Nên bỏ bao nhiêu tiền vào?',`<b>${cpSo(cpV('base_size',0.42)*100)}% NAV</b> × hệ số đèn (Xanh 1,0 · Vàng 0,6 · Cam 0,35 · Đỏ 0,2) × hệ số nền (1,2 / 1,0) × hệ số rủi ro (cờ vàng 0,5), rồi cắt bởi các trần: <b>${cpSo(cpV('max_pos',0.5)*100)}% NAV</b> một mã, <b>${cpSo(cpV('sector_cap',0.30)*100)}% NAV</b> một ngành, <b>${cpSo(cpV('max_total',1)*100)}% NAV</b> toàn danh mục, tiền mặt, tối đa <b>${cpV('max_pos_n',12)} mã</b>, sàn ${cpSo(cpV('min_size',0.02)*100)}% NAV. <b style="color:var(--warn)">Thực tế: trần ngành ${cpSo(cpV('sector_cap',0.30)*100)}% luôn cắt trước khi đèn Xanh cho ra ${cpSo(cpV('base_size',0.42)*100)}% — lệnh mới lớn nhất là ${cpSo(Math.min(cpV('base_size',0.42),cpV('sector_cap',0.30))*100)}% NAV.</b> Cùng một bộ chia vốn (allocator.py) dùng cho backtest, sổ paper, chuông Telegram và trang này.`,'A'],
@@ -4259,6 +4259,35 @@ function chuongBan(L) {
   if (moi.length) reoChuong(moi.map(x => ({ sym: x.sym, price: x.price, viec: viecBan(x) })), 'ban');
 }
 
+/* ---------- MÁY CHỦ ĐÃ CHỐT PHIÊN (22/10/2026) ----------
+   true = ngoài giờ khớp lệnh, và bản quét gần nhất của máy chủ chạy SAU giờ đóng cửa
+   (live_scan ghi open=false sau 15h06) với đủ dữ liệu. Lúc đó live.json mang số đóng cửa
+   thật (gồm ATC) và Điều kiện 9 — mọi bảng tín hiệu và giá đóng cửa phải theo nó, không
+   theo nhịp real-time cuối cùng (có thể là giá trước ATC). Nghỉ trưa không tính: máy chủ
+   vẫn ghi open=true trong 9h00–15h06. */
+function mayChuChotPhien(L) {
+  L = L || LIVE.server;
+  if (!L || L.open !== false || !L.session || !L.hits) return false;
+  if (typeof phienMo === 'function' && phienMo()) return false;
+  if (LIVE.stale || L.status === 'DATA_DEGRADED') return false;
+  return true;
+}
+/* Ghi số đóng cửa của máy chủ đè lên dòng real-time cùng mã — để giá ở Danh mục, biểu đồ,
+   Chi tiết mã khớp đúng bảng tín hiệu. Đơn vị NSI.rt: đồng. */
+function apSoChotPhien(rows) {
+  if (!rows || !mayChuChotPhien()) return rows;
+  (LIVE.server.hits || []).forEach(h => {
+    const r = rows[h.sym];
+    if (!r || !(h.price > 0) || !(h.ref > 0)) return;
+    r.price = Math.round(h.price * 1000); r.ref = Math.round(h.ref * 1000);
+    if (h.vol > 0) r.vol = h.vol;
+    if (h.gtgd > 0) r.tv = h.gtgd * 1e9;
+    if (r.hi < r.price) r.hi = r.price;
+    r.chot = true;
+  });
+  return rows;
+}
+
 /* ---------- nạp live.json ---------- */
 async function napLive() {
   const L = await docJSON('live.json');
@@ -4281,7 +4310,10 @@ async function napLive() {
   chuongBan(L);
   // Khi lớp real-time đang chạy thì nó mới là nguồn chính. live.json của máy chủ
   // trễ 10–20 phút; để nó ghi đè lên số real-time là bảng nhảy lùi về quá khứ.
-  if (LIVE.rtOn) return;
+  // NGOẠI TRỪ khi máy chủ đã CHỐT PHIÊN (22/10/2026): sau giờ đóng cửa số của máy chủ là
+  // số đóng cửa thật, còn nguồn real-time có thể kẹt ở giá trước ATC (21/10: ORS 14,55
+  // KL 1,45× trong khi đóng cửa trần 14,65 KL 5,33×).
+  if (LIVE.rtOn && !mayChuChotPhien(L)) return;
   LIVE.data = L;
 
   // Mã nào MỚI so với lần nạp trước? Hai loại đếm riêng, chuông đỏ ưu tiên.
@@ -4383,6 +4415,12 @@ function apCoMayChu(h, sv, t) {
   h.dang_cam = cam;
   h.mua_do = !!(sv && sv.mua_do && !cam);
   h.truot9 = !!(sv && sv.truot9 && !cam);
+  // luật tối đa 1 lệnh mua thử treo — máy chủ quyết, trình duyệt chỉ chép cờ (22/10/2026)
+  h.khong_mua = (!cam && sv && sv.khong_mua) || null;
+  h.khong_mua_vi = h.khong_mua ? (sv.khong_mua_vi || []) : [];
+  // thứ tự ưu tiên khi nhiều mã cùng nổ (điểm + Vol/TB20, máy chủ xếp — 22/10/2026)
+  h.uu_tien = (sv && sv.uu_tien) || null;
+  h.n_ung_vien = (sv && sv.n_ung_vien) || null;
   // mua đỏ chỉ khi giá real-time VẪN đủ mọi điều kiện đo được trong phiên (ngoài ĐK9);
   // giá tụt khỏi ngưỡng sau lần quét của máy chủ -> quay về Sắp đủ
   const conThieu = (h.miss || []).filter(k => !ODK9.test(k));
@@ -4400,6 +4438,7 @@ const BAC_TH = { MUA: 0, MUA_DO: 0, SAP_DU: 1, DANG_CAM: 2, DE_MAT: 3, THEO_DOI:
    máy chủ dùng. Ngưỡng lấy từ ô tra cứu đã nhúng sẵn trong trang (cập nhật mỗi
    tối), nên không cần tải thêm gì.                                            */
 function tinhLaiTinHieu() {
+  if (mayChuChotPhien()) { LIVE.data = LIVE.server; return; }
   const R = NSI.rt || {};
   const L = D.lookup || {};
   const hits = [], _svm = svHitsMap();
@@ -4537,9 +4576,12 @@ function pageLiveTrucTiep(root, L) {
     score: 0, miss: [], need_px: null, need_vol: null, ordimb: null, fa: false,
   }, h || {}));
   // bản ghi thẳng từ live.json (không có real-time): cờ đã nằm sẵn trong bản ghi
-  L.hits.forEach(h => { if (!h.realtime_mapped) apCoMayChu(h, h.mua_do || h.dang_cam || h.truot9 ? h : null, (D.lookup || {})[h.sym]); });
+  L.hits.forEach(h => { if (!h.realtime_mapped) apCoMayChu(h, h.mua_do || h.dang_cam || h.truot9 || h.khong_mua || h.uu_tien ? h : null, (D.lookup || {})[h.sym]); });
+  const theoUu = (a, b) => (a.uu_tien || 99) - (b.uu_tien || 99);
   const last = D.regime[D.regime.length - 1];
-  const mua = L.hits.filter(h => h.level === 'MUA' || h.level === 'MUA_DO');
+  const muaHet = L.hits.filter(h => h.level === 'MUA' || h.level === 'MUA_DO');
+  const mua = muaHet.filter(h => !h.khong_mua).sort(theoUu);
+  const khongMua = muaHet.filter(h => h.khong_mua).sort(theoUu);
   const cam = L.hits.filter(h => h.level === 'DANG_CAM');
   const sap = L.hits.filter(h => h.level === 'SAP_DU');
   const dem = L.hits.filter(h => h.level === 'DE_MAT');
@@ -4556,7 +4598,7 @@ function pageLiveTrucTiep(root, L) {
       <th style="text-align:right" title="Cỡ lệnh mua ÷ cỡ lệnh bán — hệ đòi ≥ ${cpDTvi()}">Dòng tiền</th>
       <th style="text-align:right">Điểm</th><th>Còn thiếu</th></tr></thead><tbody>
       ${list.map(h => `<tr>
-        <td class="sym">${esc(h.sym)}${h.level === 'MUA_DO' ? '<div style="font-size:11px;font-weight:700;color:var(--critical)">MUA DÒ ATC</div>' : ''}${h.dang_cam ? '<div style="font-size:11px;font-weight:700" class="muted">ĐANG CẦM</div>' : ''}</td>
+        <td class="sym">${esc(h.sym)}${h.uu_tien && h.n_ung_vien > 1 ? `<div style="font-size:11px;font-weight:700;color:var(--accent)" title="Nhiều mã cùng đạt: xếp theo điểm + Vol/TB20">ƯU TIÊN ${h.uu_tien}</div>` : ''}${h.khong_mua ? '<div style="font-size:11px;font-weight:700" class="muted">KHÔNG MUA</div>' : h.level === 'MUA_DO' ? '<div style="font-size:11px;font-weight:700;color:var(--critical)">MUA DÒ ATC</div>' : ''}${h.dang_cam ? '<div style="font-size:11px;font-weight:700" class="muted">ĐANG CẦM</div>' : ''}</td>
         <td class="muted" style="font-size:13px">${(h.name || '').slice(0, 34)}</td>
         <td style="text-align:right">${h.price}</td>
         <td style="text-align:right;font-weight:660" class="${h.pct >= 0 ? 'pos' : 'neg'}">${h.pct >= 0 ? '+' : ''}${h.pct}%</td>
@@ -4567,7 +4609,8 @@ function pageLiveTrucTiep(root, L) {
           h.ordimb == null ? '—' : h.ordimb.toFixed(2) + '×'}</td>
         <td style="text-align:right;color:var(--text-primary);font-weight:640">${h.score}</td>
         <td class="muted" style="font-size:12.5px">${h.fa ? '<b style="color:var(--warn)">chưa đạt cơ bản — không mua</b> · ' : ''}${
-          h.level === 'MUA_DO' ? `<b style="color:var(--critical)">Đủ ĐK1–8 → mua đủ lệnh lúc ATC · ${coMuaDoTxt(h.sym)}</b> · tối ~18–19h xác nhận ĐK9 (cỡ lệnh mua ≥ ${String(h.ordimb_min || 1.4).replace('.', ',')}× cỡ lệnh bán); không đạt thì bán 100% ATC T+${cpV('sell_from', 3)}${h.miss.length ? ' · lưu ý: ' + h.miss.join(' · ') : ''}`
+          h.khong_mua ? `<b>Hệ thống không mua mã này.</b> Đang có lệnh dò chưa xác nhận${h.khong_mua_vi.length ? ' (' + h.khong_mua_vi.map(esc).join(', ') + ')' : ''} — mỗi lúc chỉ giữ ${cpV('max_unconf', 1)} lệnh dò chờ xác nhận, mã ưu tiên cao hơn (điểm + Vol/TB20) được vào trước.`
+          : h.level === 'MUA_DO' ? `<b style="color:var(--critical)">Đủ ĐK1–8 → mua đủ lệnh lúc ATC · ${coMuaDoTxt(h.sym)}</b> · tối ~18–19h xác nhận ĐK9 (cỡ lệnh mua ≥ ${String(h.ordimb_min || 1.4).replace('.', ',')}× cỡ lệnh bán); không đạt thì bán 100% ATC T+${cpV('sell_from', 3)}${h.miss.length ? ' · lưu ý: ' + h.miss.join(' · ') : ''}`
           : h.dang_cam ? '<b>Hệ thống đang cầm mã này — không mua thêm.</b> Luật thoát xem ở Danh mục hệ thống.'
           : (h.miss.length ? h.miss.join(' · ') : '—')}</td>
       </tr>`).join('')}
@@ -4606,6 +4649,8 @@ function pageLiveTrucTiep(root, L) {
 
   ${mua.length ? bang(mua, '🔴 Đủ điểm mua', '')
     : '<h2>🔴 Đủ điểm mua</h2><p class="muted" style="margin-top:0">Chưa có mã nào.</p>'}
+
+  ${bang(khongMua, '⛔ Đủ điều kiện — hệ thống không mua', '')}
 
   ${bang(sap, '🟠 Sắp đủ', L.open
       ? 'Còn thiếu một bước, hoặc dự phóng cho thấy sẽ đạt lúc đóng cửa. Cột Vol/TB20 hiện <b>giá trị hiện tại → dự phóng cuối phiên</b>.'
@@ -5304,7 +5349,7 @@ async function napVPS() {
       if (rows[h.sym] && h.ordimb != null) { rows[h.sym].oi = h.ordimb; rows[h.sym].oi_at = sv.asof; }
     });
 
-    NSI.rt = rows;
+    NSI.rt = apSoChotPhien(rows);
     RTV.n = Object.keys(rows).length;
     RTV.at = new Date();
     NSI.rtAt = new Date(RTV.at.getTime() - RTV.at.getTimezoneOffset() * 60000).toISOString().slice(0, 19);
@@ -5342,6 +5387,8 @@ async function napChiSo() {
    ảnh chụp cũ hơn, nên khi nó THIẾU thì mã KHÔNG được lên mức MUA — chỉ SẮP ĐỦ.
    Thà báo thiếu còn hơn báo mua một phiên mà bộ máy chín lớp vốn không đụng vào. */
 function tinhLaiTinHieuVPS() {
+  // Sau giờ đóng cửa, máy chủ đã chốt phiên -> bảng tín hiệu theo đúng live.json (22/10/2026).
+  if (mayChuChotPhien()) { LIVE.data = LIVE.server; return; }
   const R = NSI.rt || {}, L = D.lookup || {}, hits = [];
   const oiMin = (LIVE.server && LIVE.server.ordimb_min) || cpDT();
   const f = phanPhien(), mo = phienMo();

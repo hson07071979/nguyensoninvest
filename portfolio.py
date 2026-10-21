@@ -479,8 +479,14 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
             continue
         muon_mua.append(dict(h, price=float(h['price']) / 1000,
                              _probe_fail=bool(C.get('stage1') is not None and C.get('use_ordimb', True) and not dat9)))
-    # thu tu uu tien = engine2.rank_rows('score'): diem CANSLIM giam dan, hoa -> ma
-    muon_mua.sort(key=lambda h: (-(h.get('score') or 0), h['sym']))
+    # thu tu uu tien = DUNG thu tu bo may da xep (signals_today.uu_tien, engine2.rank_rows theo
+    # cfg.rank_mode — PROD 'score_volr' tu 22/10/2026). Ban thresholds cu chua co uu_tien -> lui ve
+    # allocator.xep_uu_tien (cung cong thuc), roi diem giam dan.
+    if all(h.get('uu_tien') is not None for h in muon_mua):
+        muon_mua.sort(key=lambda h: (h['uu_tien'], h['sym']))
+    else:
+        _thu = {x['sym']: x['uu_tien'] for x in AL.xep_uu_tien(muon_mua, C)}
+        muon_mua.sort(key=lambda h: (_thu[h['sym']], h['sym']))
 
     for h in muon_mua:
         px = float(h['price']) * 1000

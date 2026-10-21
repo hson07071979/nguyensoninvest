@@ -49,6 +49,40 @@ def unconf_blocked(n_hanging, cfg=None):
     return lim is not None and int(n_hanging) >= int(lim)
 
 
+def _hang(vals, syms):
+    """Hang phan tram trong tap (0 = kem nhat, 1 = tot nhat) — y het engine2._pr(higher_better=True).
+    Bang nhau: engine giu thu tu ung vien = thu tu ma (fa.npz xep theo ma) -> o day xep theo ma."""
+    n = len(vals)
+    if n <= 1:
+        return [1.0] * n
+    order = sorted(range(n), key=lambda k: (vals[k], syms[k]))
+    out = [0.0] * n
+    for r, k in enumerate(order):
+        out[k] = r / (n - 1)
+    return out
+
+
+def xep_uu_tien(rows, cfg=None):
+    """THU TU UU TIEN khi nhieu ma cung no trong mot phien (R38, PROD tu 22/10/2026).
+    rows: list dict co 'sym', 'score', 'volr'. Tra ve list MOI da xep, moi dict them 'uu_tien' (1 = vao truoc).
+    rank_mode 'score_volr' = hang(diem) + hang(Vol/TB20) trong chinh tap ung vien, hoa -> ma — cung cong thuc
+    engine2.rank_rows. 'score' (PROD cu) = diem giam dan, hoa -> ma. Dung chung cho live_scan va so ghi tien."""
+    rows = [dict(r) for r in (rows or [])]
+    mode = (cfg or {}).get('rank_mode') or 'score'
+    sc = [float(_num(r.get('score')) or 0.0) for r in rows]
+    if mode == 'score_volr':
+        vr = [float(_num(r.get('volr')) or 0.0) for r in rows]
+        sy = [str(r.get('sym')) for r in rows]
+        a, b = _hang(sc, sy), _hang(vr, sy)
+        idx = sorted(range(len(rows)), key=lambda k: (-(a[k] + b[k]), str(rows[k].get('sym'))))
+    else:
+        idx = sorted(range(len(rows)), key=lambda k: (-sc[k], str(rows[k].get('sym'))))
+    out = [rows[k] for k in idx]
+    for n, r in enumerate(out, 1):
+        r['uu_tien'] = n
+    return out
+
+
 def _num(x):
     try:
         x = float(x)
