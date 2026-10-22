@@ -343,9 +343,10 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
         if do:
             dong = [f"\U0001F7E0 *MUA DÒ* — {len(do)} mã, phiên {ses} · {t_bao_s}", '']
             for h in do:
+                _ut = (f"*ƯU TIÊN {h['uu_tien']}/{h['n_ung_vien']}* · " if h.get('uu_tien') and (h.get('n_ung_vien') or 0) > 1 else '')
                 if h.get('khong_mua') == 'max_unconf':
                     vi = ', '.join(h.get('khong_mua_vi') or [])
-                    dong.append(f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f}\n"
+                    dong.append(f"{_ut}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f}\n"
                                 f"   ⛔ *KHÔNG MUA* — đang có lệnh dò chưa xác nhận ĐK9{(' (' + vi + ')') if vi else ''}"
                                 f" · tối đa {_cf.get('max_unconf')}")
                     continue
@@ -360,8 +361,7 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
                                  + (f" ≈ {ti2/1e6:,.0f} triệu" if ti2 else '') + " — bộ máy dùng đèn lúc đóng cửa")
                 kl = (f"vol {h['volr']}× → dự phóng *{h.get('volr_proj_curve')}×* (KL mới có {frac*100:.0f}% phiên)"
                       if h.get('mua_do_du_phong') else f"vol {h['volr']}×")
-                uu = f"ưu tiên {h['uu_tien']}/{h.get('n_ung_vien')} · " if h.get('uu_tien') and (h.get('n_ung_vien') or 0) > 1 else ''
-                dong.append(f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · {uu}{kl} · điểm {h['score']:.0f}\n   {size}")
+                dong.append(f"{_ut}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · {kl} · điểm {h['score']:.0f}\n   {size}")
             dong += ['', "Đặt lệnh NGAY (LO), đừng chờ ATC nếu giá đang sát/ở trần — ATC trần rất khó khớp.",
                      f"Tối ~18–19h xác nhận ĐK1–8 bằng số đóng cửa + Điều kiện 9: đạt → giữ; không đạt → bán 100% ATC T+{sf}."]
             if _post('\n'.join(dong)):
@@ -416,7 +416,7 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
         dong += ['', "Đã lỡ mua dò lúc ATC thì không có trong sổ hệ thống — tự quyết, hệ thống không theo dõi luật thoát cho mã này."]
         if _post('\n'.join(dong), prio=3):
             da_gui += ['KM:' + h['sym'] for h in km]
-    moi = [h for h in mua if h['sym'] not in cu]
+    moi = sorted([h for h in mua if h['sym'] not in cu], key=lambda h: (h.get('uu_tien') or 99, h['sym']))
     if not moi:
         return da_gui
 
@@ -431,6 +431,7 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
         if tien and nav:
             size += f" = *{tien/1e6:,.0f} triệu* trên NAV hiện tại {nav/1e9:.2f} tỷ"
         dong.append(
+            (f"*ƯU TIÊN {h['uu_tien']}/{h['n_ung_vien']}* · " if h.get('uu_tien') and (h.get('n_ung_vien') or 0) > 1 else '') +
             f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%)\n"
             f"   vol {h['volr']}× TB20 · GTGD {h['gtgd']} tỷ · điểm {h['score']:.0f} · "
             f"dòng tiền {h['ordimb']}× (≥ {h['ordimb_min']})\n"
@@ -874,6 +875,7 @@ def flow_obs(ses, now, rows, syms):
     return rec
 
 
+
 def main():
     if not os.path.exists('thresholds.json'):
         sys.exit('HONG: khong co thresholds.json — repo private chua day sang')
@@ -1129,9 +1131,10 @@ def main():
         ))
 
     order = {'MUA': 0, 'SAP_DU': 1, 'DE_MAT': 2, 'THEO_DOI': 3}
-    hits.sort(key=lambda x: (order[x['level']], -x['pct']))
-    # 22/10/2026: luat toi da 1 lenh mua thu treo ghi thang vao ban ghi (truoc chi co trong Telegram)
+    # 22/10/2026: thu tu UU TIEN (R38) + luat toi da 1 lenh mua thu treo ghi thang vao ban ghi
+    # (truoc chi co trong Telegram) — chay TRUOC khi sap xep de bang theo dung thu tu mua.
     n_khong_mua = danh_dau_max_unconf(hits, T, ses, int(CF.get('sell_from', 3) or 3)) if spec_ok else 0
+    hits.sort(key=lambda x: (order[x['level']], x.get('uu_tien') or 99, -x['pct']))
 
     cov = len(fresh) / max(1, len(syms))
     oi_cov = obs['ordimb'] / max(1, len(fresh))
