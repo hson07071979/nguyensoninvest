@@ -4,9 +4,9 @@
  "nav_source": "portfolio.json",
  "nav0": 1000000000.0,
  "cash": 822244017.5,
- "nav": 996579018,
- "session_done": "2026-10-21",
- "updated": "2026-10-21T21:40:02",
+ "nav": 1007884018,
+ "session_done": "2026-10-22",
+ "updated": "2026-10-22T21:27:38",
  "open": [
   {
    "book_id": "LIVE_PAPER",
@@ -20,12 +20,12 @@
    "cost_px": 14671.975,
    "sh": 11900,
    "cost": 174596502,
-   "peak": 0.0,
+   "peak": 0.06325153907364212,
    "b10": 0,
    "b20": 0,
    "part": false,
    "pyr": false,
-   "held": 0,
+   "held": 1,
    "light": "CAM",
    "score": 59.3,
    "ordimb": 1.678,
@@ -35,9 +35,9 @@
    "prod_config_hash": "ef51d3e39611",
    "size_theo": 17.64,
    "size_reasons": [],
-   "last": 14.65,
-   "last_day": "2026-10-21",
-   "pnl": -0.4,
+   "last": 15.6,
+   "last_day": "2026-10-22",
+   "pnl": 6.06,
    "x0": {
     "date": "2026-10-21",
     "pos_pct": 17.49,
@@ -45,8 +45,8 @@
     "total_pct": 17.49,
     "nav": 996579018
    },
-   "peak_gain": 0.0,
-   "gain": -0.15,
+   "peak_gain": 6.33,
+   "gain": 6.33,
    "profit_lock_active": false,
    "profit_floor": null,
    "profit_trigger": null,
@@ -56,13 +56,12 @@
    "exit_phan": 1.0,
    "action": "GIỮ",
    "earliest_sell": "T+3",
-   "last_adj": 14.65,
-   "last_val": 14650.0,
+   "last_adj": 15.6,
+   "last_val": 15600.0,
    "k_adj": 1.0,
-   "last_done": "2026-10-21",
+   "last_done": "2026-10-22",
    "cost_basis": "cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1",
    "tail_adj": [
-    13450.0,
     13000.0,
     13000.0,
     13100.0,
@@ -91,7 +90,8 @@
     13500.0,
     13500.0,
     13700.0,
-    14650.0
+    14650.0,
+    15600.0
    ],
    "cfg_hash_state": "a9ad20d69c2f"
   }
@@ -361,9 +361,9 @@
   "sector_cap_ok": true,
   "pyr_sector_over": [],
   "now": {
-   "max_pos_pct": 17.49,
-   "max_sector_pct": 17.49,
-   "total_pct": 17.49
+   "max_pos_pct": 18.42,
+   "max_sector_pct": 18.42,
+   "total_pct": 18.42
   },
   "pnl_reconcile_ok": true,
   "ok": true
@@ -372,7 +372,7 @@
   "n_open": 1,
   "n_closed": 4,
   "winrate": 25.0,
-  "total_return": -0.34,
+  "total_return": 0.79,
   "best": 4.58,
   "worst": -6.19,
   "since": "2026-09-14"
