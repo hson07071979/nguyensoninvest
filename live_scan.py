@@ -349,13 +349,14 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
                 _treo = sum(1 for p in _op if _AL.probe_hanging(p, sf, days_ahead=1))
             except Exception as e:
                 print('dem lenh do treo loi:', e); _treo = None
-            do = sorted(do, key=lambda h: (-(h.get('score') or 0), h['sym']))
+            do = sorted(do, key=lambda h: (h.get('uu_tien') or 99, -(h.get('score') or 0), h['sym']))
         if do:
             dong = [f"\U0001F7E0 *MUA DÒ* — {len(do)} mã, phiên {ses} · {t_bao_s}", '']
             for h in do:
+                _ut = (f"*ƯU TIÊN {h['uu_tien']}/{h['n_ung_vien']}* · " if h.get('uu_tien') and (h.get('n_ung_vien') or 0) > 1 else '')
                 if _treo is not None:
                     if _treo >= int(_cf['max_unconf']):
-                        dong.append(f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f}\n"
+                        dong.append(f"{_ut}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f}\n"
                                     f"   ⛔ *KHÔNG MUA* — đang có {_treo} lệnh dò chưa xác nhận ĐK9 (tối đa {_cf['max_unconf']})")
                         continue
                     _treo += 1
@@ -370,7 +371,7 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
                                  + (f" ≈ {ti2/1e6:,.0f} triệu" if ti2 else '') + " — bộ máy dùng đèn lúc đóng cửa")
                 kl = (f"vol {h['volr']}× → dự phóng *{h.get('volr_proj_curve')}×* (KL mới có {frac*100:.0f}% phiên)"
                       if h.get('mua_do_du_phong') else f"vol {h['volr']}×")
-                dong.append(f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · {kl} · điểm {h['score']:.0f}\n   {size}")
+                dong.append(f"{_ut}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · {kl} · điểm {h['score']:.0f}\n   {size}")
             dong += ['', "Đặt lệnh NGAY (LO), đừng chờ ATC nếu giá đang sát/ở trần — ATC trần rất khó khớp.",
                      f"Tối ~18–19h xác nhận ĐK1–8 bằng số đóng cửa + Điều kiện 9: đạt → giữ; không đạt → bán 100% ATC T+{sf}."]
             if _post('\n'.join(dong)):
@@ -405,7 +406,7 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
 
     # MUA only — and only hits whose EVERY required production condition passed.
     mua = [h for h in hits if h['level'] == 'MUA' and h.get('prod_ok')]
-    moi = [h for h in mua if h['sym'] not in cu]
+    moi = sorted([h for h in mua if h['sym'] not in cu], key=lambda h: (h.get('uu_tien') or 99, h['sym']))
     if not moi:
         return da_gui
 
@@ -420,6 +421,7 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
         if tien and nav:
             size += f" = *{tien/1e6:,.0f} triệu* trên NAV hiện tại {nav/1e9:.2f} tỷ"
         dong.append(
+            (f"*ƯU TIÊN {h['uu_tien']}/{h['n_ung_vien']}* · " if h.get('uu_tien') and (h.get('n_ung_vien') or 0) > 1 else '') +
             f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%)\n"
             f"   vol {h['volr']}× TB20 · GTGD {h['gtgd']} tỷ · điểm {h['score']:.0f} · "
             f"dòng tiền {h['ordimb']}× (≥ {h['ordimb_min']})\n"
@@ -785,6 +787,51 @@ def flow_obs(ses, now, rows, syms):
     return rec
 
 
+def xep_uu_tien_live(hits, T):
+    """THU TU MUA khi nhieu ma cung no (R38 PROD 22/10/2026) — cung cong thuc bo may
+    (allocator.xep_uu_tien, rank_mode trong cfg = diem CANSLIM + Vol/TB20).
+    Ung vien = ma MUA hoac MUA DO chua cam. Ghi vao tung hit: uu_tien (1 = mua truoc),
+    n_ung_vien, va khong_mua/khong_mua_vi theo luat toi da N lenh do treo (max_unconf)
+    xet dung thu tu uu tien — trang web va chuong doc chung mot ket qua."""
+    CF = (T or {}).get('cfg') or {}
+    ung = [h for h in hits if (h.get('level') == 'MUA' or h.get('mua_do')) and not h.get('dang_cam')]
+    for h in hits:
+        h['uu_tien'] = None; h['n_ung_vien'] = None; h['khong_mua'] = None; h['khong_mua_vi'] = []
+    if not ung:
+        return
+    try:
+        import allocator as AL
+        xep = AL.xep_uu_tien([dict(sym=h['sym'], score=h.get('score'), volr=h.get('volr')) for h in ung], CF)
+    except Exception as e:
+        print('xep uu tien loi:', e)
+        xep = [dict(sym=h['sym'], uu_tien=i) for i, h in
+               enumerate(sorted(ung, key=lambda h: (-(h.get('score') or 0), h['sym'])), 1)]
+    hang = {r['sym']: r['uu_tien'] for r in xep}
+    for h in ung:
+        h['uu_tien'] = hang.get(h['sym']); h['n_ung_vien'] = len(ung)
+    if CF.get('max_unconf') is None:
+        return
+    try:
+        import allocator as AL
+        sf = int(CF.get('sell_from', 3) or 3)
+        op = ((T or {}).get('book') or {}).get('positions')
+        if op is None:
+            P = json.load(open('portfolio.json', encoding='utf-8')) if os.path.exists('portfolio.json') else {}
+            op = [p for p in (P.get('open') or []) if (p.get('sh') or 0) > 0]
+        treo = sum(1 for p in op if AL.probe_hanging(p, sf, days_ahead=1))
+    except Exception as e:
+        print('dem lenh do treo loi:', e); return
+    lim = int(CF['max_unconf'])
+    for h in sorted(ung, key=lambda h: h['uu_tien'] or 99):
+        if not h.get('mua_do') or h.get('prod_ok'):
+            continue          # MUA da du 9 dieu kien: khong phai lenh do
+        if treo >= lim:
+            h['khong_mua'] = True
+            h['khong_mua_vi'] = [f'đang có {treo} lệnh dò chưa xác nhận ĐK9 (tối đa {lim})']
+        else:
+            treo += 1
+
+
 def main():
     if not os.path.exists('thresholds.json'):
         sys.exit('HONG: khong co thresholds.json — repo private chua day sang')
@@ -1039,8 +1086,9 @@ def main():
             miss=[SP.labels(CF).get(k, k) if CF else k for k in res.get('missing', [])],
         ))
 
+    xep_uu_tien_live(hits, T)
     order = {'MUA': 0, 'SAP_DU': 1, 'DE_MAT': 2, 'THEO_DOI': 3}
-    hits.sort(key=lambda x: (order[x['level']], -x['pct']))
+    hits.sort(key=lambda x: (order[x['level']], x.get('uu_tien') or 99, -x['pct']))
 
     cov = len(fresh) / max(1, len(syms))
     oi_cov = obs['ordimb'] / max(1, len(fresh))
