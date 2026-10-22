@@ -335,31 +335,21 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
     # (1) MUA DO 14h00-14h45: du DK1-8 (KL/GTGD co the theo DU PHONG), DK9 chua co so
     if MUA_DO_TU <= t_bao <= MUA_DO_DEN:
         do = [h for h in hits if h.get('mua_do') and 'D:' + h['sym'] not in cu]
-        # TOI DA 1 LENH DO TREO (PROD 03/10/2026, R31): dem lenh da truot DK9 con giu hom nay
-        # (so he thong toi qua, +1 phien) roi xet tung ma theo diem giam dan nhu engine2.
+        # TOI DA 1 LENH DO TREO (PROD 03/10/2026, R31): danh_dau_max_unconf() da xet TOAN BO ung
+        # vien cua nhip nay theo diem giam dan (ke ca ma da bao o nhip truoc) va ghi co vao ban ghi.
+        # Truoc 22/10 ham nay tu dem rieng chi tren ma MOI -> nhip sau co the bao MUA ma thu hai.
         _cf = (T or {}).get('cfg') or {}
-        _treo = None
-        if _cf.get('max_unconf') is not None:
-            try:
-                import allocator as _AL
-                _op = ((T or {}).get('book') or {}).get('positions')
-                if _op is None:
-                    _P = json.load(open('portfolio.json', encoding='utf-8')) if os.path.exists('portfolio.json') else {}
-                    _op = [p for p in (_P.get('open') or []) if (p.get('sh') or 0) > 0]
-                _treo = sum(1 for p in _op if _AL.probe_hanging(p, sf, days_ahead=1))
-            except Exception as e:
-                print('dem lenh do treo loi:', e); _treo = None
-            do = sorted(do, key=lambda h: (h.get('uu_tien') or 99, -(h.get('score') or 0), h['sym']))
+        do = sorted(do, key=lambda h: (h.get('uu_tien') or 99, h['sym']))
         if do:
             dong = [f"\U0001F7E0 *MUA DÒ* — {len(do)} mã, phiên {ses} · {t_bao_s}", '']
             for h in do:
                 _ut = (f"*ƯU TIÊN {h['uu_tien']}/{h['n_ung_vien']}* · " if h.get('uu_tien') and (h.get('n_ung_vien') or 0) > 1 else '')
-                if _treo is not None:
-                    if _treo >= int(_cf['max_unconf']):
-                        dong.append(f"{_ut}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f}\n"
-                                    f"   ⛔ *KHÔNG MUA* — đang có {_treo} lệnh dò chưa xác nhận ĐK9 (tối đa {_cf['max_unconf']})")
-                        continue
-                    _treo += 1
+                if h.get('khong_mua') == 'max_unconf':
+                    vi = ', '.join(h.get('khong_mua_vi') or [])
+                    dong.append(f"{_ut}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f}\n"
+                                f"   ⛔ *KHÔNG MUA* — đang có lệnh dò chưa xác nhận ĐK9{(' (' + vi + ')') if vi else ''}"
+                                f" · tối đa {_cf.get('max_unconf')}")
+                    continue
                 theo, thuc, ly, tien, nav = co_lenh(h, T or {}, den)
                 size = (f"cỡ *{thuc:.1f}% NAV*" if thuc is not None else "")
                 if tien and nav:
@@ -395,6 +385,15 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
             dong += [f"*{x['sym']}* thiếu {', '.join(lb_.get(k, k) for k in x['thieu'])} → *bán TOÀN BỘ (100%) ATC ngày {x['ban'][8:10]}/{x['ban'][5:7]}* (T+{sf}, dự kiến) nếu đã mua. Sẽ nhắc lại lúc 14h hôm đó." for x in tr]
             if _post('\n'.join(dong)):
                 da_gui += ['X8:' + x['sym'] for x in tr]
+        # DINH CHINH (22/10/2026): da bao 'khong du DK1-8' o lan quet truoc, lan quet nay cham lai DAT
+        # (vd so von hoa toi muon) -> bao huy nhac ban, khong de nguoi xem ban nham ma he thong dang cam.
+        ok_ = [x for x in (xac_nhan or []) if x['ket_qua'] == 'DAT_DK18'
+               and 'X8:' + x['sym'] in cu and 'X8OK:' + x['sym'] not in cu]
+        if ok_:
+            dong = [f"✅ *ĐÍNH CHÍNH* — phiên {ses}", '']
+            dong += [f"*{x['sym']}* chấm lại bằng số đóng cửa: *ĐỦ ĐK1–8*. Bỏ nhắc bán lần trước." for x in ok_]
+            if _post('\n'.join(dong)):
+                da_gui += ['X8OK:' + x['sym'] for x in ok_]
     # (2) Sau phien: DK9 truot -> ban lenh do ATC T+2
     if sau_phien:
         tr = [h for h in hits if h.get('truot9') and 'X:' + h['sym'] not in cu]
@@ -406,6 +405,17 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
 
     # MUA only — and only hits whose EVERY required production condition passed.
     mua = [h for h in hits if h['level'] == 'MUA' and h.get('prod_ok')]
+    # Ma bi luat 'toi da 1 lenh mua thu treo' chan: bao MOT dong rieng, khong goi la xac nhan/giu.
+    km = [h for h in mua if h.get('khong_mua') and 'KM:' + h['sym'] not in cu]
+    mua = [h for h in mua if not h.get('khong_mua')]
+    if km and sau_phien:
+        dong = [f"⛔ *ĐỦ ĐIỀU KIỆN NHƯNG HỆ THỐNG KHÔNG MUA* — phiên {ses}", '']
+        dong += [f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f} — đang có lệnh dò chưa xác nhận"
+                 + (f" ({', '.join(h.get('khong_mua_vi') or [])})" if h.get('khong_mua_vi') else '')
+                 + f", tối đa {((T or {}).get('cfg') or {}).get('max_unconf')}" for h in km]
+        dong += ['', "Đã lỡ mua dò lúc ATC thì không có trong sổ hệ thống — tự quyết, hệ thống không theo dõi luật thoát cho mã này."]
+        if _post('\n'.join(dong), prio=3):
+            da_gui += ['KM:' + h['sym'] for h in km]
     moi = sorted([h for h in mua if h['sym'] not in cu], key=lambda h: (h.get('uu_tien') or 99, h['sym']))
     if not moi:
         return da_gui
@@ -751,10 +761,88 @@ def den_tam_tinh(T, ses, frac, rows=None, phien_mo=False):
 
 
 def doc_nhac_ban():
+    """Nhac ban cua lan quet truoc. Bo dong da duoc lan quet SAU xac nhan DAT_DK18 (22/10/2026):
+    phien 21/10 lan quet 15h15+ thieu so von hoa -> ghi nhac ban ORS/DIG/VSC 'thieu Von hoa',
+    lan quet 21h05 da cham DAT nhung dong nhac van nam lai -> 14h ngay 26/10 se bao BAN ORS
+    (ma he thong dang cam). Chi giu dong nao chua bi xac nhan nguoc lai."""
     try:
-        return list(json.load(open('live.json', encoding='utf-8')).get('nhac_ban') or [])
+        L = json.load(open('live.json', encoding='utf-8'))
     except Exception:
         return []
+    return loc_nhac_ban(L.get('nhac_ban'), L.get('xac_nhan_mua_do'), L.get('session'))
+
+
+def loc_nhac_ban(nhac, xac_nhan, ses):
+    dat = {x.get('sym') for x in (xac_nhan or []) if x.get('ket_qua') == 'DAT_DK18'}
+    return [x for x in (nhac or []) if not (x.get('mua') == ses and x.get('sym') in dat)]
+
+
+def xet_dk18(res_, CF):
+    """Cham lai DK1-8 cua lenh mua do bang so dong cua -> (ket_qua, thieu).
+    'CHUA_RO' khi dieu kien thieu chi vi NGUON chua co so (von hoa = None: FireAnt chua dien
+    MarketCap cho dong phien luc 15h15) — khong phai truot, de lan quet sau cham lai."""
+    m18 = [k for k in (res_.get('missing') or []) if k != 'ordimb']
+    vals = res_.get('values') or {}
+    chua_co_so = [k for k in m18 if k == 'mcap' and vals.get('mcap') is None]
+    if chua_co_so:
+        return 'CHUA_RO', chua_co_so
+    return ('TRUOT_DK18', m18) if m18 else ('DAT_DK18', [])
+
+
+def danh_dau_max_unconf(hits, T, ses, sf=3):
+    """THU TU UU TIEN + TOI DA N LENH MUA THU TREO — ghi thang vao ban ghi live.json.
+
+    (1) uu_tien (22/10/2026, R38): moi ung vien cua phien duoc danh so 1, 2, 3... theo
+        allocator.xep_uu_tien(cfg) — PROD 'score_volr': hang(diem) + hang(Vol/TB20) trong tap ung
+        vien, hoa -> ma; CUNG cong thuc engine2.rank_rows (test_rank_r38).
+    (2) max_unconf (R31): truoc 22/10 luat nay chi nam trong tin Telegram; ban ghi van de MUA nen
+        phien 21/10 trang hien ca DIG lan VSC o 'Du diem mua' trong khi bo may chi mua ORS.
+        Het cho -> khong_mua='max_unconf', khong_mua_vi=[ma dang chiem cho]. Khong doi level/prod_ok.
+
+    Ung vien = ma chua cam dang mua do hoac MUA du PROD; sau khi bo may da chay cho chinh phien nay
+    (T.asof == ses) them ca ma bo may VUA MUA hom nay (luc nay da thanh 'dang cam') de so thu tu
+    dung nhu luc chon. Tra ve so ma bi danh dau khong mua."""
+    import allocator as _AL
+    T = T or {}
+    cf = T.get('cfg') or {}
+    pos = ((T.get('book') or {}).get('positions')) or []
+    chot = str(T.get('asof') or '') == ses
+    da_mua = [s['sym'] for s in (T.get('signals_today') or []) if s.get('date') == ses] if chot else []
+    ung = [h for h in hits if (h['sym'] in da_mua) or (not h.get('dang_cam')
+           and (h.get('mua_do') or (h.get('level') == 'MUA' and h.get('prod_ok'))))]
+    if not ung:
+        return 0
+    xep = _AL.xep_uu_tien([dict(sym=h['sym'], score=h.get('score'), volr=h.get('volr')) for h in ung], cf)
+    thu_tu = {x['sym']: x['uu_tien'] for x in xep}
+    for h in ung:
+        h['uu_tien'], h['n_ung_vien'] = thu_tu[h['sym']], len(ung)
+    ung.sort(key=lambda h: h['uu_tien'])
+    if cf.get('max_unconf') is None:
+        return 0
+    lim = int(cf['max_unconf'])
+    if chot:
+        treo = [p['sym'] for p in pos if p.get('probe_fail') or int(p.get('held') or 0) == 0]
+        n = 0
+        for h in ung:
+            if h['sym'] in da_mua:
+                continue
+            if len(treo) >= lim:
+                h['khong_mua'], h['khong_mua_vi'] = 'max_unconf', list(treo)
+                n += 1
+        return n
+    try:
+        treo = [p['sym'] for p in pos if _AL.probe_hanging(p, sf, days_ahead=1)]
+    except Exception as e:
+        print('dem lenh do treo loi:', e)
+        return 0
+    n = 0
+    for h in ung:
+        if len(treo) >= lim:
+            h['khong_mua'], h['khong_mua_vi'] = 'max_unconf', list(treo)
+            n += 1
+        else:
+            treo.append(h['sym'])
+    return n
 
 
 def _hash_ok(T):
@@ -786,50 +874,6 @@ def flow_obs(ses, now, rows, syms):
         print('obs loi:', e)
     return rec
 
-
-def xep_uu_tien_live(hits, T):
-    """THU TU MUA khi nhieu ma cung no (R38 PROD 22/10/2026) — cung cong thuc bo may
-    (allocator.xep_uu_tien, rank_mode trong cfg = diem CANSLIM + Vol/TB20).
-    Ung vien = ma MUA hoac MUA DO chua cam. Ghi vao tung hit: uu_tien (1 = mua truoc),
-    n_ung_vien, va khong_mua/khong_mua_vi theo luat toi da N lenh do treo (max_unconf)
-    xet dung thu tu uu tien — trang web va chuong doc chung mot ket qua."""
-    CF = (T or {}).get('cfg') or {}
-    ung = [h for h in hits if (h.get('level') == 'MUA' or h.get('mua_do')) and not h.get('dang_cam')]
-    for h in hits:
-        h['uu_tien'] = None; h['n_ung_vien'] = None; h['khong_mua'] = None; h['khong_mua_vi'] = []
-    if not ung:
-        return
-    try:
-        import allocator as AL
-        xep = AL.xep_uu_tien([dict(sym=h['sym'], score=h.get('score'), volr=h.get('volr')) for h in ung], CF)
-    except Exception as e:
-        print('xep uu tien loi:', e)
-        xep = [dict(sym=h['sym'], uu_tien=i) for i, h in
-               enumerate(sorted(ung, key=lambda h: (-(h.get('score') or 0), h['sym'])), 1)]
-    hang = {r['sym']: r['uu_tien'] for r in xep}
-    for h in ung:
-        h['uu_tien'] = hang.get(h['sym']); h['n_ung_vien'] = len(ung)
-    if CF.get('max_unconf') is None:
-        return
-    try:
-        import allocator as AL
-        sf = int(CF.get('sell_from', 3) or 3)
-        op = ((T or {}).get('book') or {}).get('positions')
-        if op is None:
-            P = json.load(open('portfolio.json', encoding='utf-8')) if os.path.exists('portfolio.json') else {}
-            op = [p for p in (P.get('open') or []) if (p.get('sh') or 0) > 0]
-        treo = sum(1 for p in op if AL.probe_hanging(p, sf, days_ahead=1))
-    except Exception as e:
-        print('dem lenh do treo loi:', e); return
-    lim = int(CF['max_unconf'])
-    for h in sorted(ung, key=lambda h: h['uu_tien'] or 99):
-        if not h.get('mua_do') or h.get('prod_ok'):
-            continue          # MUA da du 9 dieu kien: khong phai lenh do
-        if treo >= lim:
-            h['khong_mua'] = True
-            h['khong_mua_vi'] = [f'đang có {treo} lệnh dò chưa xác nhận ĐK9 (tối đa {lim})']
-        else:
-            treo += 1
 
 
 def main():
@@ -1086,8 +1130,10 @@ def main():
             miss=[SP.labels(CF).get(k, k) if CF else k for k in res.get('missing', [])],
         ))
 
-    xep_uu_tien_live(hits, T)
     order = {'MUA': 0, 'SAP_DU': 1, 'DE_MAT': 2, 'THEO_DOI': 3}
+    # 22/10/2026: thu tu UU TIEN (R38) + luat toi da 1 lenh mua thu treo ghi thang vao ban ghi
+    # (truoc chi co trong Telegram) — chay TRUOC khi sap xep de bang theo dung thu tu mua.
+    n_khong_mua = danh_dau_max_unconf(hits, T, ses, int(CF.get('sell_from', 3) or 3)) if spec_ok else 0
     hits.sort(key=lambda x: (order[x['level']], x.get('uu_tien') or 99, -x['pct']))
 
     cov = len(fresh) / max(1, len(syms))
@@ -1110,6 +1156,7 @@ def main():
                source_health=health,
                hits=hits, de_mat_pct=DE_MAT_PCT,
                n_mua=sum(1 for h in hits if h['level'] == 'MUA'),
+               n_khong_mua=n_khong_mua,
                n_de_mat=sum(1 for h in hits if h['level'] == 'DE_MAT'),
                n_cho_dong_tien=sum(1 for h in hits if h.get('reason') == 'WAITING_FOR_FLOW_CONFIRMATION'),
                n_mua_do=sum(1 for h in hits if h.get('mua_do')))
@@ -1126,13 +1173,16 @@ def main():
             res_ = res_by.get(s_)
             if not res_:
                 continue
-            m18 = [k for k in (res_.get('missing') or []) if k != 'ordimb']
-            if m18:
+            kq, m18 = xet_dk18(res_, CF)
+            # lan quet nay la ket luan MOI NHAT cho phien -> bo dong nhac cu cua chinh ma nay
+            nhac = [x for x in nhac if not (x.get('sym') == s_ and x.get('mua') == ses)]
+            if kq == 'TRUOT_DK18':
                 ngay_ban = phien_cong(ses, int(CF.get('sell_from', 3) or 3))
-                if not any(x.get('sym') == s_ and x.get('mua') == ses for x in nhac):
-                    nhac.append(dict(sym=s_, mua=ses, ban=ngay_ban, ly_do='không đủ ĐK1–8 lúc đóng cửa: ' +
-                                     ', '.join(SP.labels(CF).get(k, k) for k in m18)))
+                nhac.append(dict(sym=s_, mua=ses, ban=ngay_ban, ly_do='không đủ ĐK1–8 lúc đóng cửa: ' +
+                                 ', '.join(SP.labels(CF).get(k, k) for k in m18)))
                 xac_nhan.append(dict(sym=s_, ket_qua='TRUOT_DK18', thieu=m18, ban=ngay_ban))
+            elif kq == 'CHUA_RO':
+                xac_nhan.append(dict(sym=s_, ket_qua='CHUA_RO', chua_co_so=m18))
             else:
                 xac_nhan.append(dict(sym=s_, ket_qua='DAT_DK18'))
     da_keu = gui_telegram(hits, ses, cu_mua, cu_ses, T.get('light', 'VANG'), frac, T, den_tt=den_tt,
