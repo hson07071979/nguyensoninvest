@@ -335,7 +335,7 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
     # (1) MUA DO 14h00-14h45: du DK1-8 (KL/GTGD co the theo DU PHONG), DK9 chua co so
     if MUA_DO_TU <= t_bao <= MUA_DO_DEN:
         do = [h for h in hits if h.get('mua_do') and 'D:' + h['sym'] not in cu]
-        # TOI DA 1 LENH DO TREO (PROD 03/10/2026, R31): danh_dau_max_unconf() da xet TOAN BO ung
+        # TOI DA N LENH DO TREO (cfg.max_unconf; PROD max 2 tu 23/10/2026, R31): danh_dau_max_unconf() da xet TOAN BO ung
         # vien cua nhip nay theo diem giam dan (ke ca ma da bao o nhip truoc) va ghi co vao ban ghi.
         # Truoc 22/10 ham nay tu dem rieng chi tren ma MOI -> nhip sau co the bao MUA ma thu hai.
         _cf = (T or {}).get('cfg') or {}

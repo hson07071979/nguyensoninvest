@@ -100,5 +100,39 @@ class NhacBan(unittest.TestCase):
         self.assertEqual(LS.xet_dk18(dict(missing=['ordimb'], values={}), {}), ('DAT_DK18', []))
 
 
+
+class Max2(unittest.TestCase):
+    """PROD tu 23/10/2026: toi da 2 lenh do treo (cfg.max_unconf=2)."""
+    CF2 = dict(max_unconf=2, sell_from=3, rank_mode='score_volr')
+
+    def test_trong_phien_hai_ma_dau_duoc_mua(self):
+        T = dict(asof='2026-10-20', cfg=self.CF2, book=dict(positions=[]))
+        hs = [hit('VSC', 48.9, level='SAP_DU', prod_ok=False, mua_do=True, volr=2.86),
+              hit('DIG', 58.8, level='SAP_DU', prod_ok=False, mua_do=True, volr=2.88),
+              hit('ORS', 59.3, level='SAP_DU', prod_ok=False, mua_do=True, volr=5.33)]
+        self.assertEqual(LS.danh_dau_max_unconf(hs, T, '2026-10-21'), 1)
+        m = {h['sym']: h for h in hs}
+        self.assertNotIn('khong_mua', m['ORS']); self.assertNotIn('khong_mua', m['DIG'])
+        self.assertEqual(m['VSC']['khong_mua_vi'], ['ORS', 'DIG'])
+
+    def test_mot_lenh_cu_treo_con_mot_cho(self):
+        T = dict(asof='2026-09-30', cfg=self.CF2, book=dict(positions=[dict(sym='PVT', held=1, probe_fail=True)]))
+        hs = [hit('AAA', 70, level='SAP_DU', prod_ok=False, mua_do=True),
+              hit('BBB', 50, level='SAP_DU', prod_ok=False, mua_do=True)]
+        LS.danh_dau_max_unconf(hs, T, '2026-10-01')
+        m = {h['sym']: h for h in hs}
+        self.assertNotIn('khong_mua', m['AAA'])
+        self.assertEqual(m['BBB']['khong_mua_vi'], ['PVT', 'AAA'])
+
+    def test_sau_khi_bo_may_mua_hai_ma(self):
+        T = dict(asof='2026-10-21', cfg=self.CF2,
+                 signals_today=[dict(sym='ORS', date='2026-10-21'), dict(sym='DIG', date='2026-10-21')],
+                 book=dict(positions=[dict(sym='ORS', held=0, probe_fail=False),
+                                      dict(sym='DIG', held=0, probe_fail=False)]))
+        hs = [hit('VSC', 48.9, volr=2.86), hit('DIG', 58.8, dang_cam=True, level='THEO_DOI', volr=2.88),
+              hit('ORS', 59.3, dang_cam=True, level='THEO_DOI', volr=5.33)]
+        self.assertEqual(LS.danh_dau_max_unconf(hs, T, '2026-10-21'), 1)
+        self.assertEqual([h['sym'] for h in hs if h.get('khong_mua')], ['VSC'])
+
 if __name__ == '__main__':
     unittest.main()
