@@ -4,9 +4,9 @@
  "nav_source": "portfolio.json",
  "nav0": 1000000000.0,
  "cash": 822244017.5,
- "nav": 1002529018,
- "session_done": "2026-10-27",
- "updated": "2026-10-27T21:29:17",
+ "nav": 1004314018,
+ "session_done": "2026-10-28",
+ "updated": "2026-10-28T21:30:03",
  "open": [
   {
    "book_id": "LIVE_PAPER",
@@ -25,7 +25,7 @@
    "b20": 0,
    "part": false,
    "pyr": false,
-   "held": 4,
+   "held": 5,
    "light": "CAM",
    "score": 59.3,
    "ordimb": 1.678,
@@ -35,9 +35,9 @@
    "prod_config_hash": "ef51d3e39611",
    "size_theo": 17.64,
    "size_reasons": [],
-   "last": 15.15,
-   "last_day": "2026-10-27",
-   "pnl": 3.0,
+   "last": 15.3,
+   "last_day": "2026-10-28",
+   "pnl": 4.02,
    "x0": {
     "date": "2026-10-21",
     "pos_pct": 17.49,
@@ -46,7 +46,7 @@
     "nav": 996579018
    },
    "peak_gain": 9.05,
-   "gain": 3.26,
+   "gain": 4.28,
    "profit_lock_active": true,
    "profit_floor": 2.0,
    "profit_trigger": 8.0,
@@ -54,15 +54,14 @@
    "exit_reason": null,
    "pending_exit": null,
    "exit_phan": 1.0,
-   "action": "GIỮ — khoá lãi đang bật: đỉnh +9,1%, sàn bảo vệ +2% (hiện +3,3%)",
+   "action": "GIỮ — khoá lãi đang bật: đỉnh +9,1%, sàn bảo vệ +2% (hiện +4,3%)",
    "earliest_sell": "2026-10-26",
-   "last_adj": 15.15,
-   "last_val": 15150.0,
+   "last_adj": 15.3,
+   "last_val": 15300.0,
    "k_adj": 1.0,
-   "last_done": "2026-10-27",
+   "last_done": "2026-10-28",
    "cost_basis": "cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1",
    "tail_adj": [
-    13100.0,
     13400.0,
     13400.0,
     13200.0,
@@ -91,7 +90,8 @@
     15600.0,
     16000.0,
     15500.0,
-    15150.0
+    15150.0,
+    15300.0
    ],
    "cfg_hash_state": "a9ad20d69c2f"
   }
@@ -368,9 +368,9 @@
   "sector_cap_ok": true,
   "pyr_sector_over": [],
   "now": {
-   "max_pos_pct": 17.98,
-   "max_sector_pct": 17.98,
-   "total_pct": 17.98
+   "max_pos_pct": 18.13,
+   "max_sector_pct": 18.13,
+   "total_pct": 18.13
   },
   "pnl_reconcile_ok": true,
   "ok": true
@@ -379,7 +379,7 @@
   "n_open": 1,
   "n_closed": 4,
   "winrate": 25.0,
-  "total_return": 0.25,
+  "total_return": 0.43,
   "best": 4.58,
   "worst": -6.19,
   "since": "2026-09-14"
