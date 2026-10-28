@@ -1,0 +1,44 @@
+name: Báo lệnh Hard
+
+# 28/10/2026: anh Sơn bấm Hard Buy / Hard Sell / Hoàn tác ở Sổ tay (trang quản trị) -> trang ghi
+# manual.json -> workflow này so khoá `hard` trước/sau lần ghi và bắn tin (Telegram + ntfy) ngay.
+# Bản dựng tối đăng thresholds.json -> báo lệnh nào bộ máy đã khớp / từ chối (kèm lý do).
+# Không ghi gì vào repo. Sổ hệ thống cập nhật ở bản dựng tối (nsi-bot daily.yml tự chạy lại khi có lệnh mới).
+on:
+  push:
+    branches: [main]
+    paths: ['manual.json', 'thresholds.json']
+
+permissions:
+  contents: read
+
+jobs:
+  bao:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests==2.33.1
+      - name: Bản manual.json + thresholds.json trước lần ghi này
+        env:
+          TRUOC: ${{ github.event.before }}
+        run: |
+          echo '{}' > /tmp/manual_cu.json; cp thresholds.json /tmp/thr_cu.json
+          if [ -n "$TRUOC" ] && [ "$TRUOC" != "0000000000000000000000000000000000000000" ] \
+             && git fetch -q --depth=1 origin "$TRUOC" 2>/dev/null; then
+            git show "$TRUOC:manual.json" > /tmp/manual_cu.json 2>/dev/null || echo '{}' > /tmp/manual_cu.json
+            git show "$TRUOC:thresholds.json" > /tmp/thr_cu.json 2>/dev/null || echo '{}' > /tmp/thr_cu.json
+          fi
+      - name: Báo lệnh mới / hoàn tác
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT:  ${{ secrets.TELEGRAM_CHAT }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          python -B hard_bao.py /tmp/manual_cu.json manual.json
+          python -B hard_bao.py --ket-qua /tmp/thr_cu.json thresholds.json

@@ -139,7 +139,7 @@ def cost_px(p, C):
     return float(p['entry_px']) * (1 + C['fee_buy'])
 
 
-def dong_vi_the(P, p, ly_do, ngay, px_adj, px_raw, k_adj, C, phan=1.0):
+def dong_vi_the(P, p, ly_do, ngay, px_adj, px_raw, k_adj, C, phan=1.0, hard=None):
     """Ban `phan` vi the. QUY UOC GIA (mot quy uoc duy nhat): vi the do bang so co
     phan LUC MUA; gia tri moi co phieu goc tai phien i = AdjClose[i] / k_adj, voi
     k_adj = AdjClose/PriceClose cua phien mua (lay tu CUNG mot lan tai nen). Co tuc
@@ -169,7 +169,9 @@ def dong_vi_the(P, p, ly_do, ngay, px_adj, px_raw, k_adj, C, phan=1.0):
         light=p.get('light', ''), phan=round(phan, 3),
         sh_before=p['sh'], pct_pos=round(100 * sh / p['sh'], 1) if p['sh'] else None,
         pct_nav=round(100 * _gia_tri / _nav, 2) if _nav > 0 else None,
-        cond9=p.get('cond9')))
+        cond9=p.get('cond9'),
+        # LENH HARD (28/10/2026): 'ban' = anh Son ban chu dong; 'mua'/'them' = vi the mo/them bang Hard Buy
+        **({'hard': hard or p.get('hard')} if (hard or p.get('hard')) else {})))
     p['sh'] -= sh
     if phan < 1:
         p['part'] = True
@@ -263,11 +265,35 @@ def main():
         # truong cua luat thoat dang chay thi phai NANG CAP TRANG THAI, khong duoc im lang
         # tra ve (loi 26/09/2026: deploy TOP110+S1 xong, so van mang hash cu 89c720ebf701,
         # BVH thieu profit_floor/sellable/action).
+        luu = False
         if can_nang_cap(P, T):
             nang_cap(P, T, C, ses, now)
-            json.dump(P, open(FILE, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+            luu = True
         elif _hoan_tac:
             P['checks'] = doi_soat(P, C, T.get('cfg') or {})
+            luu = True
+        # LENH HARD bam SAU khi phien da vao so (vd 23h, cuoi tuan): bo may da dung lai va khop
+        # lenh o dung phien cua no -> so ghi tien vao so ngay bay gio, vi the mua moi duoc cham soc
+        # tu ngay mua toi phien da chot (cung vong _cham).
+        _cho = hard_cho(P, T)
+        if _cho:
+            _lights = dict(T.get('light_by_date') or {}); _lights[ses] = T.get('light')
+            _nk, _CA = [], {}
+            _moi = ap_hard_tre(P, T, C, _cho, '9999-12-31', _lights, _nk, _CA, ses)
+            if _moi:
+                _ids = {id(q) for q in _moi}
+                P['open'] = [q for q in P['open'] if id(q) not in _ids] + _cham(P, C, ses, T.get('light'), _nk, _CA, ses, _moi)
+            mv = sum(p['sh'] * (p.get('last_val') or (p.get('last') or 0) * 1000 or p['entry_px']) for p in P['open'])
+            P['nav'] = round(P['cash'] + mv)
+            P['open'].sort(key=lambda p: p['entry'])
+            if _nk:
+                P['log'].insert(0, dict(date=ses, items=_nk))
+                P['log'].sort(key=lambda x: x['date'], reverse=True)
+                print('\n'.join('  ' + x for x in _nk))
+            P['checks'] = doi_soat(P, C, T.get('cfg') or {})
+            P['stats'] = tinh_stats(P, ses)
+            luu = True
+        if luu:
             json.dump(P, open(FILE, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
         else:
             print(f'phien {ses} da vao so roi')
@@ -311,10 +337,11 @@ def main():
             nhat_ky.append(f"CẢNH BÁO: sổ dừng ở {done}, bản dựng chỉ còn lịch sử từ {truoc} — "
                            "các phiên ở giữa không xử lý được lệnh mua / hạ 1/3 / nhồi")
     theo_phien = []
+    _hard = hard_cho(P, T)
     for d in (cho or [ses]):
         nk = []
         mot_phien(P, T, C, d, lights.get(d), list(sig_by.get(d, {}).values()), loai, syms_th,
-                  nk, CACHE, ses)
+                  nk, CACHE, ses, hard=_hard, lights=lights)
         if nk:
             theo_phien.append((d, nk))
 
@@ -345,18 +372,149 @@ def main():
         print('  ' + x)
 
 
-def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF):
-    """Xu ly MOT phien: huy lenh sai luat, thoat lenh (tang dan), vao lenh bo may,
-    nhoi lenh. Goi lan luot cho moi phien chua xu ly (audit 24/09, loi D3: truoc day
-    bo lo mot dem la mat lenh mua va lan ha 1/3 cua phien do)."""
-    # ---------- 0. HUY LENH SAI LUAT (mot lan) ----------
-    for p in P['open']:
-        k = (p['sym'], p['entry'])
-        if k in VOID and p.get('sh', 0) > 0 and not p.get('void_done'):
-            p['void'] = VOID[k]
+# ---------------------------------------------------------------------------
+# LENH HARD cua anh Son (28/10/2026) — so ghi tien LAM THEO bo may.
+# Nguon DUY NHAT: thresholds.json['hard']['fills'] (engine2 da xu ly: phien, gia, khop/tu choi).
+# Chi lenh `ok` cua bo may moi vao so; moi lenh vao so DUNG MOT LAN (P['hard_done']).
+# Co lenh tinh bang allocator.py cua chinh so nay (cung luat voi engine2): % NAV anh nhap, chan boi
+# tran moi ma / tong von / nganh / tien mat / so ma toi da. Ban: phan anh chon, lam tron lo 100 cp,
+# con duoi 100 cp thi ban het.
+# ---------------------------------------------------------------------------
+def hard_cho(P, T):
+    xong = set(P.get('hard_done') or [])
+    return [f for f in ((T.get('hard') or {}).get('fills') or [])
+            if f.get('ok') and f.get('id') and f['id'] not in xong]
 
-    # ---------- 1. CHAM SOC CAC VI THE DANG MO ----------
-    mo = [p for p in P['open'] if p.get('sh', 0) > 0]
+
+def _nen_ngay(sym, ngay, CACHE, ASOF):
+    """(AdjClose, PriceClose) cua phien `ngay`; tai them nen neu cache chua co."""
+    b = CACHE.get(sym)
+    if not b or not any(x[0] == ngay for x in b):
+        frm = (dt.date.fromisoformat(ngay) - dt.timedelta(days=75)).isoformat()
+        b2 = bars(sym, frm, ASOF)
+        if b2:
+            gop = {x[0]: x for x in (b or [])}
+            gop.update({x[0]: x for x in b2})
+            CACHE[sym] = sorted(gop.values())
+            b = CACHE[sym]
+    for x in (b or []):
+        if x[0] == ngay:
+            return x[1], x[2]
+    return None, None
+
+
+def ap_hard(P, T, C, f, light_d, nhat_ky, CACHE, ASOF, cung_phien):
+    n0 = len(nhat_ky)
+    try:
+        return _ap_hard(P, T, C, f, light_d, nhat_ky, CACHE, ASOF, cung_phien)
+    finally:
+        if not cung_phien:
+            for k in range(n0, len(nhat_ky)):
+                nhat_ky[k] = f"[lệnh phiên {f['phien'][8:10]}/{f['phien'][5:7]}, vào sổ trễ] " + nhat_ky[k]
+
+
+def _ap_hard(P, T, C, f, light_d, nhat_ky, CACHE, ASOF, cung_phien):
+    """Vao so MOT lenh Hard da khop o bo may. cung_phien=True: goi sau buoc 1 cua chinh phien do
+    (vi the moi phai co trang thai cua ra ngay). False: vao so tre — vi the mua moi se duoc
+    vong cham soc (_cham) chay tu ngay mua. Tra ve vi the mua moi (neu co) de cham soc."""
+    cfgT = T.get('cfg') or {}
+    sym = f['sym']; d = f['phien']; px = float(f['gia']) * 1000
+    P.setdefault('hard_done', []).append(f['id'])
+    gia = lambda q: q.get('last_val') or (q.get('last') or 0) * 1000 or q['entry_px']
+    p = next((q for q in P['open'] if q['sym'] == sym and q.get('sh', 0) > 0), None)
+    if f['loai'] == 'ban':
+        if p is None:
+            nhat_ky.append(f"HARD BÁN {sym} — sổ ghi tiến không cầm mã này, bỏ qua (bộ máy đã khớp)")
+            return None
+        adj_d, raw_d = _nen_ngay(sym, d, CACHE, ASOF)
+        if not adj_d or not raw_d:
+            nhat_ky.append(f"CẢNH BÁO: HARD BÁN {sym} phiên {d} — không tải được nến ngày đó, bỏ qua")
+            return None
+        k_adj = p.get('k_adj')
+        if not k_adj:
+            nhat_ky.append(f"CẢNH BÁO: HARD BÁN {sym} — vị thế chưa có k_adj (chưa chăm sóc phiên nào), bỏ qua")
+            return None
+        phan = float(f.get('phan') or 1.0)
+        if phan < 1 and p['sh'] - int(p['sh'] * phan // 100 * 100) < 100:
+            phan = 1.0                                      # phan con lai duoi 100 cp -> ban het
+        if phan < 1 and int(p['sh'] * phan // 100 * 100) < 100:
+            nhat_ky.append(f"HARD BÁN {sym} — không đủ 1 lô để bán {phan*100:.0f}%, bỏ qua")
+            return None
+        het = dong_vi_the(P, p, 'Hard Sell — anh Sơn bán chủ động', d, px * adj_d / raw_d, px, k_adj, C,
+                          phan, hard='ban')
+        _c = P['closed'][0]
+        nhat_ky.append(f"HARD BÁN {sym} {px/1000:.2f} — {_c['pct_pos']:.0f}% vị thế = {_c['sh']:,} cp ≈ "
+                       f"{_c['pct_nav']:.1f}% NAV (lãi/lỗ sau phí {_c['pnl_pct']:+.2f}%)")
+        if het:
+            P['open'] = [q for q in P['open'] if q.get('sh', 0) > 0]
+        return None
+    # ---- mua ----
+    inv = sum(q['sh'] * gia(q) for q in P['open']); nav = P['cash'] + inv
+    nganh = (p.get('sector') if p else None) or f.get('sector') or ((T.get('syms') or {}).get(sym) or {}).get('sector') or 'Khác'
+    if p is None and len([q for q in P['open'] if q.get('sh', 0) > 0]) >= int(cfgT.get('max_pos_n', 12)):
+        nhat_ky.append(f"HARD MUA {sym} — sổ ghi tiến đủ số mã tối đa, bỏ qua (bộ máy đã khớp)")
+        return None
+    sec = sum(q['sh'] * gia(q) for q in P['open'] if (q.get('sector') or 'Khác') == nganh)
+    muon = nav * float(f.get('pct_nav') or 0) / 100
+    room, why = AL.addon_capacity(nav, P['cash'], inv, sec, (p['sh'] * gia(p) if p else 0.0), cfg=cfgT)
+    c_px = px * (1 + C['fee_buy'])
+    sh = AL.lots(min(muon, room), c_px)
+    if sh < 100:
+        nhat_ky.append(f"HARD MUA {sym} — không đủ 1 lô sau khi áp {AL.REASON_VI.get(why, why)}, bỏ qua")
+        return None
+    chi = sh * c_px
+    if p is not None:
+        # mua them: quy co phieu mua hom nay ve don vi "co phieu goc" cua vi the (nhu lenh nhoi)
+        adj_d, raw_d = _nen_ngay(sym, d, CACHE, ASOF)
+        k = p.get('k_adj')
+        v_goc = (adj_d / k) if (adj_d and k) else None        # gia tri 1 co phieu goc phien d
+        add_u = int(round(sh * raw_d / v_goc)) if (v_goc and raw_d) else sh
+        P['cash'] -= chi
+        p['cost_px'] = (cost_px(p, C) * p['sh'] + chi) / (p['sh'] + add_u)
+        p['sh'] = p['sh'] + add_u
+        p['cost'] = round(p['cost_px'] * p['sh'])
+        p.setdefault('hard', 'them')
+        p['xp'] = ty_trong(P, sym, nganh, d, gia)
+        _x = p['xp']
+        nhat_ky.append(f"HARD MUA THÊM {sym} {px/1000:.2f} × {sh:,} cp ({chi/nav*100:.1f}% NAV) — sau mua mã "
+                       f"{_x['pos_pct']:.1f}% NAV · ngành {_x['sector_pct']:.1f}% · tổng {_x['total_pct']:.1f}%")
+        return None
+    P['cash'] -= chi
+    q = dict(book_id=BOOK_ID, position_source='hard', nav_source='portfolio.json', hard='mua',
+             sym=sym, name=((T.get('syms') or {}).get(sym) or {}).get('name', ''), sector=nganh,
+             entry=d, entry_px=px, cost_px=c_px, sh=sh, cost=round(chi),
+             peak=0.0, b10=0, b20=0, part=False, pyr=False, held=0,
+             light=light_d, score=None, ordimb=None, probe_fail=False, cond9=None,
+             ordimb_min=C.get('ordimb_min', 1.4), prod_config_hash=T.get('prod_config_hash'),
+             size_theo=round(muon / nav * 100, 2) if nav else None, size_reasons=([] if muon <= room else [why]),
+             hard_id=f['id'], last=round(px / 1000, 2), last_day=d, pnl=0.0)
+    P['open'].append(q)
+    q['x0'] = ty_trong(P, sym, nganh, d, gia)
+    if cung_phien:
+        q.update(ER.status(C, px / c_px - 1, 0.0, 0, probe_fail=False, light_today=light_d, light_entry=light_d))
+        q['earliest_sell'] = f"T+{int(C.get('sell_from', 2) or 2)}"
+    _x = q['x0']
+    nhat_ky.append(f"HARD MUA {sym} {px/1000:.2f} × {sh:,} cp ({chi/nav*100:.1f}% NAV · ngành {_x['sector_pct']:.1f}% · "
+                   f"tổng cổ phiếu {_x['total_pct']:.1f}% NAV · anh Sơn nhập {float(f.get('pct_nav') or 0):.1f}%)")
+    return None if cung_phien else q
+
+
+def ap_hard_tre(P, T, C, cho, truoc, lights, nhat_ky, CACHE, ASOF):
+    """Lenh Hard cua cac phien < `truoc` chua vao so (vd bam sau khi trang da dung xong phien do):
+    vao so ngay bay gio, theo dung thu tu phien/lan bam. Tra ve cac vi the MUA MOI — nguoi goi dua
+    chung qua _cham (cham soc tu ngay mua toi phien dang xu ly)."""
+    moi = []
+    for f in [x for x in cho if x['phien'] < truoc and x['id'] not in set(P.get('hard_done') or [])]:
+        q = ap_hard(P, T, C, f, lights.get(f['phien']) or T.get('light'), nhat_ky, CACHE, ASOF, cung_phien=False)
+        if q is not None:
+            moi.append(q)
+    return moi
+
+
+def _cham(P, C, ses, light, nhat_ky, CACHE, ASOF, mo):
+    """CHAM SOC cac vi the `mo` toi het phien `ses` (luat thoat exit_rules.decide, xu ly tang dan
+    tu last_done). Tra ve cac vi the con giu. Tach khoi mot_phien ngay 28/10/2026 de lenh Hard
+    vao so tre (sau khi phien da chot) cung di qua DUNG mot vong cham soc nay."""
     need = [p for p in mo if p['sym'] not in CACHE]
     if need:
         frm = (min(dt.date.fromisoformat(p['entry']) for p in need) - dt.timedelta(days=75)).isoformat()
@@ -453,7 +611,30 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF)
             # 30 gia dong cua dieu chinh gan nhat: de lop quet trong phien tinh MA10/MA30 voi gia hom nay
             p['tail_adj'] = [round(x, 2) for x in adj[-30:]]
             con_lai.append(p)
-    P['open'] = con_lai
+    return con_lai
+
+
+def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF, hard=None, lights=None):
+    """Xu ly MOT phien: huy lenh sai luat, thoat lenh (tang dan), vao lenh bo may,
+    nhoi lenh. Goi lan luot cho moi phien chua xu ly (audit 24/09, loi D3: truoc day
+    bo lo mot dem la mat lenh mua va lan ha 1/3 cua phien do)."""
+    # ---------- 0. HUY LENH SAI LUAT (mot lan) ----------
+    for p in P['open']:
+        k = (p['sym'], p['entry'])
+        if k in VOID and p.get('sh', 0) > 0 and not p.get('void_done'):
+            p['void'] = VOID[k]
+
+    # ---------- 0b. LENH HARD CUA PHIEN TRUOC CHUA VAO SO (vao tre) ----------
+    if hard:
+        ap_hard_tre(P, T, C, hard, ses, lights or {}, nhat_ky, CACHE, ASOF)
+    # ---------- 1. CHAM SOC CAC VI THE DANG MO ----------
+    P['open'] = _cham(P, C, ses, light, nhat_ky, CACHE, ASOF, [p for p in P['open'] if p.get('sh', 0) > 0])
+
+    # ---------- 1b. LENH HARD CUA CHINH PHIEN NAY ----------
+    # Dung thu tu engine2: sau cua ra cua bot (gia dong cua), truoc lenh mua theo tin hieu.
+    for f in (hard or []):
+        if f['phien'] == ses and f['id'] not in set(P.get('hard_done') or []):
+            ap_hard(P, T, C, f, light, nhat_ky, CACHE, ASOF, cung_phien=True)
 
     def gia(p):
         return p.get('last_val') or (p.get('last') or 0) * 1000 or p['entry_px']
