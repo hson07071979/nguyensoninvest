@@ -1183,3 +1183,4 @@
 {"at": "2026-10-28T20:31:05", "session": "2026-10-28", "expected": 165, "received": 165, "buy_count": 165, "sell_count": 165, "buy_qty": 165, "sell_qty": 165, "ordimb": 165}
 {"at": "2026-10-28T20:46:05", "session": "2026-10-28", "expected": 165, "received": 165, "buy_count": 165, "sell_count": 165, "buy_qty": 165, "sell_qty": 165, "ordimb": 165}
 {"at": "2026-10-28T22:24:59", "session": "2026-10-28", "expected": 165, "received": 165, "buy_count": 165, "sell_count": 165, "buy_qty": 165, "sell_qty": 165, "ordimb": 165}
+{"at": "2026-10-29T09:00:14", "session": "2026-10-29", "expected": 165, "received": 165, "buy_count": 0, "sell_count": 0, "buy_qty": 6, "sell_qty": 3, "ordimb": 0}
