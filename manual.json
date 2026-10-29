@@ -1,6 +1,21 @@
 {
  "v": 1,
- "updated": null,
+ "updated": "2026-10-29T10:31:01",
  "trades": [],
- "watch": []
+ "watch": [],
+ "hard": [
+  {
+   "id": "H20261029T173101-ORS",
+   "loai": "ban",
+   "sym": "ORS",
+   "ngay": "2026-10-29",
+   "gia": 15.15,
+   "phan": 1,
+   "tran": 16.35,
+   "san": 14.25,
+   "luc": "2026-10-29T17:31:01+07:00",
+   "ghi_chu": "",
+   "huy": null
+  }
+ ]
 }
