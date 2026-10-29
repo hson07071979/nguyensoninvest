@@ -301,7 +301,10 @@ def gui_tin(text, md=True, prio=4, tags=None):
             r = requests.post(os.environ.get('NTFY_URL', 'https://ntfy.sh').rstrip('/'),
                               json={'topic': topic, 'title': dong[0][:200],
                                     'message': ('\n'.join(dong[1:]).strip() or dong[0])[:3900],
-                                    'priority': int(prio), 'tags': list(tags or [])}, timeout=20)
+                                    'priority': int(prio), 'tags': list(tags or [])}, timeout=20,
+                              # 29/10/2026: runner GitHub dùng IP chung → ntfy.sh có thể trả 429; có token thì hạn mức tính theo tài khoản
+                              headers={'Authorization': 'Bearer ' + os.environ['NTFY_TOKEN'].strip()}
+                              if os.environ.get('NTFY_TOKEN', '').strip() else None)
             print('ntfy:', 'da gui' if r.ok else f'HONG {r.status_code} {r.text[:120]}')
             ok = ok or r.ok
         except Exception as e:
