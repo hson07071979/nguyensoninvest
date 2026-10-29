@@ -3,8 +3,8 @@
  "book_id": "LIVE_PAPER",
  "nav_source": "portfolio.json",
  "nav0": 1000000000.0,
- "cash": 997330205.0,
- "nav": 997330205,
+ "cash": 1002078305.0,
+ "nav": 1002078305,
  "session_done": "2026-10-29",
  "updated": "2026-10-29T21:30:05",
  "open": [],
@@ -18,12 +18,12 @@
    "entry": "2026-10-21",
    "exit": "2026-10-29",
    "entry_px": 14.65,
-   "exit_px": 14.75,
+   "exit_px": 15.15,
    "sh": 11900,
    "held": 6,
-   "pnl_pct": 0.28,
-   "pnl_vnd": 489685,
-   "reason": "Khoá lãi S1 (đỉnh ≥8% → sàn +2%)",
+   "pnl_pct": 3.0,
+   "pnl_vnd": 5237785,
+   "reason": "Hard Sell — anh Sơn bán chủ động (thay lệnh bot cùng phiên: Khoá lãi S1 (đỉnh ≥8% → sàn +2%))",
    "peak": 9.1,
    "profit_floor": 2.0,
    "light": "CAM",
@@ -31,7 +31,11 @@
    "sh_before": 11900,
    "pct_pos": 100.0,
    "pct_nav": 17.59,
-   "cond9": "DAT"
+   "cond9": "DAT",
+   "hard": "ban",
+   "hard_id": "H20261029T173101-ORS",
+   "bot_reason": "Khoá lãi S1 (đỉnh ≥8% → sàn +2%)",
+   "bot_exit_px": 14.75
   },
   {
    "book_id": "LIVE_PAPER",
@@ -121,6 +125,12 @@
   }
  ],
  "log": [
+  {
+   "date": "2026-10-29",
+   "items": [
+    "[lệnh phiên 29/10, vào sổ trễ] HARD BÁN ORS 15.15 — thay lệnh bot cùng phiên 2026-10-29 (Khoá lãi S1 (đỉnh ≥8% → sàn +2%), 14.75); 11,900 cp, lãi/lỗ sau phí +3.00%"
+   ]
+  },
   {
    "date": "2026-10-29",
    "items": [
@@ -321,7 +331,7 @@
   "n_open": 0,
   "n_closed": 5,
   "winrate": 40.0,
-  "total_return": -0.27,
+  "total_return": 0.21,
   "best": 4.58,
   "worst": -6.19,
   "since": "2026-09-14"
@@ -362,5 +372,8 @@
    "to_hash": "a657b4464743",
    "n_open": 1
   }
+ ],
+ "hard_done": [
+  "H20261029T173101-ORS"
  ]
 }
