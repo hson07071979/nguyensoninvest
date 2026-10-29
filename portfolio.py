@@ -424,7 +424,37 @@ def _ap_hard(P, T, C, f, light_d, nhat_ky, CACHE, ASOF, cung_phien):
     p = next((q for q in P['open'] if q['sym'] == sym and q.get('sh', 0) > 0), None)
     if f['loai'] == 'ban':
         if p is None:
-            nhat_ky.append(f"HARD BÁN {sym} — sổ ghi tiến không cầm mã này, bỏ qua (bộ máy đã khớp)")
+            # 30/10/2026 (ca ORS 29/10): bo may cho Hard Sell THANG lenh thoat cua bot cung phien. So ghi tien
+            # co the da dong vi the bang lenh bot o phien do (lenh tay bam sau ATC, vao so tre) -> sua lenh ban
+            # do thanh Hard Sell dung gia anh dien; phan anh khong ban (25/50%) giu gia bot.
+            c = next((x for x in P['closed'] if x['sym'] == sym and x.get('exit') == d and not x.get('hard')), None)
+            if c is None:
+                nhat_ky.append(f"HARD BÁN {sym} — sổ ghi tiến không cầm mã này, bỏ qua (bộ máy đã khớp)")
+                return None
+            phan = float(f.get('phan') or 1.0)
+            sh_h = c['sh'] if phan >= 1 else int(c['sh'] * phan // 100 * 100)
+            if c['sh'] - sh_h < 100:
+                sh_h = c['sh']
+            fee = C['fee_sell']; old = float(c['exit_px']) * 1000
+            von_1 = (c['sh'] * old * (1 - fee) - c['pnl_vnd']) / c['sh']      # gia von 1 cp (gom phi mua)
+            P['cash'] += sh_h * (px - old) * (1 - fee)
+            bot_ly_do = c.get('reason')
+            def _ban(rec, n, gia_ban):
+                thu = n * gia_ban * (1 - fee); von = n * von_1
+                rec.update(sh=n, exit_px=round(gia_ban / 1000, 2), pnl_vnd=round(thu - von),
+                           pnl_pct=round((thu / von - 1) * 100, 2) if von else None)
+            if sh_h < c['sh']:
+                con = dict(c); _ban(con, c['sh'] - sh_h, old)
+                con['pct_pos'] = round(100 * con['sh'] / c['sh_before'], 1) if c.get('sh_before') else None
+                P['closed'].insert(P['closed'].index(c) + 1, con)
+            _pn = c.get('pct_nav')
+            _ban(c, sh_h, px)
+            c.update(reason='Hard Sell — anh Sơn bán chủ động (thay lệnh bot cùng phiên: ' + str(bot_ly_do) + ')',
+                     hard='ban', hard_id=f['id'], bot_reason=bot_ly_do, bot_exit_px=round(old / 1000, 2))
+            if sh_h < (c.get('sh_before') or sh_h) and _pn is not None and c.get('sh_before'):
+                c['pct_nav'] = round(_pn * sh_h / (sh_h + (c.get('sh_before') - sh_h)), 2)
+            nhat_ky.append(f"HARD BÁN {sym} {px/1000:.2f} — thay lệnh bot cùng phiên {d} ({bot_ly_do}, "
+                           f"{old/1000:.2f}); {sh_h:,} cp, lãi/lỗ sau phí {c['pnl_pct']:+.2f}%")
             return None
         adj_d, raw_d = _nen_ngay(sym, d, CACHE, ASOF)
         if not adj_d or not raw_d:
