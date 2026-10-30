@@ -453,6 +453,11 @@ def _ap_hard(P, T, C, f, light_d, nhat_ky, CACHE, ASOF, cung_phien):
                      hard='ban', hard_id=f['id'], bot_reason=bot_ly_do, bot_exit_px=round(old / 1000, 2))
             if sh_h < (c.get('sh_before') or sh_h) and _pn is not None and c.get('sh_before'):
                 c['pct_nav'] = round(_pn * sh_h / (sh_h + (c.get('sh_before') - sh_h)), 2)
+            # dòng nhật ký cũ của lệnh bot (đã bị thay) -> bỏ, không thì trang vẫn hiện lãi theo giá bot
+            for _lg in P.get('log') or []:
+                if _lg.get('date') == d:
+                    _lg['items'] = [x for x in (_lg.get('items') or []) if not str(x).startswith(f"BÁN {sym} ")]
+            P['log'] = [_lg for _lg in (P.get('log') or []) if _lg.get('items')]
             nhat_ky.append(f"HARD BÁN {sym} {px/1000:.2f} — thay lệnh bot cùng phiên {d} ({bot_ly_do}, "
                            f"{old/1000:.2f}); {sh_h:,} cp, lãi/lỗ sau phí {c['pnl_pct']:+.2f}%")
             return None
