@@ -5,8 +5,8 @@
  "nav0": 1000000000.0,
  "cash": 1002078305.0,
  "nav": 1002078305,
- "session_done": "2026-10-30",
- "updated": "2026-10-31T07:27:37",
+ "session_done": "2026-11-02",
+ "updated": "2026-11-02T21:30:40",
  "open": [],
  "closed": [
   {
@@ -303,7 +303,7 @@
   "session_done": "2026-09-24"
  },
  "dung_lai_2409": true,
- "light": "CAM",
+ "light": "DO",
  "prod_config_hash": "a9ad20d69c2f",
  "checks": {
   "nav_identity": true,
