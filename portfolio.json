@@ -3,11 +3,61 @@
  "book_id": "LIVE_PAPER",
  "nav_source": "portfolio.json",
  "nav0": 1000000000.0,
- "cash": 1002078305.0,
- "nav": 1002078305,
- "session_done": "2026-11-03",
- "updated": "2026-11-03T21:33:09",
- "open": [],
+ "cash": 855458705.0,
+ "nav": 1001858705,
+ "session_done": "2026-11-04",
+ "updated": "2026-11-04T21:31:30",
+ "open": [
+  {
+   "book_id": "LIVE_PAPER",
+   "position_source": "engine_signal",
+   "nav_source": "portfolio.json",
+   "sym": "HAH",
+   "name": "Công ty Cổ phần Vận tải và Xếp dỡ Hải An",
+   "sector": "Hàng & Dịch vụ Công nghiệp",
+   "entry": "2026-11-04",
+   "entry_px": 48800.0,
+   "cost_px": 48873.200000000004,
+   "sh": 3000,
+   "cost": 146619600,
+   "peak": 0.0,
+   "b10": 0,
+   "b20": 0,
+   "part": false,
+   "pyr": false,
+   "held": 0,
+   "light": "CAM",
+   "score": 59.1,
+   "ordimb": 1.059,
+   "probe_fail": true,
+   "cond9": "TRUOT",
+   "ordimb_min": 1.4,
+   "prod_config_hash": "a9ad20d69c2f",
+   "size_theo": 14.7,
+   "size_reasons": [],
+   "last": 48.8,
+   "last_day": "2026-11-04",
+   "pnl": 0.0,
+   "x0": {
+    "date": "2026-11-04",
+    "pos_pct": 14.61,
+    "sector_pct": 14.61,
+    "total_pct": 14.61,
+    "nav": 1001858705
+   },
+   "peak_gain": 0.0,
+   "gain": -0.15,
+   "profit_lock_active": false,
+   "profit_floor": null,
+   "profit_trigger": null,
+   "sellable": false,
+   "exit_reason": null,
+   "pending_exit": "Cond9 không xác nhận — bán lệnh thăm dò",
+   "exit_phan": 1.0,
+   "action": "CHỜ T+3 — Cond9 không xác nhận — bán lệnh thăm dò (chưa bán được, xét lại ATC T+3)",
+   "earliest_sell": "T+3"
+  }
+ ],
  "closed": [
   {
    "book_id": "LIVE_PAPER",
@@ -125,6 +175,13 @@
   }
  ],
  "log": [
+  {
+   "date": "2026-11-04",
+   "items": [
+    "MUA DÒ HAH lúc ATC — tối ĐK9 = 1.059 < 1.4: không xác nhận, bán ATC T+3",
+    "MUA HAH 48.80 × 3,000 cp (14.6% NAV · ngành 14.6% · tổng cổ phiếu 14.6% NAV · lý thuyết 14.7% · đèn Cam · OrdImb 1.059)"
+   ]
+  },
   {
    "date": "2026-10-29",
    "items": [
@@ -303,7 +360,7 @@
   "session_done": "2026-09-24"
  },
  "dung_lai_2409": true,
- "light": "DO",
+ "light": "CAM",
  "prod_config_hash": "a9ad20d69c2f",
  "checks": {
   "nav_identity": true,
@@ -314,18 +371,18 @@
   "sector_cap_ok": true,
   "pyr_sector_over": [],
   "now": {
-   "max_pos_pct": 0.0,
-   "max_sector_pct": 0.0,
-   "total_pct": 0.0
+   "max_pos_pct": 14.61,
+   "max_sector_pct": 14.61,
+   "total_pct": 14.61
   },
   "pnl_reconcile_ok": true,
   "ok": true
  },
  "stats": {
-  "n_open": 0,
+  "n_open": 1,
   "n_closed": 5,
   "winrate": 40.0,
-  "total_return": 0.21,
+  "total_return": 0.19,
   "best": 4.58,
   "worst": -6.19,
   "since": "2026-09-14"
