@@ -54,7 +54,7 @@ LABEL = {
     'vol': 'Khối lượng ≥ {vol_floor}× TB20',
     'gtgd': 'GTGD phiên ≥ {gtgd_bn} tỷ',
     'volat': 'Biến động TB20 ≥ {volat_pct}%',
-    'mcap': 'Vốn hoá ≥ {mcap_bn} tỷ',
+    'mcap': 'Vốn hoá phiên trước ≥ {mcap_bn} tỷ',
     'hist': 'Đủ {min_history} phiên lịch sử',
     'base': 'Nền giá ≤ {base_pct}%',
     'cond8': 'Đóng cửa nửa trên nến',
@@ -413,6 +413,11 @@ def evaluate(sp, row, U, cfg, X=None):
     ac, ah, al = f32(_num(row.get('AdjClose'))), f32(_num(row.get('AdjHigh'))), f32(_num(row.get('AdjLow')))
     vol, tv = f32(_num(row.get('Volume'))), f32(_num(row.get('TotalValue')))
     mc = f32(_num(row.get('MarketCap')))
+    # R45 (PROD 04/11/2026, anh Son chot): dieu kien von hoa dung von hoa PHIEN T-1 (so da chot, sp['mc_last']
+    # tu spec_export = engine2.mc_hieu_luc) — khong con phu thuoc FireAnt dien MarketCap cua phien tre
+    # (TCH 04/11: 20:03 chua co so -> bi cham truot). Dac ta cu chua co mc_last -> dung so cua phien nhu truoc.
+    if 'mc_last' in sp:
+        mc = f32(_num(sp.get('mc_last')))
     v, ok = {}, {}
     pct = ret32(close, basic)
     v['pct'] = pct

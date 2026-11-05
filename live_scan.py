@@ -228,6 +228,24 @@ def doc_live_cu():
         return set(), None
 
 
+def giu_luot_cu(cu):
+    """(n, [ma]) — buoc DOI LUOT gan nhat trong phien: khoa 'G<n>:ma' trong alerted (04/11/2026).
+    Chua co buoc nao -> (0, [])."""
+    best, out = 0, []
+    for k in cu or ():
+        if not k.startswith('G') or ':' not in k:
+            continue
+        n_, s_ = k[1:].split(':', 1)
+        if not n_.isdigit():
+            continue
+        n_ = int(n_)
+        if n_ > best:
+            best, out = n_, [s_]
+        elif n_ == best:
+            out.append(s_)
+    return best, sorted(out)
+
+
 def co_lenh(h, T, den):
     """Size shown in the alert = the SHARED allocator (allocator.py) applied to the
     live paper book, not a hand-typed 42% x light. Returns (theoretical %, actual %,
@@ -336,39 +354,89 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
     sf = int(((T or {}).get('cfg') or {}).get('sell_from', 3) or 3)
     dtt = (den_tt or {}).get('light')
     # (1) MUA DO 14h00-14h45: du DK1-8 (KL/GTGD co the theo DU PHONG), DK9 chua co so
+    # 04/11/2026 (anh Son): thu tu uu tien (R38) duoc XEP LAI moi nhip 90s; ma dang GIU LUOT mua do
+    # = ung vien khong bi 'khong_mua'. Truoc day chuong chi bao ma CHUA tung bao -> phien 04/11 bao
+    # VND 14:03, ORS "1/2" 14:08, TCH "1/2" 14:28 ma khong noi ma truoc da mat luot. Nay: ghi lai ai
+    # dang giu luot ('G<n>:ma' trong alerted); luot doi -> bao NGAY "DOI UU TIEN" (luon theo thu tu moi):
+    # mua dò ma moi, ma cu chua khop thi huy, da khop thi ban 100% ATC T+sell_from.
     if MUA_DO_TU <= t_bao <= MUA_DO_DEN:
-        do = [h for h in hits if h.get('mua_do') and 'D:' + h['sym'] not in cu]
-        # TOI DA N LENH DO TREO (cfg.max_unconf; PROD max 2 tu 23/10/2026, R31): danh_dau_max_unconf() da xet TOAN BO ung
-        # vien cua nhip nay theo diem giam dan (ke ca ma da bao o nhip truoc) va ghi co vao ban ghi.
-        # Truoc 22/10 ham nay tu dem rieng chi tren ma MOI -> nhip sau co the bao MUA ma thu hai.
         _cf = (T or {}).get('cfg') or {}
-        do = sorted(do, key=lambda h: (h.get('uu_tien') or 99, h['sym']))
-        if do:
-            dong = [f"\U0001F7E0 *MUA DÒ* — {len(do)} mã, phiên {ses} · {t_bao_s}", '']
-            for h in do:
-                _ut = (f"*ƯU TIÊN {h['uu_tien']}/{h['n_ung_vien']}* · " if h.get('uu_tien') and (h.get('n_ung_vien') or 0) > 1 else '')
-                if h.get('khong_mua') == 'max_unconf':
+        do_all = sorted([h for h in hits if h.get('mua_do')], key=lambda h: (h.get('uu_tien') or 99, h['sym']))
+        giu = [h for h in do_all if h.get('khong_mua') != 'max_unconf']
+        g_cu = giu_luot_cu(cu)
+        n_cu, truoc = g_cu
+        giu_s = [h['sym'] for h in giu]
+
+        def _dong_mua(h, _ut):
+            theo, thuc, ly, tien, nav = co_lenh(h, T or {}, den)
+            size = (f"cỡ *{thuc:.1f}% NAV*" if thuc is not None else "")
+            if tien and nav:
+                size += f" ≈ *{tien/1e6:,.0f} triệu*"
+            if dtt and dtt != den:
+                t2, th2, _, ti2, _ = co_lenh(h, T or {}, dtt)
+                if th2 is not None and (thuc is None or abs(th2 - thuc) > 0.05):
+                    size += (f"\n   ⚠ đèn tạm tính hôm nay *{dtt}* (hôm qua {den}) → cỡ theo đèn mới *{th2:.1f}% NAV*"
+                             + (f" ≈ {ti2/1e6:,.0f} triệu" if ti2 else '') + " — bộ máy dùng đèn lúc đóng cửa")
+            kl = (f"vol {h['volr']}× → dự phóng *{h.get('volr_proj_curve')}×* (KL mới có {frac*100:.0f}% phiên)"
+                  if h.get('mua_do_du_phong') else f"vol {h['volr']}×")
+            return f"{_ut}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · {kl} · điểm {h['score']:.0f}\n   {size}"
+
+        def _ut_of(h):
+            return (f"*ƯU TIÊN {h['uu_tien']}/{h['n_ung_vien']}* · " if h.get('uu_tien') and (h.get('n_ung_vien') or 0) > 1 else '')
+
+        _cuoi = ["", "Đặt lệnh NGAY (LO), đừng chờ ATC nếu giá đang sát/ở trần — ATC trần rất khó khớp.",
+                 f"Tối ~18–19h xác nhận ĐK1–8 bằng số đóng cửa + Điều kiện 9: đạt → giữ; không đạt → bán 100% ATC T+{sf}."]
+        if giu and set(giu_s) != set(truoc):
+            if not truoc:
+                # lan dau trong phien co ma giu luot: tin MUA DO nhu cu (kem dong KHONG MUA cho ma het luot)
+                # 'D:' = da bao MUA (dat lenh); 'DK:' = chi bao KHONG MUA (khong dat lenh) — tach tu 04/11/2026
+                do = [h for h in do_all if h['sym'] in giu_s
+                      or ('D:' + h['sym'] not in cu and 'DK:' + h['sym'] not in cu)]
+                dong = [f"\U0001F7E0 *MUA DÒ* — {len(giu)} mã, phiên {ses} · {t_bao_s}", '']
+                for h in do:
+                    if h.get('khong_mua') == 'max_unconf':
+                        vi = ', '.join(h.get('khong_mua_vi') or [])
+                        dong.append(f"{_ut_of(h)}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f}\n"
+                                    f"   ⛔ *KHÔNG MUA* — hết lượt mua dò{(' (' + vi + ')') if vi else ''}"
+                                    f" · tối đa {_cf.get('max_unconf')}")
+                        continue
+                    dong.append(_dong_mua(h, _ut_of(h)))
+                dong += _cuoi
+            else:
+                # DOI UU TIEN: luon theo thu tu moi (anh Son 04/11/2026), bao ngay moi lan doi
+                bo = [s_ for s_ in truoc if s_ not in giu_s]
+                theo_ma = {h['sym']: h for h in do_all}
+                dong = [f"\U0001F501 *ĐỔI ƯU TIÊN MUA DÒ* — phiên {ses} · {t_bao_s}", '']
+                for h in giu:
+                    if h['sym'] in truoc:
+                        continue
+                    dong.append('→ ' + _dong_mua(h, _ut_of(h)))
+                for s_ in bo:
+                    h_ = theo_ma.get(s_)
+                    vi_tri = (f"xuống *{h_['uu_tien']}/{h_['n_ung_vien']}*" if h_ and h_.get('uu_tien')
+                              else "không còn đủ điều kiện mua dò lúc này")
+                    dong.append(f"*{s_}* {vi_tri} → *KHÔNG MUA NỮA*: chưa khớp thì *huỷ lệnh*; "
+                                f"đã khớp thì *bán 100% ATC T+{sf}* (hệ thống chỉ giữ {_cf.get('max_unconf')} lệnh dò)")
+                if len(do_all) > 1:
+                    dong += ['', 'Thứ tự lúc này: ' + ' · '.join(f"{h.get('uu_tien') or '?'}. {h['sym']}" for h in do_all)]
+                dong += _cuoi
+            if _post('\n'.join(dong)):
+                da_gui += [f"G{n_cu + 1}:{s_}" for s_ in giu_s]
+                da_gui += ['D:' + s_ for s_ in giu_s if 'D:' + s_ not in cu]
+                if not truoc:
+                    da_gui += ['DK:' + h['sym'] for h in do if h['sym'] not in giu_s]
+        elif not giu:
+            # khong ma nao giu luot (vd dang co lenh do treo tu phien truoc): bao KHONG MUA mot lan cho ma moi
+            km_ = [h for h in do_all if 'D:' + h['sym'] not in cu and 'DK:' + h['sym'] not in cu]
+            if km_:
+                dong = [f"\U0001F7E0 *ĐỦ ĐIỀU KIỆN MUA DÒ NHƯNG HẾT LƯỢT* — phiên {ses} · {t_bao_s}", '']
+                for h in km_:
                     vi = ', '.join(h.get('khong_mua_vi') or [])
-                    dong.append(f"{_ut}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f}\n"
+                    dong.append(f"{_ut_of(h)}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f}\n"
                                 f"   ⛔ *KHÔNG MUA* — đang có lệnh dò chưa xác nhận ĐK9{(' (' + vi + ')') if vi else ''}"
                                 f" · tối đa {_cf.get('max_unconf')}")
-                    continue
-                theo, thuc, ly, tien, nav = co_lenh(h, T or {}, den)
-                size = (f"cỡ *{thuc:.1f}% NAV*" if thuc is not None else "")
-                if tien and nav:
-                    size += f" ≈ *{tien/1e6:,.0f} triệu*"
-                if dtt and dtt != den:
-                    t2, th2, _, ti2, _ = co_lenh(h, T or {}, dtt)
-                    if th2 is not None and (thuc is None or abs(th2 - thuc) > 0.05):
-                        size += (f"\n   ⚠ đèn tạm tính hôm nay *{dtt}* (hôm qua {den}) → cỡ theo đèn mới *{th2:.1f}% NAV*"
-                                 + (f" ≈ {ti2/1e6:,.0f} triệu" if ti2 else '') + " — bộ máy dùng đèn lúc đóng cửa")
-                kl = (f"vol {h['volr']}× → dự phóng *{h.get('volr_proj_curve')}×* (KL mới có {frac*100:.0f}% phiên)"
-                      if h.get('mua_do_du_phong') else f"vol {h['volr']}×")
-                dong.append(f"{_ut}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · {kl} · điểm {h['score']:.0f}\n   {size}")
-            dong += ['', "Đặt lệnh NGAY (LO), đừng chờ ATC nếu giá đang sát/ở trần — ATC trần rất khó khớp.",
-                     f"Tối ~18–19h xác nhận ĐK1–8 bằng số đóng cửa + Điều kiện 9: đạt → giữ; không đạt → bán 100% ATC T+{sf}."]
-            if _post('\n'.join(dong)):
-                da_gui += ['D:' + h['sym'] for h in do]
+                if _post('\n'.join(dong), prio=3):
+                    da_gui += ['DK:' + h['sym'] for h in km_]
     # (1b) NHAC BAN lenh mua do truot DK1-8 (ma khong co trong so ghi tien -> khong co chuong thoat)
     today_ = (gio_vn().date().isoformat())
     if 14.0 <= t_bao <= 14.75:
@@ -393,8 +461,11 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
         ok_ = [x for x in (xac_nhan or []) if x['ket_qua'] == 'DAT_DK18'
                and 'X8:' + x['sym'] in cu and 'X8OK:' + x['sym'] not in cu]
         if ok_:
+            het_ = {h['sym'] for h in hits if h.get('khong_mua') == 'max_unconf'}
             dong = [f"✅ *ĐÍNH CHÍNH* — phiên {ses}", '']
-            dong += [f"*{x['sym']}* chấm lại bằng số đóng cửa: *ĐỦ ĐK1–8*. Bỏ nhắc bán lần trước." for x in ok_]
+            dong += [(f"*{x['sym']}* chấm lại bằng số đóng cửa: *ĐỦ ĐK1–8* nhưng *hết lượt* mua dò (mã khác đứng trước) "
+                      f"→ vẫn bán 100% ATC T+{sf} nếu đã mua." if x['sym'] in het_ else
+                      f"*{x['sym']}* chấm lại bằng số đóng cửa: *ĐỦ ĐK1–8*. Bỏ nhắc bán lần trước.") for x in ok_]
             if _post('\n'.join(dong)):
                 da_gui += ['X8OK:' + x['sym'] for x in ok_]
     # (2) Sau phien: DK9 truot -> ban lenh do ATC T+2
@@ -402,7 +473,11 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
         tr = [h for h in hits if h.get('truot9') and 'X:' + h['sym'] not in cu]
         if tr:
             dong = [f"\u26AA *KHÔNG ĐẠT ĐIỀU KIỆN 9* — phiên {ses}", '']
-            dong += [f"*{h['sym']}* dòng tiền {h['ordimb']}× (< {h['ordimb_min']}) → *bán TOÀN BỘ (100%) lệnh dò lúc ATC T+{int(((T or {}).get('cfg') or {}).get('sell_from', 2) or 2)}* nếu đã mua dò" for h in tr]
+            dong += [f"*{h['sym']}* dòng tiền {h['ordimb']}× (< {h['ordimb_min']}) → *bán TOÀN BỘ (100%) lệnh dò lúc ATC T+{int(((T or {}).get('cfg') or {}).get('sell_from', 2) or 2)}* nếu đã mua dò"
+                     + (f"\n   ⚠ Bộ máy *CHỌN MÃ NÀY* làm lệnh dò hôm nay (ưu tiên {h['uu_tien']}/{h['n_ung_vien']}, đủ ĐK1–8 lúc đóng cửa) — "
+                        f"nó chiếm lượt, mã sau nó không được mua" if (h.get('uu_tien') == 1 and not h.get('khong_mua')
+                                                                     and (h.get('n_ung_vien') or 0) > 1) else '')
+                     for h in tr]
             if _post('\n'.join(dong)):
                 da_gui += ['X:' + h['sym'] for h in tr]
 
@@ -416,7 +491,9 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
         dong += [f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f} — đang có lệnh dò chưa xác nhận"
                  + (f" ({', '.join(h.get('khong_mua_vi') or [])})" if h.get('khong_mua_vi') else '')
                  + f", tối đa {((T or {}).get('cfg') or {}).get('max_unconf')}" for h in km]
-        dong += ['', "Đã lỡ mua dò lúc ATC thì không có trong sổ hệ thống — tự quyết, hệ thống không theo dõi luật thoát cho mã này."]
+        dong += ['', f"Đã mua dò mã này lúc chiều → *bán 100% ATC T+{sf}* (hết lượt — hệ thống chỉ giữ "
+                     f"{((T or {}).get('cfg') or {}).get('max_unconf')} lệnh dò, mã đứng trước được giữ). Sẽ nhắc lại lúc 14h hôm đó. "
+                     "Chưa mua thì bỏ qua."]
         if _post('\n'.join(dong), prio=3):
             da_gui += ['KM:' + h['sym'] for h in km]
     moi = sorted([h for h in mua if h['sym'] not in cu], key=lambda h: (h.get('uu_tien') or 99, h['sym']))
@@ -792,6 +869,19 @@ def xet_dk18(res_, CF):
     return ('TRUOT_DK18', m18) if m18 else ('DAT_DK18', [])
 
 
+def nhac_het_luot(hits, nhac, cu_mua, ses, sf):
+    """04/11/2026: ma DA BAO MUA DO ('D:' trong alerted) ma luc dong cua du het dieu kien nhung HET LUOT
+    (khong_mua='max_unconf') -> bo may khong mua -> them nhac ban 100% ATC T+sf (thay dong nhac cu cua ma)."""
+    nhac = list(nhac or [])
+    for h in hits:
+        if (h.get('khong_mua') == 'max_unconf' and h.get('level') == 'MUA' and h.get('prod_ok')
+                and 'D:' + h['sym'] in cu_mua):
+            nhac = [x for x in nhac if not (x.get('sym') == h['sym'] and x.get('mua') == ses)]
+            nhac.append(dict(sym=h['sym'], mua=ses, ban=phien_cong(ses, sf),
+                             ly_do='hết lượt mua dò — mã khác đứng trước theo thứ tự ưu tiên lúc đóng cửa'))
+    return nhac
+
+
 def danh_dau_max_unconf(hits, T, ses, sf=3):
     """THU TU UU TIEN + TOI DA N LENH MUA THU TREO — ghi thang vao ban ghi live.json.
 
@@ -811,8 +901,13 @@ def danh_dau_max_unconf(hits, T, ses, sf=3):
     pos = ((T.get('book') or {}).get('positions')) or []
     chot = str(T.get('asof') or '') == ses
     da_mua = [s['sym'] for s in (T.get('signals_today') or []) if s.get('date') == ses] if chot else []
+    # LOI 04/11/2026 (HAH/TCH): truoc day ung vien KHONG gom ma 'truot9' (du DK1-8 luc dong cua, truot DK9).
+    # Bo may thi xep lenh do TRUOC khi co DK9 (screen ignore_ordimb) -> HAH van duoc tinh va dung #1
+    # (hoa diem+Vol voi TCH, pha hoa theo ma). Live bo HAH ra -> 16:33 bao 'GIU TCH' trong khi bo may mua HAH.
+    # Nay gom ca truot9 = dung tap ung vien cua engine2.screen. truot9 chi co sau dong cua (trong phien
+    # chua co so lenh dat mua/ban — obs/flow: ordimb 0/165), nen khong doi gi luc 14h00-14h45.
     ung = [h for h in hits if (h['sym'] in da_mua) or (not h.get('dang_cam')
-           and (h.get('mua_do') or (h.get('level') == 'MUA' and h.get('prod_ok'))))]
+           and (h.get('mua_do') or h.get('truot9') or (h.get('level') == 'MUA' and h.get('prod_ok'))))]
     if not ung:
         return 0
     xep = _AL.xep_uu_tien([dict(sym=h['sym'], score=h.get('score'), volr=h.get('volr')) for h in ung], cf)
@@ -1051,6 +1146,9 @@ def main():
     den_live = (den_tt or {}).get('light')
 
     hits = []; res_by = {}
+    # 04/11/2026 (anh Son): ma DA BAO MUA DO trong phien khong duoc "tu xoa" khoi trang khi truot mot
+    # dieu kien (truoc: truot dieu kien tinh -> NOT_ELIGIBLE -> bien mat). Giu o 'Sap du', ghi ro thieu gi.
+    bao_do = {k[2:] for k in cu_mua if k.startswith('D:')} if cu_ses == ses else set()
     for s, r in fresh.items():
         t = syms[s]
         sp = t.get('spec')
@@ -1092,6 +1190,8 @@ def main():
         # van chi hien THEO_DOI. Nang THEO_DOI/None len DE_MAT; khong dung toi MUA/SAP_DU.
         if lvl in (None, 'THEO_DOI') and pct * 100 >= DE_MAT_PCT and t.get('state') in ('cho', 'fa'):
             lvl, why = 'DE_MAT', (why or 'WATCHLIST_MOVER')
+        if s in bao_do and lvl in (None, 'THEO_DOI', 'DE_MAT'):
+            lvl, why = 'SAP_DU', 'DA_BAO_DO'
         if lvl is None:
             continue
         v = res['values']
@@ -1128,6 +1228,7 @@ def main():
                         and set(res.get('missing', [])) == {'ordimb'} and v.get('ordimb_available')),
             size_pct=t.get('size_pct'), size_tran=t.get('size_tran'),
             dang_cam=dang_cam,
+            da_bao_do=(s in bao_do),
             cond={SP.labels(CF).get(k, k) if CF else k: (k in res.get('passed', []))
                   for k in res.get('required', [])},
             miss=[SP.labels(CF).get(k, k) if CF else k for k in res.get('missing', [])],
@@ -1188,6 +1289,11 @@ def main():
                 xac_nhan.append(dict(sym=s_, ket_qua='CHUA_RO', chua_co_so=m18))
             else:
                 xac_nhan.append(dict(sym=s_, ket_qua='DAT_DK18'))
+    # 04/11/2026 (anh Son: luon theo thu tu moi): ma DA BAO MUA DO, luc dong cua du het dieu kien nhung
+    # HET LUOT (ma khac dung truoc, toi da max_unconf lenh do) -> bo may khong co lenh nay -> nhac ban
+    # 100% ATC T+sell_from, giong ma truot ĐK1-8.
+    if ses == today and t_now >= 15.25 and cu_ses == ses:
+        nhac = nhac_het_luot(hits, nhac, cu_mua, ses, int(CF.get('sell_from', 3) or 3))
     da_keu = gui_telegram(hits, ses, cu_mua, cu_ses, T.get('light', 'VANG'), frac, T, den_tt=den_tt,
                           xac_nhan=xac_nhan, nhac=nhac) or []
     try:
