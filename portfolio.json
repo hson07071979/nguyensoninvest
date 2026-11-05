@@ -3,11 +3,98 @@
  "book_id": "LIVE_PAPER",
  "nav_source": "portfolio.json",
  "nav0": 1000000000.0,
- "cash": 1002078305.0,
- "nav": 1002078305,
- "session_done": "2026-11-03",
- "updated": "2026-11-03T21:33:09",
- "open": [],
+ "cash": 855233367.5,
+ "nav": 1004733368,
+ "session_done": "2026-11-05",
+ "updated": "2026-11-05T22:39:30",
+ "open": [
+  {
+   "book_id": "LIVE_PAPER",
+   "position_source": "engine_signal",
+   "nav_source": "portfolio.json",
+   "sym": "TCH",
+   "name": "Công ty Cổ phần Đầu tư Dịch vụ Tài chính Hoàng Huy",
+   "sector": "Bất động sản",
+   "entry": "2026-11-04",
+   "entry_px": 12750.0,
+   "cost_px": 12769.125,
+   "sh": 11500,
+   "cost": 146844938,
+   "peak": 0.01808072205417366,
+   "b10": 0,
+   "b20": 0,
+   "part": false,
+   "pyr": false,
+   "held": 1,
+   "light": "CAM",
+   "score": 54.4,
+   "ordimb": 2.293,
+   "probe_fail": false,
+   "cond9": "DAT",
+   "ordimb_min": 1.4,
+   "prod_config_hash": "f7521c8dac11",
+   "size_theo": 14.7,
+   "size_reasons": [],
+   "last": 13.0,
+   "last_day": "2026-11-05",
+   "pnl": 1.55,
+   "x0": {
+    "date": "2026-11-04",
+    "pos_pct": 14.64,
+    "sector_pct": 14.64,
+    "total_pct": 14.64,
+    "nav": 1001858368
+   },
+   "peak_gain": 1.81,
+   "gain": 1.81,
+   "profit_lock_active": false,
+   "profit_floor": null,
+   "profit_trigger": null,
+   "sellable": false,
+   "exit_reason": null,
+   "pending_exit": null,
+   "exit_phan": 1.0,
+   "action": "GIỮ",
+   "earliest_sell": "T+3",
+   "last_adj": 13.0,
+   "last_val": 13000.0,
+   "k_adj": 1.0,
+   "last_done": "2026-11-05",
+   "cost_basis": "cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1",
+   "tail_adj": [
+    11300.0,
+    11400.0,
+    11500.0,
+    11550.0,
+    11300.0,
+    10900.0,
+    11000.0,
+    11100.0,
+    10850.0,
+    10500.0,
+    10750.0,
+    10800.0,
+    10800.0,
+    10900.0,
+    11100.0,
+    11200.0,
+    11250.0,
+    11300.0,
+    11900.0,
+    12000.0,
+    12000.0,
+    11900.0,
+    12100.0,
+    12100.0,
+    12200.0,
+    11850.0,
+    11850.0,
+    11950.0,
+    12750.0,
+    13000.0
+   ]
+  }
+ ],
  "closed": [
   {
    "book_id": "LIVE_PAPER",
@@ -125,6 +212,12 @@
   }
  ],
  "log": [
+  {
+   "date": "2026-11-04",
+   "items": [
+    "MUA TCH 12.75 × 11,500 cp (14.7% NAV · ngành 14.6% · tổng cổ phiếu 14.6% NAV · lý thuyết 14.7% · đèn Cam · OrdImb 2.293)"
+   ]
+  },
   {
    "date": "2026-10-29",
    "items": [
@@ -303,8 +396,8 @@
   "session_done": "2026-09-24"
  },
  "dung_lai_2409": true,
- "light": "DO",
- "prod_config_hash": "a9ad20d69c2f",
+ "light": "CAM",
+ "prod_config_hash": "f7521c8dac11",
  "checks": {
   "nav_identity": true,
   "pnl_reconcile_gap_vnd": 1,
@@ -314,18 +407,18 @@
   "sector_cap_ok": true,
   "pyr_sector_over": [],
   "now": {
-   "max_pos_pct": 0.0,
-   "max_sector_pct": 0.0,
-   "total_pct": 0.0
+   "max_pos_pct": 14.88,
+   "max_sector_pct": 14.88,
+   "total_pct": 14.88
   },
   "pnl_reconcile_ok": true,
   "ok": true
  },
  "stats": {
-  "n_open": 0,
+  "n_open": 1,
   "n_closed": 5,
   "winrate": 40.0,
-  "total_return": 0.21,
+  "total_return": 0.47,
   "best": 4.58,
   "worst": -6.19,
   "since": "2026-09-14"
