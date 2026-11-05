@@ -694,7 +694,9 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF,
         if h['sym'] in dang_cam or h['sym'] in loai:
             continue
         muon_mua.append(dict(h, price=float(h['price']) / 1000,
-                             _probe_fail=bool(C.get('stage1') is not None and C.get('use_ordimb', True) and not dat9)))
+                             # R48 chot 14:25: ma chot ma dong cua rot DK1-8 -> lenh do truot nhu engine2 (oi_ok=False)
+                             _probe_fail=bool(C.get('stage1') is not None and C.get('use_ordimb', True)
+                                              and (not dat9 or h.get('dat_dk18_dong_cua') is False))))
     # thu tu uu tien = DUNG thu tu bo may da xep (signals_today.uu_tien, engine2.rank_rows theo
     # cfg.rank_mode — PROD 'score_volr' tu 22/10/2026). Ban thresholds cu chua co uu_tien -> lui ve
     # allocator.xep_uu_tien (cung cong thuc), roi diem giam dan.
@@ -752,7 +754,9 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF,
                                        light_today=light, light_entry=light))
         P['open'][-1]['earliest_sell'] = f"T+{int(C.get('sell_from', 2) or 2)}"
         if h.get('_probe_fail'):
-            nhat_ky.append(f"MUA DÒ {h['sym']} lúc ATC — tối ĐK9 = {h.get('ordimb')} < {C.get('ordimb_min', 1.4)}: "
+            nhat_ky.append(f"MUA DÒ {h['sym']} " + (f"lúc chốt {int(C.get('chot_phut') or 1425) // 100:02d}:{int(C.get('chot_phut') or 1425) % 100:02d}" if h.get('chot') else "lúc ATC") +
+                           (" — đóng cửa không còn đủ ĐK1–8" if h.get('dat_dk18_dong_cua') is False else "") +
+                           f" — tối ĐK9 = {h.get('ordimb')} (cần ≥ {C.get('ordimb_min', 1.4)}): "
                            f"không xác nhận, bán ATC T+{int(C.get('sell_from', 2) or 2)}")
         _x = P['open'][-1]['x0']
         nhat_ky.append(f"MUA {h['sym']} {px/1000:.2f} × {sh:,} cp ({chi/nav*100:.1f}% NAV · ngành {_x['sector_pct']:.1f}% · "

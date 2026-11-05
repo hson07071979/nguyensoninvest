@@ -246,6 +246,97 @@ def giu_luot_cu(cu):
     return best, sorted(out)
 
 
+VIETCAP_PHUT = 'https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart'
+
+
+def nen_phut_vietcap(sym, countback=420):
+    """Nen 1 phut hom nay cua MOT ma (Vietcap khong tra nhieu ma mot lan goi). None khi loi."""
+    H_ = {'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0',
+          'Referer': 'https://trading.vietcap.com.vn/', 'Origin': 'https://trading.vietcap.com.vn'}
+    for a in range(3):
+        try:
+            r = requests.post(VIETCAP_PHUT, json=dict(timeFrame='ONE_MINUTE', symbols=[sym], to=int(time.time()),
+                                                     countBack=int(countback)), headers=H_, timeout=30)
+            if r.status_code == 200:
+                x = r.json()
+                return x[0] if x else {}
+        except Exception:
+            pass
+        time.sleep(1.0 * (a + 1))
+    return None
+
+
+def gio_chot(CF):
+    """HHMM cua luat chot lenh do (cfg chot_phut, PROD 1425) hoac None = tat (nhu cu)."""
+    try:
+        v = int((CF or {}).get('chot_phut') or 0)
+    except (TypeError, ValueError):
+        return None
+    return v if v > 0 else None
+
+
+def doc_chot_cu(ses):
+    """Ket qua chot da tinh o lan quet truoc CUA CUNG PHIEN (giu co dinh ca phien)."""
+    try:
+        c = json.load(open('live.json', encoding='utf-8')).get('chot') or {}
+        return c if c.get('session') == ses and c.get('xong') else None
+    except Exception:
+        return None
+
+
+def chot_phien(CF, syms, fresh, ses, today, now, spec_ok):
+    """CHOT LENH DO 14:25 (R48, anh Son duyet 05/11/2026) — signal_spec.chot_du, CUNG ham voi engine2.
+    Chi tinh khi da qua gio chot cua phien hom nay. Ung vien = ma co gia CAO NHAT phien da cham nguong bien do
+    (co the da du luc 14:25), khong dang cam. Lay nen 1 phut Vietcap, trang thai cac nen bat dau truoc gio chot.
+    Ket qua giu co dinh ca phien (live.json['chot'], xong=True) — chi tinh lai khi lan truoc thieu nen phut."""
+    hm = gio_chot(CF)
+    if not hm or not spec_ok or ses != today:
+        return None
+    if now.hour * 100 + now.minute < hm:
+        return None
+    cu = doc_chot_cu(ses)
+    if cu:
+        return cu
+    can = []
+    for s_, r in fresh.items():
+        t = syms.get(s_) or {}
+        sp = t.get('spec')
+        if not sp or t.get('dang_cam'):
+            continue
+        try:
+            cao = float(r.get('PriceHigh') or 0) / float(r.get('PriceBasic') or 0) - 1
+        except Exception:
+            continue
+        if cao >= float(sp.get('thr') or 1):
+            can.append(s_)
+    import allocator as _AL
+    ok, loi = [], []
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        for s_, x in zip(can, ex.map(nen_phut_vietcap, can)):
+            if x is None:
+                loi.append(s_); continue
+            if not x or not x.get('t'):
+                continue
+            st = SP.trang_thai_phut(x['t'], x['h'], x['l'], x['c'], x['v'], ses, hm)
+            r = fresh[s_]
+            try:
+                ar = float(r.get('PriceClose')) / float(r.get('AdjClose'))
+            except Exception:
+                ar = 1.0
+            res = SP.chot_du(syms[s_]['spec'], st, r.get('PriceBasic'), CF, ar=ar)
+            if res['ok']:
+                ok.append(dict(sym=s_, score=float(res['score']), volr=float(res['volr']), gia=res['gia'],
+                               phut=res['phut'], pct=round(float(res['pct']) * 100, 2)))
+    xep = _AL.xep_uu_tien(ok, CF)
+    rec = dict(session=ses, gio=hm, luc=now.isoformat(timespec='seconds'), ung_vien=len(can),
+               xep=[dict(sym=x['sym'], uu_tien=x['uu_tien'], score=round(x['score'], 1), volr=round(x['volr'], 2),
+                         gia=x['gia'], phut=x['phut'], pct=x['pct']) for x in xep],
+               loi=loi, xong=not loi)
+    print(f"CHOT {hm}: {len(can)} ung vien · du {len(ok)} · " + (', '.join(x['sym'] for x in xep) or 'khong ai')
+          + (f" · LOI nen phut {loi} (quet sau tinh lai)" if loi else ''))
+    return rec
+
+
 def co_lenh(h, T, den):
     """Size shown in the alert = the SHARED allocator (allocator.py) applied to the
     live paper book, not a hand-typed 42% x light. Returns (theoretical %, actual %,
@@ -359,7 +450,10 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
     # VND 14:03, ORS "1/2" 14:08, TCH "1/2" 14:28 ma khong noi ma truoc da mat luot. Nay: ghi lai ai
     # dang giu luot ('G<n>:ma' trong alerted); luot doi -> bao NGAY "DOI UU TIEN" (luon theo thu tu moi):
     # mua dò ma moi, ma cu chua khop thi huy, da khop thi ban 100% ATC T+sell_from.
-    if MUA_DO_TU <= t_bao <= MUA_DO_DEN:
+    # R48: co luat chot (cfg chot_phut) -> chuong mua do chi tu GIO CHOT (14:25); truoc do chi la dang dan
+    _hm = gio_chot((T or {}).get('cfg'))
+    _tu = (_hm // 100 + (_hm % 100) / 60) if _hm else MUA_DO_TU
+    if _tu <= t_bao <= MUA_DO_DEN:
         _cf = (T or {}).get('cfg') or {}
         do_all = sorted([h for h in hits if h.get('mua_do')], key=lambda h: (h.get('uu_tien') or 99, h['sym']))
         giu = [h for h in do_all if h.get('khong_mua') != 'max_unconf']
@@ -379,6 +473,8 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
                              + (f" ≈ {ti2/1e6:,.0f} triệu" if ti2 else '') + " — bộ máy dùng đèn lúc đóng cửa")
             kl = (f"vol {h['volr']}× → dự phóng *{h.get('volr_proj_curve')}×* (KL mới có {frac*100:.0f}% phiên)"
                   if h.get('mua_do_du_phong') else f"vol {h['volr']}×")
+            if h.get('chot') and _hm:
+                kl = f"*chốt {_hm // 100:02d}:{_hm % 100:02d}* giá {h.get('chot_gia')} · {kl}"
             return f"{_ut}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · {kl} · điểm {h['score']:.0f}\n   {size}"
 
         def _ut_of(h):
@@ -392,7 +488,10 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
                 # 'D:' = da bao MUA (dat lenh); 'DK:' = chi bao KHONG MUA (khong dat lenh) — tach tu 04/11/2026
                 do = [h for h in do_all if h['sym'] in giu_s
                       or ('D:' + h['sym'] not in cu and 'DK:' + h['sym'] not in cu)]
-                dong = [f"\U0001F7E0 *MUA DÒ* — {len(giu)} mã, phiên {ses} · {t_bao_s}", '']
+                _hd = (f"\U0001F7E0 *CHỐT MUA DÒ {_hm // 100:02d}:{_hm % 100:02d}*" if any(h.get('chot') for h in giu)
+                       else f"\U0001F7E0 *MUA DÒ* (không mã nào đủ lúc {_hm // 100:02d}:{_hm % 100:02d} → mua ATC theo KL dự phóng)"
+                       if _hm else f"\U0001F7E0 *MUA DÒ*")
+                dong = [f"{_hd} — {len(giu)} mã, phiên {ses} · {t_bao_s}", '']
                 for h in do:
                     if h.get('khong_mua') == 'max_unconf':
                         vi = ', '.join(h.get('khong_mua_vi') or [])
@@ -882,7 +981,7 @@ def nhac_het_luot(hits, nhac, cu_mua, ses, sf):
     return nhac
 
 
-def danh_dau_max_unconf(hits, T, ses, sf=3):
+def danh_dau_max_unconf(hits, T, ses, sf=3, truoc=()):
     """THU TU UU TIEN + TOI DA N LENH MUA THU TREO — ghi thang vao ban ghi live.json.
 
     (1) uu_tien (22/10/2026, R38): moi ung vien cua phien duoc danh so 1, 2, 3... theo
@@ -906,12 +1005,18 @@ def danh_dau_max_unconf(hits, T, ses, sf=3):
     # (hoa diem+Vol voi TCH, pha hoa theo ma). Live bo HAH ra -> 16:33 bao 'GIU TCH' trong khi bo may mua HAH.
     # Nay gom ca truot9 = dung tap ung vien cua engine2.screen. truot9 chi co sau dong cua (trong phien
     # chua co so lenh dat mua/ban — obs/flow: ordimb 0/165), nen khong doi gi luc 14h00-14h45.
+    _tr = set(truoc or ())
     ung = [h for h in hits if (h['sym'] in da_mua) or (not h.get('dang_cam')
-           and (h.get('mua_do') or h.get('truot9') or (h.get('level') == 'MUA' and h.get('prod_ok'))))]
+           and (h.get('mua_do') or h.get('truot9') or h['sym'] in _tr
+                or (h.get('level') == 'MUA' and h.get('prod_ok'))))]
     if not ung:
         return 0
-    xep = _AL.xep_uu_tien([dict(sym=h['sym'], score=h.get('score'), volr=h.get('volr')) for h in ung], cf)
-    thu_tu = {x['sym']: x['uu_tien'] for x in xep}
+    # R48 CHOT 14:25: ma chot (theo thu tu chot) dung TRUOC; phan con lai xep RIENG (= engine2: _rc + _rest)
+    truoc = [s_ for s_ in (truoc or ()) if any(h['sym'] == s_ for h in ung)]
+    xep = _AL.xep_uu_tien([dict(sym=h['sym'], score=h.get('score'), volr=h.get('volr')) for h in ung
+                           if h['sym'] not in truoc], cf)
+    thu_tu = {s_: n for n, s_ in enumerate(truoc, 1)}
+    thu_tu.update({x['sym']: x['uu_tien'] + len(truoc) for x in xep})
     for h in ung:
         h['uu_tien'], h['n_ung_vien'] = thu_tu[h['sym']], len(ung)
     ung.sort(key=lambda h: h['uu_tien'])
@@ -1145,6 +1250,22 @@ def main():
         den_loi = 'khong phai phien hom nay / dac ta toi khong danh cho phien nay'
     den_live = (den_tt or {}).get('light')
 
+    # ---- CHOT LENH DO 14:25 (R48) ----
+    hm_chot = gio_chot(CF) if spec_ok else None
+    try:
+        chot_rec = chot_phien(CF, syms, fresh, ses, today, now, spec_ok)
+    except Exception as e:
+        print('!! chot 14:25 loi:', type(e).__name__, e)
+        chot_rec = None
+    # chot chua XONG (thieu nen phut vai ma) -> chua chot, quet sau tinh lai; trong luc do theo cach cu
+    chot_xep = [x['sym'] for x in (chot_rec or {}).get('xep') or []] if (chot_rec or {}).get('xong') else []
+    chot_by = {x['sym']: x for x in (chot_rec or {}).get('xep') or [] if x['sym'] in chot_xep}
+    t_vn = now.hour + now.minute / 60
+    # cua so mua do sau khi chot: ma chot luon la lenh do (gia/KL luc quet co the da doi)
+    cua_chot = bool(chot_xep) and ses == today and t_vn < 15.0
+    # truoc gio chot (trong phien): ung vien mua do chi la DANG DAN, chua bao mua
+    truoc_chot = bool(hm_chot) and ses == today and phien_mo and (now.hour * 100 + now.minute) < hm_chot
+
     hits = []; res_by = {}
     # 04/11/2026 (anh Son): ma DA BAO MUA DO trong phien khong duoc "tu xoa" khoi trang khi truot mot
     # dieu kien (truoc: truot dieu kien tinh -> NOT_ELIGIBLE -> bien mat). Giu o 'Sap du', ghi ro thieu gi.
@@ -1192,6 +1313,8 @@ def main():
             lvl, why = 'DE_MAT', (why or 'WATCHLIST_MOVER')
         if s in bao_do and lvl in (None, 'THEO_DOI', 'DE_MAT'):
             lvl, why = 'SAP_DU', 'DA_BAO_DO'
+        if cua_chot and s in chot_by and lvl != 'MUA':
+            lvl, why = 'SAP_DU', 'CHOT_%d' % hm_chot
         if lvl is None:
             continue
         v = res['values']
@@ -1219,7 +1342,12 @@ def main():
             prod_ok=bool(res.get('all_ok')),
             # MUA DO (PROD stage1, 25/09/2026): du DK1-8, DK9 chua co so -> mua ATC, toi xac nhan
             mua_do=bool((CF.get('stage1') is not None and not dang_cam
-                         and set(res.get('missing', [])) == {'ordimb'} and not v.get('ordimb_available')) or du_phong),
+                         and set(res.get('missing', [])) == {'ordimb'} and not v.get('ordimb_available')) or du_phong
+                        or (cua_chot and s in chot_by and not dang_cam)),
+            # R48: ma chot luc 14:25 (gio, gia luc chot) / truoc 14:25 chi la dang dan
+            chot=(chot_by[s]['phut'] if s in chot_by else None),
+            chot_gia=(round(chot_by[s]['gia'] / 1000, 2) if s in chot_by else None),
+            cho_chot=(hm_chot if truoc_chot else None),
             # KL/GTGD chua du luc quet nhung DU PHONG cuoi phien du (toi xac nhan bang so dong cua)
             mua_do_du_phong=bool(du_phong and set(res.get('missing', [])) != {'ordimb'}),
             volr_proj_curve=vproj_,
@@ -1237,7 +1365,8 @@ def main():
     order = {'MUA': 0, 'SAP_DU': 1, 'DE_MAT': 2, 'THEO_DOI': 3}
     # 22/10/2026: thu tu UU TIEN (R38) + luat toi da 1 lenh mua thu treo ghi thang vao ban ghi
     # (truoc chi co trong Telegram) — chay TRUOC khi sap xep de bang theo dung thu tu mua.
-    n_khong_mua = danh_dau_max_unconf(hits, T, ses, int(CF.get('sell_from', 3) or 3)) if spec_ok else 0
+    n_khong_mua = danh_dau_max_unconf(hits, T, ses, int(CF.get('sell_from', 3) or 3),
+                                      truoc=chot_xep) if spec_ok else 0
     hits.sort(key=lambda x: (order[x['level']], x.get('uu_tien') or 99, -x['pct']))
 
     cov = len(fresh) / max(1, len(syms))
@@ -1313,6 +1442,7 @@ def main():
         print('tom tat loi:', type(e).__name__, e)
     out['alerted'] = dict(session=ses, syms=sorted((cu_mua if cu_ses == ses else set()) | set(da_keu)))
     out['nhac_ban'] = nhac
+    out['chot'] = chot_rec
     out['xac_nhan_mua_do'] = xac_nhan
     out['den_tam_tinh'] = den_tt
     out['den_tam_tinh_loi'] = None if den_tt else den_loi

@@ -512,3 +512,110 @@ def classify(res, cfg, frac=1.0, volr_proj=None):
     if len(miss & intraday) <= 1 and (miss - intraday) <= {'ordimb'}:
         return 'SAP_DU', 'NEAR'
     return 'THEO_DOI', 'PARTIAL'
+
+
+# ============================================================================
+# CHOT LENH DO 14:25 (R48, PROD 05/11/2026 — anh Son chot)
+# ----------------------------------------------------------------------------
+# Van de (phien 04/11/2026): chuong 14:28 bao TCH, anh Son mua; HAH chi du khoi luong
+# LUC DONG CUA (nho 1,78 trieu cp THOA THUAN) -> bo may xep bang so dong cua chon HAH.
+# Bao luc dong cua thi khong vao lenh duoc va khong co tin hieu.
+# Luat moi: tinh bang NEN 1 PHUT Vietcap, trang thai cua cac nen BAT DAU TRUOC 14:25
+# (= so tai 14:25:00, nen 14:24 da dong). Ma du ĐK1-8 voi KL KHOP THAT toi luc do ->
+# xep theo thu tu PROD (diem + Vol/TB20) -> #1 giu luot lenh do, mua LO gia luc 14:25.
+# Khong ma nao du -> mua do ATC theo so dong cua nhu cu (lop live bao 14:25-14:45 theo
+# KL du phong). Toi: DK9 + DK1-8 bang so dong cua: dat -> giu; truot -> ban 100% ATC T+3.
+# Backtest R47 (01/2025-11/2026): 14:25 +127,1% vs PROD dong cua +128,7%, 6 thang +3,4% vs +2,9%.
+# MOT dinh nghia, hai noi goi: engine2 (moi phien lich su co nen phut) va live_scan (14:25).
+# ============================================================================
+CHOT_TZ_GIO = 7
+
+
+def trang_thai_phut(t, h, l, c, v, ngay, chot_hm=1425):
+    """Nen 1 phut (mang Vietcap: t epoch giay, h/l/c gia, v KL khop) -> trang thai LUY KE cua
+    phien `ngay` (YYYY-MM-DD) tinh tu cac nen bat dau TRUOC chot_hm (HHMM gio VN).
+    Tra ve [hm_cuoi, gia, cao, thap, kl, gtgd] hoac None. gtgd = tong(KL phut x gia dong phut)."""
+    import datetime as _dt
+    tz = _dt.timezone(_dt.timedelta(hours=CHOT_TZ_GIO))
+    hm_c = None; px = hi = lo = None; kl = 0.0; gt = 0.0
+    for k in range(len(t)):
+        ts = _dt.datetime.fromtimestamp(int(t[k]), tz)
+        if ts.date().isoformat() != ngay:
+            continue
+        hm = ts.hour * 100 + ts.minute
+        if hm >= int(chot_hm):
+            continue
+        ck, hk, lk, vk = float(c[k]), float(h[k]), float(l[k]), float(v[k] or 0.0)
+        hm_c = hm if (hm_c is None or hm > hm_c) else hm_c
+        if hm == hm_c:
+            px = ck
+        hi = hk if hi is None else max(hi, hk)
+        lo = lk if lo is None else min(lo, lk)
+        kl += vk; gt += vk * ck
+    if hm_c is None or not (px and px > 0):
+        return None
+    return [int(hm_c), float(px), float(hi), float(lo), float(kl), float(gt)]
+
+
+def chot_du(sp, st, ref, cfg, ar=1.0):
+    """Lenh do co du ĐK1-8 tai thoi diem chot khong — CUNG mot ham cho engine2 va live_scan.
+    sp  : dac ta cua ma cho phien nay (spec_export.sp_ma: so den het phien truoc)
+    st  : trang_thai_phut(...) = [hm, gia, cao, thap, kl, gtgd] (gia THO, dong)
+    ref : gia tham chieu phien (dong); ar: AdjRatio phien (gia tho / gia dieu chinh, live = 1)
+    Khac evaluate(): KL/GTGD/gia la so LUY KE toi luc chot; RS / Momentum / TOP-N lay phien
+    TRUOC (rs_prev, mom_prev, in_topn_prev) — khong nhin truoc, khong can cat ngang trong phien.
+    Tra ve dict(ok=bool, missing=[...], score, volr, gia, phut)."""
+    miss = []
+    if not st or not sp:
+        return dict(ok=False, missing=['data'], score=None, volr=None, gia=None, phut=None)
+    hm, px, hi, lo, kl, gt = st
+    px32, ref32 = f32(px), f32(_num(ref))
+    if cfg.get('use_top_liquid', True) and not sp.get('in_topn_prev'):
+        miss.append('uni')
+    pct = ret32(px32, ref32) if (not isnan(ref32) and ref32 > 0) else NAN
+    if not ((not isnan(pct)) and pct >= f32(sp['thr'])):
+        miss.append('pct')
+    kl32 = f32(kl)
+    vma = mean20(sp.get('vol_s19'), sp.get('vol_c19'), kl32)
+    volr = div32(kl32, pos_or_nan(vma))
+    if not ge32(volr, cfg['vol_floor']):
+        miss.append('vol')
+    gt32_ = f32(gt)
+    if not ge32(gt32_, cfg['gtgd_min']):
+        miss.append('gtgd')
+    rng = div32(sub32(f32(hi), f32(lo)), pos_or_nan(px32))
+    volat = mean20(sp.get('rng_s19'), sp.get('rng_c19'), rng)
+    if not ge32(volat, cfg['volat_min']):
+        miss.append('volat')
+    if not gt32(f32(_num(sp.get('mc_last'))), cfg['min_mktcap']):
+        miss.append('mcap')
+    if not (int(sp.get('nbars_prev') or 0) + 1 >= cfg['min_history']):
+        miss.append('hist')
+    if not le32(_num(sp.get('base')), cfg['base_range']):
+        miss.append('base')
+    if cfg.get('use_cond8') and px < (hi + lo) / 2:
+        miss.append('cond8')
+    if sp.get('blocked'):
+        miss.append('risk')
+    npg = sp.get('npat_yoy')
+    if npg is not None and cfg.get('dk5_lo', 0.0) <= npg < cfg.get('dk5_hi', 0.25):
+        miss.append('dk5')
+    sc = None
+    if sp.get('funda') is False:
+        miss.append('score')
+    else:
+        a = f32(_num(ar)) if (_num(ar) == _num(ar) and _num(ar) > 0) else f32(1.0)
+        ca, ha = div32(px32, a), div32(f32(hi), a)
+        hi52 = _nanmax(_num(sp.get('hi52_249')), ha)
+        nh = ret32(ca, hi52) if (not isnan(hi52) and hi52 > 0) else NAN
+        N = 10 if (not isnan(nh) and nh >= -0.15) else 0
+        S = 5 if (not isnan(volr) and volr >= 1.2) else 0
+        tvma = mean20(sp.get('tv_s19'), sp.get('tv_c19'), gt32_)
+        I_ = 10 if (not isnan(tvma) and tvma >= 15e9) else 0
+        rs = _num(sp.get('rs_prev'))
+        L = 15 if (not isnan(rs) and rs >= 70) else 0
+        sc, _mp = _score(dict(sp.get('pts_static') or {}), N, S, L, I_, _num(sp.get('mom_prev')))
+        if sc < cfg['score_floor']:
+            miss.append('score')
+    return dict(ok=not miss, missing=miss, score=sc, volr=(None if isnan(volr) else volr),
+                gia=float(px), phut=int(hm), pct=(None if isnan(pct) else pct))

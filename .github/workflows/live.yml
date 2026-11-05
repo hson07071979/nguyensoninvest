@@ -123,7 +123,14 @@ jobs:
             else
               NGHI=1200     # 20 phút
             fi
-            echo "─── nghỉ $(( NGHI / 60 )) phút ───"
+            # R48 CHOT 14:25: nhip nghi vat qua 14:25 thi thuc day dung 14:25:15 de bao chot som nhat
+            # (chuong + bo may deu tinh tren nen phut truoc 14:25, quet tre van ra cung ma).
+            GIAY=$(( 10#$(TZ=Asia/Ho_Chi_Minh date '+%H')*3600 + 10#$(TZ=Asia/Ho_Chi_Minh date '+%M')*60 + 10#$(TZ=Asia/Ho_Chi_Minh date '+%S') ))
+            CHOT=$(( 14*3600 + 25*60 + 15 ))
+            if [ "$GIAY" -lt "$CHOT" ] && [ $(( GIAY + NGHI )) -gt "$CHOT" ]; then
+              NGHI=$(( CHOT - GIAY ))
+            fi
+            echo "─── nghỉ $(( NGHI / 60 )) phút $(( NGHI % 60 )) giây ───"
             sleep "$NGHI"
           done
 
