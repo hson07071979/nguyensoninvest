@@ -4,7 +4,7 @@
  "nav_source": "portfolio.json",
  "nav0": 1000000000.0,
  "cash": 708012867.5,
- "nav": 1010262868,
+ "nav": 1009772868,
  "session_done": "2026-11-06",
  "updated": "2026-11-06T21:38:15",
  "open": [
@@ -92,7 +92,8 @@
     12750.0,
     13000.0,
     13500.0
-   ]
+   ],
+   "cfg_hash_state": "555a895e892d"
   },
   {
    "book_id": "LIVE_PAPER",
@@ -121,9 +122,9 @@
    "prod_config_hash": "f7521c8dac11",
    "size_theo": 14.7,
    "size_reasons": [],
-   "last": 15.0,
+   "last": 14.95,
    "last_day": "2026-11-06",
-   "pnl": 0.0,
+   "pnl": -0.73,
    "x0": {
     "date": "2026-11-06",
     "pos_pct": 14.55,
@@ -132,7 +133,7 @@
     "nav": 1010262868
    },
    "peak_gain": 0.0,
-   "gain": -0.15,
+   "gain": -0.48,
    "profit_lock_active": false,
    "profit_floor": null,
    "profit_trigger": null,
@@ -141,7 +142,45 @@
    "pending_exit": "Cond9 không xác nhận — bán lệnh thăm dò",
    "exit_phan": 1.0,
    "action": "CHỜ T+3 — Cond9 không xác nhận — bán lệnh thăm dò (chưa bán được, xét lại ATC T+3)",
-   "earliest_sell": "T+3"
+   "earliest_sell": "T+3",
+   "last_adj": 14.95,
+   "last_val": 14950.0,
+   "k_adj": 1.0,
+   "last_done": "2026-11-06",
+   "cost_basis": "cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1",
+   "tail_adj": [
+    13900.0,
+    14000.0,
+    13850.0,
+    13700.0,
+    13300.0,
+    13350.0,
+    13850.0,
+    13600.0,
+    13100.0,
+    13200.0,
+    13150.0,
+    12900.0,
+    13000.0,
+    13250.0,
+    13250.0,
+    13500.0,
+    13600.0,
+    13900.0,
+    13750.0,
+    13750.0,
+    13550.0,
+    13350.0,
+    13450.0,
+    13600.0,
+    13400.0,
+    13100.0,
+    13050.0,
+    13950.0,
+    14200.0,
+    14950.0
+   ],
+   "cfg_hash_state": "555a895e892d"
   }
  ],
  "closed": [
@@ -261,6 +300,14 @@
   }
  ],
  "log": [
+  {
+   "date": "2026-11-06",
+   "items": [
+    "NÂNG CẤP TRẠNG THÁI SỔ: cấu hình f7521c8dac11 → 555a895e892d (không mua/bán lại, không sửa lịch sử)",
+    "NÂNG CẤP TCH: đỉnh +5.72% · hiện +5.72% · sàn — · GIỮ",
+    "NÂNG CẤP VND: đỉnh +0.00% · hiện -0.48% · sàn — · CHỜ T+3 — Cond9 không xác nhận — bán lệnh thăm dò (chưa bán được, xét lại ATC T+3)"
+   ]
+  },
   {
    "date": "2026-11-06",
    "items": [
@@ -453,7 +500,7 @@
  },
  "dung_lai_2409": true,
  "light": "CAM",
- "prod_config_hash": "f7521c8dac11",
+ "prod_config_hash": "555a895e892d",
  "checks": {
   "nav_identity": true,
   "pnl_reconcile_gap_vnd": 1,
@@ -465,7 +512,7 @@
   "now": {
    "max_pos_pct": 15.37,
    "max_sector_pct": 15.37,
-   "total_pct": 29.92
+   "total_pct": 29.88
   },
   "pnl_reconcile_ok": true,
   "ok": true
@@ -480,6 +527,13 @@
   "since": "2026-09-14"
  },
  "migrations": [
+  {
+   "at": "2026-11-08T17:52:00",
+   "session": "2026-11-06",
+   "from_hash": "f7521c8dac11",
+   "to_hash": "555a895e892d",
+   "n_open": 2
+  },
   {
    "at": "2026-10-24T04:59:39",
    "session": "2026-10-23",

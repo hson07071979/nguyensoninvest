@@ -26,13 +26,17 @@ SECTOR_CAP = 0.30
 DEFAULTS = dict(base_size=0.42, max_pos=0.50, max_total=1.0, max_pos_n=12,
                 min_size=0.02, sector_cap=SECTOR_CAP, base_bonus_range=0.10,
                 base_bonus=1.2,
-                size_map={'XANH': 1.0, 'VANG': 0.6, 'CAM': 0.35, 'DO': 0.2})
+                size_map={'XANH': 1.0, 'VANG': 0.6, 'CAM': 0.35, 'DO': 0.2},
+                # PROD tu 10/11/2026 (anh Son chot 08/11, R49b): lenh thu 3 x0,5 + doi ngua
+                nth_mul=None, rot_mode=None, rot_short=0.5, rot_per_day=1, sell_from=3,
+                fee_sell=0.0, slip_sell=0.0)
 
 REASON_VI = {'theoretical': 'cỡ lý thuyết', 'max_pos': 'trần mỗi mã',
              'max_total': 'trần tổng vốn', 'sector_cap': 'trần ngành',
              'cash': 'tiền mặt', 'max_pos_n': 'đủ số mã', 'min_size': 'dưới cỡ tối thiểu',
              'light': 'đèn chặn', 'liquidity': 'thanh khoản',
-             'max_unconf': 'đang có lệnh dò chưa xác nhận ĐK9'}
+             'max_unconf': 'đang có lệnh dò chưa xác nhận ĐK9',
+             'nth_mul': 'lệnh thứ 3 ×0,5 (đang cầm từ 2 mã)'}
 
 
 def probe_hanging(p, sell_from=3, days_ahead=0):
@@ -116,6 +120,12 @@ def entry_target(nav, cash, invested, sector_invested, n_open, light,
     risk_mul = 1.0 if risk_mul is None else float(risk_mul)
     bonus = C['base_bonus'] if (base_rng is not None and base_rng <= C['base_bonus_range']) else 1.0
     theo = nav * C['base_size'] * light_mul * risk_mul * bonus
+    # LENH THU 3 x0,5 (PROD tu 10/11/2026): dang cam >= nth_mul[0] ma -> lenh moi x nth_mul[1].
+    # n_open = so ma dang cam. engine2 tu nhan he so nay vao light_mul (co ngay hieu luc) va goi
+    # voi n_open=0, nen khong bi nhan hai lan; so ghi tien + chuong (repo public) goi voi so ma that.
+    nm = C.get('nth_mul')
+    if nm and int(n_open or 0) >= int(nm[0]):
+        theo *= float(nm[1])
     cand = [('theoretical', theo), ('max_pos', nav * C['max_pos'] - (sym_invested or 0.0))]
     inv = _num(invested)
     if inv is not None:
@@ -166,3 +176,40 @@ def lots(value, px_all_in, lot=100):
     if not px_all_in or px_all_in <= 0 or value <= 0:
         return 0
     return int(value / px_all_in // lot * lot)
+
+
+# ---------------------------------------------------------------------------
+# DOI NGUA (PROD tu phien 10/11/2026, anh Son chot 08/11, R49b 'A_duoi5') — MOT dinh nghia
+# cho engine2 (backtest) va chuong 14:25 / so ghi tien (repo public).
+# ---------------------------------------------------------------------------
+def can_doi_ngua(A, invested, nav, cfg=None):
+    """True = tin hieu moi bi kep vi day von: tong da cham tran, hoac cai tran dang chan la
+    tran tong / tien mat VA chi vao duoc < rot_short x co ly thuyet."""
+    C = cfg_of(cfg)
+    if not C.get('rot_mode') or not nav:
+        return False
+    if float(invested or 0) / float(nav) >= float(C['max_total']):
+        return True
+    return A.get('binding') in ('max_total', 'cash') and \
+        float(A.get('actual') or 0) < float(C['rot_short']) * float(A.get('theoretical') or 0)
+
+
+def chon_doi_ngua(positions, cfg=None, bo=()):
+    """Chon ma de BAN nhuong von. positions: list dict co sym, gain (lai sau phi ban, so thap phan),
+    held (so phien da giu), stage (0/2 = da xac nhan; 1 = lenh do cho xac nhan; 3 = lenh do truot),
+    hard (lenh Hard -> khong dung toi). Tra ve dict cua ma duoc chon hoac None.
+    rot_mode: 'duoi5' = lai < 5%; 'lo' = dang lo (<= 0); 'bat_ky' = bat ky. Lai thap nhat duoc chon."""
+    C = cfg_of(cfg)
+    m = C.get('rot_mode')
+    if not m:
+        return None
+    el = [p for p in positions if p.get('sym') not in set(bo)
+          and int(p.get('stage') or 0) in (0, 2) and not p.get('hard')
+          and int(p.get('held') or 0) >= int(C.get('sell_from') or 2) and p.get('gain') is not None]
+    if m == 'lo':
+        el = [p for p in el if float(p['gain']) <= 0]
+    elif m == 'duoi5':
+        el = [p for p in el if float(p['gain']) < 0.05]
+    if not el:
+        return None
+    return min(el, key=lambda p: (float(p['gain']), p['sym']))
