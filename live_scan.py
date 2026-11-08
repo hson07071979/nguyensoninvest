@@ -371,6 +371,55 @@ def co_lenh(h, T, den):
         return None, None, [], None, None
 
 
+def doi_ngua_live(h, T, den, quotes=None):
+    """DOI NGUA (PROD tu phien 10/11/2026, anh Son chot 08/11, R49b) — CUNG dinh nghia voi engine2
+    (allocator.can_doi_ngua / chon_doi_ngua). Lenh mua moi bi kep vi day von -> chon ma lai thap
+    nhat trong so he thong (lai < 5%, da ve tai khoan T+3, khong phai lenh do chua xac nhan / Hard)
+    de BAN HET cung luc chot 14:25, roi tinh lai co lenh mua. Tra ve dict hoac None."""
+    try:
+        import allocator as AL
+        CF = T.get('cfg') or {}
+        if not CF.get('rot_mode'):
+            return None
+        B = T.get('book') or {}
+        if not B.get('nav'):
+            return None
+        sp = (T['syms'].get(h['sym']) or {}).get('spec') or {}
+        op = B.get('positions') or []
+        inv = sum(float(p.get('value') or 0) for p in op)
+        nav = float(B['nav']); cash = float(B.get('cash', nav - inv))
+        ng = sp.get('sector') or 'Khác'
+        secv = lambda L: sum(float(p.get('value') or 0) for p in L if (p.get('sector') or 'Khác') == ng)
+        A = AL.entry_target(nav, cash, inv, secv(op), len(op), den, risk_mul=sp.get('rmul', 1.0),
+                            base_rng=sp.get('base'), cfg=CF)
+        if not AL.can_doi_ngua(A, inv, nav, CF):
+            return None
+        fee = float(CF.get('fee_sell') or 0.0025)
+        q = quotes if quotes is not None else quotes_snapshot([p['sym'] for p in op])
+        cands = []
+        for p in op:
+            px = float((q.get(p['sym']) or {}).get('PriceClose') or 0)
+            cr = p.get('cost_raw')
+            g = (px * (1 - fee) / float(cr) - 1) if (px > 0 and cr) else p.get('gain')
+            # so he thong la cua phien truoc -> hom nay da giu them 1 phien
+            cands.append(dict(p, gain=g, held=int(p.get('held') or 0) + 1, px_now=px or None))
+        ch = AL.chon_doi_ngua(cands, CF, bo=(h['sym'],))
+        if not ch:
+            return None
+        con = [p for p in op if p['sym'] != ch['sym']]
+        v = float(ch.get('value') or 0)
+        if ch.get('px_now') and ch.get('shares'):
+            v = float(ch['px_now']) * int(ch['shares'])
+        # co lenh moi giu he so 'lenh thu 3' tinh TRUOC khi ban (n_open = so ma truoc ban, dung engine2)
+        A2 = AL.entry_target(nav, cash + v * (1 - fee), inv - float(ch.get('value') or 0), secv(con), len(op), den,
+                             risk_mul=sp.get('rmul', 1.0), base_rng=sp.get('base'), cfg=CF)
+        return dict(sym=ch['sym'], gain=ch['gain'], px=ch.get('px_now'), shares=ch.get('shares'),
+                    thuc=round(A2['actual'] / nav * 100, 1), tien=A2['actual'], truoc=round(A['actual'] / nav * 100, 1))
+    except Exception as e:
+        print('doi_ngua_live loi:', e)
+        return None
+
+
 # =============================================================================
 # KENH BAO (03/10/2026): Telegram (neu co TELEGRAM_TOKEN/CHAT) VA app ntfy (neu co NTFY_TOPIC).
 # ntfy = app mien phi (Android/iOS), khong can tai khoan: dang ky dung ten "topic" bi mat la nhan.
@@ -475,6 +524,14 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
                   if h.get('mua_do_du_phong') else f"vol {h['volr']}×")
             if h.get('chot') and _hm:
                 kl = f"*chốt {_hm // 100:02d}:{_hm % 100:02d}* giá {h.get('chot_gia')} · {kl}"
+            dn = doi_ngua_live(h, T or {}, den)
+            if dn:
+                size = (f"cỡ *{dn['thuc']:.1f}% NAV*" + (f" ≈ *{dn['tien']/1e6:,.0f} triệu*" if dn.get('tien') else '')
+                        + f" (trước khi đổi chỉ còn {dn['truoc']:.1f}%)\n"
+                        f"   \U0001F501 *ĐỔI NGỰA: BÁN TOÀN BỘ {dn['sym']} NGAY* (LO giá khớp hiện tại"
+                        + (f" {dn['px']/1000:.2f}" if dn.get('px') else '')
+                        + (f", lãi {dn['gain']*100:+.1f}%" if dn.get('gain') is not None else '')
+                        + ") rồi mua — mã lãi thấp nhất, dưới 5%, đã về tài khoản")
             return f"{_ut}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · {kl} · điểm {h['score']:.0f}\n   {size}"
 
         def _ut_of(h):
