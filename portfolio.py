@@ -721,6 +721,25 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF,
         th = syms_th.get(h['sym'], {})
         sp = dict(rmul=h.get('rmul', 1.0), base=h.get('base'))
         nganh = h.get('sector') or th.get('sector') or 'Khác'
+        # DOI NGUA (PROD tu phien 10/11/2026, anh Son chot 08/11, R49b): bo may da ban het ma lai thap
+        # nhat de nhuong von cho lenh nay (signals_today.ban_doi) -> so ban DUNG ma do, gia dong cua phien.
+        _bd = h.get('ban_doi')
+        if _bd and _bd.get('sym'):
+            q_ = next((x for x in P['open'] if x['sym'] == _bd['sym'] and x.get('sh', 0) > 0), None)
+            if q_ is None:
+                nhat_ky.append(f"CẢNH BÁO: ĐỔI NGỰA {_bd['sym']} → {h['sym']} — sổ không còn cầm {_bd['sym']}, bỏ qua bán")
+            else:
+                adj_d, raw_d = _nen_ngay(_bd['sym'], ses, CACHE, ASOF)
+                if adj_d and raw_d and q_.get('k_adj'):
+                    _px = float(_bd.get('px') or raw_d)
+                    dong_vi_the(P, q_, 'Đổi ngựa — nhường vốn cho ' + h['sym'], ses,
+                                _px * adj_d / raw_d, _px, q_['k_adj'], C)
+                    _c = P['closed'][0]
+                    nhat_ky.append(f"ĐỔI NGỰA: BÁN {_bd['sym']} {_px/1000:.2f} — {_c['sh']:,} cp, lãi/lỗ sau phí "
+                                   f"{_c['pnl_pct']:+.2f}% → nhường vốn cho {h['sym']}")
+                    P['open'] = [x for x in P['open'] if x.get('sh', 0) > 0]
+                else:
+                    nhat_ky.append(f"CẢNH BÁO: ĐỔI NGỰA {_bd['sym']} — không tải được nến / thiếu k_adj, bỏ qua bán")
         inv = tong(); nav = P['cash'] + inv
         sec = sum(p['sh'] * gia(p) for p in P['open'] if (p.get('sector') or 'Khác') == nganh)
         A = AL.entry_target(nav, P['cash'], inv, sec, len(P['open']), light,
@@ -891,6 +910,10 @@ def nang_cap(P, T, C, ses, now):
     P['log'].insert(0, dict(date=ses, items=[f"NÂNG CẤP TRẠNG THÁI SỔ: cấu hình {cu} → {moi} "
                                              "(không mua/bán lại, không sửa lịch sử)"] + nk))
     P['log'].sort(key=lambda x: x['date'], reverse=True)
+    # 08/11/2026: nang cap DANH DAU LAI gia vi the (last_val) -> NAV phai tinh lai theo dung gia do,
+    # neu khong bat bien NAV = tien mat + gia tri thi truong truot (lan doi cau hinh R49, VND).
+    _gv = lambda p: p.get('last_val') or (p.get('last') or 0) * 1000 or p['entry_px']
+    P['nav'] = round(P['cash'] + sum(p['sh'] * _gv(p) for p in P['open']))
     P['checks'] = doi_soat(P, C, T.get('cfg') or {})
     for x in P['log'][0]['items']:
         print('  ' + x)
