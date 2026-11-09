@@ -4,9 +4,9 @@
  "nav_source": "portfolio.json",
  "nav0": 1000000000.0,
  "cash": 708012867.5,
- "nav": 1009772868,
- "session_done": "2026-11-06",
- "updated": "2026-11-06T21:38:15",
+ "nav": 1001997868,
+ "session_done": "2026-11-09",
+ "updated": "2026-11-09T20:20:40",
  "open": [
   {
    "book_id": "LIVE_PAPER",
@@ -25,7 +25,7 @@
    "b20": 0,
    "part": false,
    "pyr": false,
-   "held": 2,
+   "held": 3,
    "light": "CAM",
    "score": 54.4,
    "ordimb": 2.293,
@@ -35,9 +35,9 @@
    "prod_config_hash": "f7521c8dac11",
    "size_theo": 14.7,
    "size_reasons": [],
-   "last": 13.5,
-   "last_day": "2026-11-06",
-   "pnl": 5.46,
+   "last": 13.25,
+   "last_day": "2026-11-09",
+   "pnl": 3.51,
    "x0": {
     "date": "2026-11-04",
     "pos_pct": 14.64,
@@ -46,23 +46,22 @@
     "nav": 1001858368
    },
    "peak_gain": 5.72,
-   "gain": 5.72,
+   "gain": 3.77,
    "profit_lock_active": false,
    "profit_floor": null,
    "profit_trigger": null,
-   "sellable": false,
+   "sellable": true,
    "exit_reason": null,
    "pending_exit": null,
    "exit_phan": 1.0,
    "action": "GIỮ",
-   "earliest_sell": "T+3",
-   "last_adj": 13.5,
-   "last_val": 13500.0,
+   "earliest_sell": "2026-11-09",
+   "last_adj": 13.25,
+   "last_val": 13250.0,
    "k_adj": 1.0,
-   "last_done": "2026-11-06",
+   "last_done": "2026-11-09",
    "cost_basis": "cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1",
    "tail_adj": [
-    11400.0,
     11500.0,
     11550.0,
     11300.0,
@@ -91,7 +90,8 @@
     11950.0,
     12750.0,
     13000.0,
-    13500.0
+    13500.0,
+    13250.0
    ],
    "cfg_hash_state": "555a895e892d"
   },
@@ -112,7 +112,7 @@
    "b20": 0,
    "part": false,
    "pyr": false,
-   "held": 0,
+   "held": 1,
    "light": "CAM",
    "score": 45.7,
    "ordimb": 1.387,
@@ -122,9 +122,9 @@
    "prod_config_hash": "f7521c8dac11",
    "size_theo": 14.7,
    "size_reasons": [],
-   "last": 14.95,
-   "last_day": "2026-11-06",
-   "pnl": -0.73,
+   "last": 14.45,
+   "last_day": "2026-11-09",
+   "pnl": -4.05,
    "x0": {
     "date": "2026-11-06",
     "pos_pct": 14.55,
@@ -133,7 +133,7 @@
     "nav": 1010262868
    },
    "peak_gain": 0.0,
-   "gain": -0.48,
+   "gain": -3.81,
    "profit_lock_active": false,
    "profit_floor": null,
    "profit_trigger": null,
@@ -143,13 +143,12 @@
    "exit_phan": 1.0,
    "action": "CHỜ T+3 — Cond9 không xác nhận — bán lệnh thăm dò (chưa bán được, xét lại ATC T+3)",
    "earliest_sell": "T+3",
-   "last_adj": 14.95,
-   "last_val": 14950.0,
+   "last_adj": 14.45,
+   "last_val": 14450.0,
    "k_adj": 1.0,
-   "last_done": "2026-11-06",
+   "last_done": "2026-11-09",
    "cost_basis": "cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1",
    "tail_adj": [
-    13900.0,
     14000.0,
     13850.0,
     13700.0,
@@ -178,7 +177,8 @@
     13050.0,
     13950.0,
     14200.0,
-    14950.0
+    14950.0,
+    14450.0
    ],
    "cfg_hash_state": "555a895e892d"
   }
@@ -500,7 +500,7 @@
  },
  "dung_lai_2409": true,
  "light": "CAM",
- "prod_config_hash": "555a895e892d",
+ "prod_config_hash": "6f0796b8c41c",
  "checks": {
   "nav_identity": true,
   "pnl_reconcile_gap_vnd": 1,
@@ -510,9 +510,9 @@
   "sector_cap_ok": true,
   "pyr_sector_over": [],
   "now": {
-   "max_pos_pct": 15.37,
-   "max_sector_pct": 15.37,
-   "total_pct": 29.88
+   "max_pos_pct": 15.21,
+   "max_sector_pct": 15.21,
+   "total_pct": 29.34
   },
   "pnl_reconcile_ok": true,
   "ok": true
@@ -521,7 +521,7 @@
   "n_open": 2,
   "n_closed": 5,
   "winrate": 40.0,
-  "total_return": 1.03,
+  "total_return": 0.2,
   "best": 4.58,
   "worst": -6.19,
   "since": "2026-09-14"

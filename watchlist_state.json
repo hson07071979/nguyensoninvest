@@ -3,174 +3,326 @@
  "members": {
   "GMD": {
    "added": "2026-08-28",
-   "score": 83.8,
+   "score": 78.8,
    "status": "đạt",
    "note": ""
   },
   "HCM": {
    "added": "2026-08-28",
-   "score": 76.3,
+   "score": 56.3,
    "status": "đạt",
    "note": ""
   },
   "MBB": {
    "added": "2026-08-28",
-   "score": 72.1,
+   "score": 67.1,
    "status": "đạt",
    "note": ""
   },
   "MSN": {
    "added": "2026-08-28",
-   "score": 84.4,
-   "status": "đạt",
-   "note": ""
-  },
-  "MBS": {
-   "added": "2026-08-28",
-   "score": 61.6,
+   "score": 69.3,
    "status": "đạt",
    "note": ""
   },
   "IDC": {
    "added": "2026-08-28",
-   "score": 73.8,
+   "score": 48.8,
    "status": "đạt",
    "note": ""
   },
   "HPG": {
    "added": "2026-08-28",
-   "score": 52.3,
+   "score": 67.1,
    "status": "đạt",
    "note": ""
   },
   "MWG": {
    "added": "2026-09-16",
-   "score": 73.8,
+   "score": 62.9,
    "status": "đạt",
    "note": ""
   },
   "VGC": {
    "added": "2026-09-18",
-   "score": 47.5,
+   "score": 52.4,
    "status": "đạt",
    "note": ""
   },
   "GAS": {
    "added": "2026-09-25",
-   "score": 57.7,
+   "score": 52.0,
    "status": "đạt",
    "note": ""
   },
   "CTG": {
    "added": "2026-09-25",
-   "score": 57.7,
-   "status": "đạt",
-   "note": ""
-  },
-  "BSR": {
-   "added": "2026-10-01",
-   "score": 78.6,
+   "score": 62.8,
    "status": "đạt",
    "note": ""
   },
   "ORS": {
    "added": "2026-10-20",
-   "score": 52.8,
+   "score": 47.7,
    "status": "đạt",
    "note": ""
   },
   "NAB": {
    "added": "2026-10-21",
-   "score": 59.2,
+   "score": 79.2,
    "status": "đạt",
    "note": ""
   },
   "TNG": {
    "added": "2026-10-23",
-   "score": 59.2,
+   "score": 84.0,
    "status": "đạt",
    "note": ""
   },
   "VHM": {
    "added": "2026-10-26",
-   "score": 76.0,
+   "score": 80.7,
    "status": "đạt",
    "note": ""
   },
   "PAN": {
    "added": "2026-10-26",
-   "score": 45.6,
+   "score": 50.7,
    "status": "đạt",
    "note": ""
   },
-  "PLX": {
-   "added": "2026-11-04",
-   "score": 56.6,
+  "POW": {
+   "added": "2026-11-09",
+   "score": 81.6,
    "status": "đạt",
    "note": ""
   },
-  "HDB": {
-   "added": "2026-11-06",
-   "score": 79.4,
+  "MSB": {
+   "added": "2026-11-09",
+   "score": 74.7,
    "status": "đạt",
    "note": ""
   },
-  "HAH": {
-   "added": "2026-11-06",
-   "score": 59.0,
+  "SHB": {
+   "added": "2026-11-09",
+   "score": 71.5,
    "status": "đạt",
    "note": ""
   },
-  "DIG": {
-   "added": "2026-11-06",
-   "score": 58.5,
+  "NT2": {
+   "added": "2026-11-09",
+   "score": 69.3,
    "status": "đạt",
    "note": ""
   },
-  "VCB": {
-   "added": "2026-11-06",
-   "score": 56.4,
+  "TPB": {
+   "added": "2026-11-09",
+   "score": 58.7,
    "status": "đạt",
    "note": ""
   },
-  "PVD": {
-   "added": "2026-11-06",
-   "score": 52.0,
+  "DCM": {
+   "added": "2026-11-09",
+   "score": 57.8,
    "status": "đạt",
    "note": ""
   },
-  "HHP": {
-   "added": "2026-11-06",
-   "score": 49.4,
+  "HHV": {
+   "added": "2026-11-09",
+   "score": 56.8,
    "status": "đạt",
    "note": ""
   },
-  "BSI": {
-   "added": "2026-11-06",
-   "score": 47.8,
+  "BID": {
+   "added": "2026-11-09",
+   "score": 51.2,
    "status": "đạt",
    "note": ""
   },
-  "VSC": {
-   "added": "2026-11-06",
-   "score": 46.5,
+  "GEE": {
+   "added": "2026-11-09",
+   "score": 50.9,
    "status": "đạt",
    "note": ""
   },
-  "VND": {
-   "added": "2026-11-06",
-   "score": 46.3,
-   "status": "đạt",
-   "note": ""
-  },
-  "GEX": {
-   "added": "2026-11-06",
-   "score": 45.9,
+  "CTD": {
+   "added": "2026-11-09",
+   "score": 49.5,
    "status": "đạt",
    "note": ""
   }
  },
  "log": [
+  {
+   "date": "2026-11-09",
+   "size": 25,
+   "added_ct": [
+    {
+     "sym": "POW",
+     "score": 81.6,
+     "sector": "Điện, nước & xăng dầu khí đốt",
+     "base": 8.3,
+     "rs": 76.0
+    },
+    {
+     "sym": "MSB",
+     "score": 74.7,
+     "sector": "Ngân hàng",
+     "base": 18.3,
+     "rs": 95.6
+    },
+    {
+     "sym": "SHB",
+     "score": 71.5,
+     "sector": "Ngân hàng",
+     "base": 14.5,
+     "rs": 18.7
+    },
+    {
+     "sym": "NT2",
+     "score": 69.3,
+     "sector": "Điện, nước & xăng dầu khí đốt",
+     "base": 15.4,
+     "rs": 62.2
+    },
+    {
+     "sym": "TPB",
+     "score": 58.7,
+     "sector": "Ngân hàng",
+     "base": 13.5,
+     "rs": 48.5
+    },
+    {
+     "sym": "DCM",
+     "score": 57.8,
+     "sector": "Hóa chất",
+     "base": 14.9,
+     "rs": 53.3
+    },
+    {
+     "sym": "HHV",
+     "score": 56.8,
+     "sector": "Xây dựng và Vật liệu",
+     "base": 11.5,
+     "rs": 26.0
+    },
+    {
+     "sym": "BID",
+     "score": 51.2,
+     "sector": "Ngân hàng",
+     "base": 13.4,
+     "rs": 50.3
+    },
+    {
+     "sym": "GEE",
+     "score": 50.9,
+     "sector": "Hàng & Dịch vụ Công nghiệp",
+     "base": 19.8,
+     "rs": 17.4
+    },
+    {
+     "sym": "CTD",
+     "score": 49.5,
+     "sector": "Xây dựng và Vật liệu",
+     "base": 22.0,
+     "rs": 35.6
+    }
+   ],
+   "removed_ct": [
+    {
+     "sym": "MBS",
+     "why": "điểm 41 < 45",
+     "score": 41.4
+    },
+    {
+     "sym": "BSR",
+     "why": "nền 25.2% > 24%",
+     "score": 82.7
+    },
+    {
+     "sym": "PLX",
+     "why": "điểm 42 < 45",
+     "score": 41.5
+    },
+    {
+     "sym": "HDB",
+     "why": "NPL 3.42% > 3%",
+     "score": 74.2
+    },
+    {
+     "sym": "HAH",
+     "why": "điểm 34 < 45",
+     "score": 33.9
+    },
+    {
+     "sym": "DIG",
+     "why": "điểm 24 < 45",
+     "score": 23.6
+    },
+    {
+     "sym": "VCB",
+     "why": "điểm 36 < 45",
+     "score": 36.4
+    },
+    {
+     "sym": "PVD",
+     "why": "điểm 42 < 45",
+     "score": 41.7
+    },
+    {
+     "sym": "HHP",
+     "why": "CFO < 0",
+     "score": 64.4
+    },
+    {
+     "sym": "BSI",
+     "why": "điểm 33 < 45",
+     "score": 32.8
+    },
+    {
+     "sym": "VSC",
+     "why": "điểm 21 < 45",
+     "score": 21.4
+    },
+    {
+     "sym": "VND",
+     "why": "điểm 26 < 45",
+     "score": 26.0
+    },
+    {
+     "sym": "GEX",
+     "why": "điểm 21 < 45",
+     "score": 20.8
+    }
+   ],
+   "added": [
+    "POW",
+    "MSB",
+    "SHB",
+    "NT2",
+    "TPB",
+    "DCM",
+    "HHV",
+    "BID",
+    "GEE",
+    "CTD"
+   ],
+   "removed": [
+    "MBS",
+    "BSR",
+    "PLX",
+    "HDB",
+    "HAH",
+    "DIG",
+    "VCB",
+    "PVD",
+    "HHP",
+    "BSI",
+    "VSC",
+    "VND",
+    "GEX"
+   ]
+  },
   {
    "date": "2026-11-06",
    "size": 28,
@@ -1896,6 +2048,1122 @@
   }
  ],
  "bctc_log": [
+  {
+   "date": "2026-11-09",
+   "sym": "PNJ",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 20 → 10",
+    "cổng rủi ro: qua → chặn (CFO < 0)"
+   ],
+   "diem": 10.0,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "KOS",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 45 → 10",
+    "cổng rủi ro: qua → chặn (ICR 1.40 < 1.5)"
+   ],
+   "diem": 10.0,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "DXS",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 16 → 11"
+   ],
+   "diem": 10.6,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "DPM",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 46 → 11",
+    "cổng rủi ro: chặn → qua"
+   ],
+   "diem": 11.1,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "EIB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 16 → 11",
+    "cổng rủi ro: chặn → qua"
+   ],
+   "diem": 11.4,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "CEO",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 19 → 13"
+   ],
+   "diem": 12.9,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "NLG",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 19 → 13",
+    "đèn tím bật"
+   ],
+   "diem": 13.0,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "CTS",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 29 → 14"
+   ],
+   "diem": 13.7,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "HDC",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 39 → 14"
+   ],
+   "diem": 14.5,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "DBC",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 22 → 18"
+   ],
+   "diem": 17.5,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "DXG",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "cổng rủi ro: qua → chặn (CFO < 0)",
+    "đèn tím tắt"
+   ],
+   "diem": 17.7,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "GEX",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 46 → 21",
+    "đèn tím bật",
+    "ra khỏi danh sách mua"
+   ],
+   "diem": 20.8,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VSC",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 46 → 21",
+    "ra khỏi danh sách mua"
+   ],
+   "diem": 21.4,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "KDH",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 47 → 22",
+    "cổng rủi ro: chặn → qua",
+    "đèn tím bật"
+   ],
+   "diem": 21.6,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "EVF",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 27 → 22"
+   ],
+   "diem": 21.7,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "HUT",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [],
+   "diem": 21.9,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VRE",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 42 → 22"
+   ],
+   "diem": 22.0,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "PDR",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 32 → 22"
+   ],
+   "diem": 22.3,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VC3",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 22 → 23",
+    "cổng rủi ro: chặn → qua"
+   ],
+   "diem": 22.6,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "SSI",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 44 → 23",
+    "ra khỏi nhóm để mắt"
+   ],
+   "diem": 22.8,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "DIG",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 58 → 24",
+    "ra khỏi danh sách mua"
+   ],
+   "diem": 23.6,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "FPT",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 30 → 26"
+   ],
+   "diem": 25.5,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "TCX",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 46 → 26"
+   ],
+   "diem": 25.9,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VND",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 46 → 26",
+    "ra khỏi danh sách mua"
+   ],
+   "diem": 26.0,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VCI",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 42 → 26",
+    "ra khỏi nhóm để mắt"
+   ],
+   "diem": 26.4,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VIX",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 28 → 27"
+   ],
+   "diem": 27.3,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VAB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 13 → 28"
+   ],
+   "diem": 27.6,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "OCB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 38 → 28"
+   ],
+   "diem": 27.6,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "NVL",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 20 → 30"
+   ],
+   "diem": 30.5,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "SHS",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 26 → 31"
+   ],
+   "diem": 31.1,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VCG",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 37 → 32",
+    "cổng rủi ro: qua → chặn (CFO < 0)"
+   ],
+   "diem": 31.9,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "HAG",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "đèn tím tắt"
+   ],
+   "diem": 32.4,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "BSI",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 48 → 33",
+    "ra khỏi danh sách mua"
+   ],
+   "diem": 32.8,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VIB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 14 → 34",
+    "cổng rủi ro: qua → chặn (NPL 3.20% > 3%)"
+   ],
+   "diem": 33.9,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "HAH",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 59 → 34",
+    "ra khỏi danh sách mua"
+   ],
+   "diem": 33.9,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VCB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 56 → 36",
+    "ra khỏi danh sách mua"
+   ],
+   "diem": 36.4,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "GVR",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [],
+   "diem": 36.6,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "BVH",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 57 → 37"
+   ],
+   "diem": 37.2,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "CII",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 28 → 38"
+   ],
+   "diem": 37.5,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "PVS",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "đèn tím tắt"
+   ],
+   "diem": 37.7,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "ANV",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 34 → 39"
+   ],
+   "diem": 38.8,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VJC",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 29 → 39"
+   ],
+   "diem": 39.1,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "PVP",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 64 → 39"
+   ],
+   "diem": 39.1,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VPB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 69 → 39"
+   ],
+   "diem": 39.4,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "BCM",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 22 → 41",
+    "đèn tím tắt"
+   ],
+   "diem": 41.0,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "MBS",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 62 → 41",
+    "ra khỏi danh sách mua"
+   ],
+   "diem": 41.4,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "PLX",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 57 → 42",
+    "ra khỏi danh sách mua"
+   ],
+   "diem": 41.5,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "ACB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 21 → 42",
+    "vào nhóm để mắt"
+   ],
+   "diem": 41.5,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "PVD",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 52 → 42",
+    "đèn tím bật",
+    "ra khỏi danh sách mua"
+   ],
+   "diem": 41.7,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VNM",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 62 → 42"
+   ],
+   "diem": 41.8,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "MCH",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 22 → 42",
+    "vào nhóm để mắt"
+   ],
+   "diem": 41.8,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "TCB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [],
+   "diem": 43.9,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VPI",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 74 → 44",
+    "cổng rủi ro: qua → chặn (CFO < 0)"
+   ],
+   "diem": 44.4,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "DCL",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 30 → 45"
+   ],
+   "diem": 44.6,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "SAB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 42 → 47"
+   ],
+   "diem": 46.8,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "SSB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 32 → 47"
+   ],
+   "diem": 47.3,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "KBC",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 12 → 47",
+    "đèn tím tắt"
+   ],
+   "diem": 47.4,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "ORS",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 53 → 48"
+   ],
+   "diem": 47.7,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "IDC",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 74 → 49"
+   ],
+   "diem": 48.8,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "NKG",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 24 → 49",
+    "cổng rủi ro: chặn → qua"
+   ],
+   "diem": 49.4,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "PAN",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 46 → 51"
+   ],
+   "diem": 50.7,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "GEE",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 66 → 51",
+    "cổng rủi ro: chặn → qua",
+    "vào danh sách mua"
+   ],
+   "diem": 50.9,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "BID",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 26 → 51",
+    "vào danh sách mua"
+   ],
+   "diem": 51.2,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "STB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [],
+   "diem": 51.8,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "GAS",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 58 → 52"
+   ],
+   "diem": 52.0,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VGC",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 48 → 52"
+   ],
+   "diem": 52.4,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "BAF",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 59 → 54"
+   ],
+   "diem": 54.0,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "DPG",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [],
+   "diem": 54.2,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VTP",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 31 → 56",
+    "cổng rủi ro: qua → chặn (CFO < 0)"
+   ],
+   "diem": 55.7,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "HCM",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 76 → 56"
+   ],
+   "diem": 56.3,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "HHV",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 22 → 57",
+    "vào danh sách mua"
+   ],
+   "diem": 56.8,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "DCM",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 49 → 58",
+    "cổng rủi ro: chặn → qua",
+    "vào danh sách mua"
+   ],
+   "diem": 57.8,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "TPB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 24 → 59",
+    "vào danh sách mua"
+   ],
+   "diem": 58.7,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "PVT",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 64 → 59"
+   ],
+   "diem": 58.9,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VPL",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 45 → 60"
+   ],
+   "diem": 59.7,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "CTG",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 58 → 63"
+   ],
+   "diem": 62.8,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "MWG",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 74 → 63"
+   ],
+   "diem": 62.9,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "HHP",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 49 → 64",
+    "cổng rủi ro: qua → chặn (CFO < 0)",
+    "ra khỏi danh sách mua"
+   ],
+   "diem": 64.4,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "MBB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 72 → 67"
+   ],
+   "diem": 67.1,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "HPG",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 52 → 67"
+   ],
+   "diem": 67.1,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "NT2",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 44 → 69",
+    "vào danh sách mua"
+   ],
+   "diem": 69.3,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "MSN",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 84 → 69"
+   ],
+   "diem": 69.3,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "CDC",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 85 → 70"
+   ],
+   "diem": 69.7,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "PET",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 80 → 70"
+   ],
+   "diem": 69.8,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "LPB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 55 → 70"
+   ],
+   "diem": 70.2,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "SHB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 22 → 72",
+    "vào danh sách mua"
+   ],
+   "diem": 71.5,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "FRT",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [],
+   "diem": 72.4,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "HDB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 79 → 74",
+    "cổng rủi ro: qua → chặn (NPL 3.42% > 3%)",
+    "ra khỏi danh sách mua"
+   ],
+   "diem": 74.2,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "MSB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 40 → 75",
+    "vào danh sách mua"
+   ],
+   "diem": 74.7,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "NVB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 80 → 75"
+   ],
+   "diem": 74.9,
+   "chan": true
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "DGW",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 57 → 77"
+   ],
+   "diem": 77.4,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "GMD",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 84 → 79"
+   ],
+   "diem": 78.8,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "NAB",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 59 → 79"
+   ],
+   "diem": 79.2,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VHM",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 76 → 81"
+   ],
+   "diem": 80.7,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "POW",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 76 → 82",
+    "cổng rủi ro: chặn → qua",
+    "vào danh sách mua"
+   ],
+   "diem": 81.6,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "BSR",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 79 → 83",
+    "ra khỏi danh sách mua"
+   ],
+   "diem": 82.7,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "TNG",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 59 → 84"
+   ],
+   "diem": 84.0,
+   "chan": false
+  },
+  {
+   "date": "2026-11-09",
+   "sym": "VIC",
+   "tu": "2026Q2",
+   "den": "2026Q3",
+   "doi": [
+    "điểm 50 → 94",
+    "đèn tím tắt"
+   ],
+   "diem": 94.4,
+   "chan": true
+  },
   {
    "date": "2026-11-06",
    "sym": "KBC",
@@ -4200,54 +5468,18 @@
   }
  ],
  "quy": {
-  "CDC": [
-   "2026Q2",
-   84.7,
+  "VIC": [
+   "2026Q3",
+   94.4,
    true,
-   "CFO < 0",
+   "D/E 5.85 > 4.0",
    false,
    false,
    false
   ],
-  "MSN": [
-   "2026Q2",
-   84.4,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "GMD": [
-   "2026Q2",
-   83.8,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "NVB": [
-   "2026Q2",
-   79.9,
-   true,
-   "NPL 6.43% > 3%",
-   false,
-   false,
-   false
-  ],
-  "PET": [
-   "2026Q2",
-   79.8,
-   true,
-   "CFO < 0",
-   false,
-   false,
-   false
-  ],
-  "HDB": [
-   "2026Q2",
-   79.4,
+  "TNG": [
+   "2026Q3",
+   84.0,
    false,
    "",
    false,
@@ -4255,26 +5487,17 @@
    false
   ],
   "BSR": [
-   "2026Q2",
-   78.6,
+   "2026Q3",
+   82.7,
    false,
    "",
    false,
-   true,
+   false,
    false
   ],
   "POW": [
-   "2026Q2",
-   76.4,
-   true,
-   "CFO < 0",
-   false,
-   false,
-   false
-  ],
-  "HCM": [
-   "2026Q2",
-   76.3,
+   "2026Q3",
+   81.6,
    false,
    "",
    false,
@@ -4282,107 +5505,8 @@
    false
   ],
   "VHM": [
-   "2026Q2",
-   76.0,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "VPI": [
-   "2026Q2",
-   74.5,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "IDC": [
-   "2026Q2",
-   73.8,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "MWG": [
-   "2026Q2",
-   73.8,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "FRT": [
-   "2026Q2",
-   72.4,
-   true,
-   "CFO < 0",
-   false,
-   false,
-   false
-  ],
-  "MBB": [
-   "2026Q2",
-   72.1,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "VPB": [
-   "2026Q2",
-   69.4,
-   true,
-   "NPL 3.28% > 3%",
-   false,
-   false,
-   false
-  ],
-  "GEE": [
-   "2026Q2",
-   66.3,
-   true,
-   "CFO < 0",
-   false,
-   false,
-   false
-  ],
-  "PVP": [
-   "2026Q2",
-   64.1,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "PVT": [
-   "2026Q2",
-   64.1,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "VNM": [
-   "2026Q2",
-   61.9,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "MBS": [
-   "2026Q2",
-   61.6,
+   "2026Q3",
+   80.7,
    false,
    "",
    false,
@@ -4390,98 +5514,71 @@
    false
   ],
   "NAB": [
-   "2026Q2",
-   59.2,
+   "2026Q3",
+   79.2,
    false,
    "",
    false,
    true,
    false
   ],
-  "TNG": [
-   "2026Q2",
-   59.2,
+  "GMD": [
+   "2026Q3",
+   78.8,
    false,
    "",
    false,
    true,
    false
   ],
-  "BAF": [
-   "2026Q2",
-   59.1,
+  "DGW": [
+   "2026Q3",
+   77.4,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "NVB": [
+   "2026Q3",
+   74.9,
+   true,
+   "NPL 4.87% > 3%",
+   false,
+   false,
+   false
+  ],
+  "MSB": [
+   "2026Q3",
+   74.7,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "HDB": [
+   "2026Q3",
+   74.2,
+   true,
+   "NPL 3.42% > 3%",
+   false,
+   false,
+   false
+  ],
+  "FRT": [
+   "2026Q3",
+   72.4,
    true,
    "CFO < 0",
    false,
    false,
    false
   ],
-  "HAH": [
-   "2026Q2",
-   59.0,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "DIG": [
-   "2026Q2",
-   58.5,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "CTG": [
-   "2026Q2",
-   57.7,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "GAS": [
-   "2026Q2",
-   57.7,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "BVH": [
-   "2026Q2",
-   57.3,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "DGW": [
-   "2026Q2",
-   57.2,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "PLX": [
-   "2026Q2",
-   56.6,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "VCB": [
-   "2026Q2",
-   56.4,
+  "SHB": [
+   "2026Q3",
+   71.5,
    false,
    "",
    false,
@@ -4489,10 +5586,154 @@
    false
   ],
   "LPB": [
-   "2026Q2",
-   55.2,
+   "2026Q3",
+   70.2,
    false,
    "",
+   false,
+   false,
+   false
+  ],
+  "PET": [
+   "2026Q3",
+   69.8,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "CDC": [
+   "2026Q3",
+   69.7,
+   true,
+   "ICR 0.58 < 1.5",
+   false,
+   false,
+   false
+  ],
+  "MSN": [
+   "2026Q3",
+   69.3,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "NT2": [
+   "2026Q3",
+   69.3,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "HPG": [
+   "2026Q3",
+   67.1,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "MBB": [
+   "2026Q3",
+   67.1,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "HHP": [
+   "2026Q3",
+   64.4,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "MWG": [
+   "2026Q3",
+   62.9,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "CTG": [
+   "2026Q3",
+   62.8,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "VPL": [
+   "2026Q3",
+   59.7,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "PVT": [
+   "2026Q3",
+   58.9,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "TPB": [
+   "2026Q3",
+   58.7,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "DCM": [
+   "2026Q3",
+   57.8,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "HHV": [
+   "2026Q3",
+   56.8,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "HCM": [
+   "2026Q3",
+   56.3,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "VTP": [
+   "2026Q3",
+   55.7,
+   true,
+   "CFO < 0",
    false,
    false,
    false
@@ -4507,34 +5748,34 @@
    false
   ],
   "DPG": [
-   "2026Q2",
-   54.1,
+   "2026Q3",
+   54.2,
    false,
    "",
    false,
    false,
    false
   ],
-  "ORS": [
-   "2026Q2",
-   52.8,
+  "BAF": [
+   "2026Q3",
+   54.0,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "VGC": [
+   "2026Q3",
+   52.4,
    false,
    "",
    false,
    true,
    false
   ],
-  "HPG": [
-   "2026Q2",
-   52.3,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "PVD": [
-   "2026Q2",
+  "GAS": [
+   "2026Q3",
    52.0,
    false,
    "",
@@ -4543,323 +5784,98 @@
    false
   ],
   "STB": [
-   "2026Q2",
-   52.0,
+   "2026Q3",
+   51.8,
    true,
-   "NPL 7.54% > 3%",
+   "NPL 7.33% > 3%",
    false,
    false,
    false
   ],
-  "VIC": [
-   "2026Q2",
-   49.6,
-   true,
-   "ICR 0.72 < 1.5",
-   true,
-   false,
-   false
-  ],
-  "HHP": [
-   "2026Q2",
-   49.4,
+  "BID": [
+   "2026Q3",
+   51.2,
    false,
    "",
    false,
    true,
    false
   ],
-  "DCM": [
-   "2026Q2",
-   48.8,
-   true,
-   "CFO < 0",
-   false,
-   false,
-   false
-  ],
-  "BSI": [
-   "2026Q2",
-   47.8,
+  "GEE": [
+   "2026Q3",
+   50.9,
    false,
    "",
    false,
    true,
-   false
-  ],
-  "VGC": [
-   "2026Q2",
-   47.5,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "KDH": [
-   "2026Q2",
-   46.7,
-   true,
-   "CFO < 0",
-   false,
-   false,
-   false
-  ],
-  "VSC": [
-   "2026Q2",
-   46.5,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "VND": [
-   "2026Q2",
-   46.3,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "DPM": [
-   "2026Q2",
-   46.2,
-   true,
-   "CFO < 0",
-   false,
-   false,
-   false
-  ],
-  "GEX": [
-   "2026Q2",
-   45.9,
-   false,
-   "",
-   false,
-   true,
-   false
-  ],
-  "TCX": [
-   "2026Q2",
-   45.9,
-   true,
-   "CFO < 0",
-   false,
-   false,
    false
   ],
   "PAN": [
-   "2026Q2",
-   45.6,
+   "2026Q3",
+   50.7,
    false,
    "",
    false,
    true,
-   false
-  ],
-  "KOS": [
-   "2026Q2",
-   45.0,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "VPL": [
-   "2026Q2",
-   44.7,
-   true,
-   "CFO < 0",
-   false,
-   false,
    false
   ],
   "CTD": [
    "2026Q2",
-   44.4,
+   49.5,
    false,
    "",
    false,
-   false,
-   true
+   true,
+   false
   ],
-  "NT2": [
-   "2026Q2",
-   44.3,
-   false,
-   "",
-   false,
-   false,
-   true
-  ],
-  "TCB": [
-   "2026Q2",
-   44.1,
-   false,
-   "",
-   false,
-   false,
-   true
-  ],
-  "SSI": [
-   "2026Q2",
-   43.7,
-   false,
-   "",
-   false,
-   false,
-   true
-  ],
-  "SAB": [
-   "2026Q2",
-   41.9,
+  "NKG": [
+   "2026Q3",
+   49.4,
    false,
    "",
    false,
    false,
    false
   ],
-  "VRE": [
-   "2026Q2",
-   41.9,
+  "IDC": [
+   "2026Q3",
+   48.8,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "ORS": [
+   "2026Q3",
+   47.7,
+   false,
+   "",
+   false,
+   true,
+   false
+  ],
+  "KBC": [
+   "2026Q3",
+   47.4,
    true,
    "CFO < 0",
    false,
-   false,
-   false
-  ],
-  "VCI": [
-   "2026Q2",
-   41.7,
-   false,
-   "",
-   false,
-   false,
-   true
-  ],
-  "MSB": [
-   "2026Q2",
-   39.7,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "HDC": [
-   "2026Q2",
-   39.3,
-   true,
-   "CFO < 0",
-   true,
-   false,
-   false
-  ],
-  "PVS": [
-   "2026Q2",
-   38.5,
-   false,
-   "",
-   true,
-   false,
-   false
-  ],
-  "SBT": [
-   "2026Q2",
-   37.8,
-   true,
-   "CFO < 0",
-   false,
-   false,
-   false
-  ],
-  "OCB": [
-   "2026Q2",
-   37.7,
-   true,
-   "NPL 3.49% > 3%",
-   false,
-   false,
-   false
-  ],
-  "VCG": [
-   "2026Q2",
-   37.4,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "GVR": [
-   "2026Q2",
-   36.9,
-   false,
-   "",
-   true,
-   false,
-   false
-  ],
-  "ANV": [
-   "2026Q2",
-   34.0,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "HSG": [
-   "2026Q2",
-   32.9,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "PDR": [
-   "2026Q2",
-   32.5,
-   true,
-   "CFO < 0",
-   false,
-   false,
-   false
-  ],
-  "HAG": [
-   "2026Q2",
-   32.3,
-   true,
-   "ICR 1.01 < 1.5",
-   true,
    false,
    false
   ],
   "SSB": [
-   "2026Q2",
-   32.3,
+   "2026Q3",
+   47.3,
    false,
    "",
    false,
    false,
    false
   ],
-  "VTP": [
-   "2026Q2",
-   30.8,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "FPT": [
-   "2026Q2",
-   30.5,
+  "SAB": [
+   "2026Q3",
+   46.8,
    false,
    "",
    false,
@@ -4867,53 +5883,242 @@
    false
   ],
   "DCL": [
-   "2026Q2",
-   29.6,
+   "2026Q3",
+   44.6,
    true,
-   "ICR 0.64 < 1.5",
+   "ICR 0.45 < 1.5",
    false,
    false,
    false
   ],
-  "VJC": [
-   "2026Q2",
-   29.2,
-   true,
-   "ICR 0.98 < 1.5",
-   false,
-   false,
-   false
-  ],
-  "CTS": [
-   "2026Q2",
-   28.7,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "VIX": [
-   "2026Q2",
-   27.7,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "CII": [
-   "2026Q2",
-   27.5,
+  "VPI": [
+   "2026Q3",
+   44.4,
    true,
    "CFO < 0",
    false,
    false,
    false
   ],
-  "EVF": [
+  "TCB": [
+   "2026Q3",
+   43.9,
+   false,
+   "",
+   false,
+   false,
+   true
+  ],
+  "MCH": [
+   "2026Q3",
+   41.8,
+   false,
+   "",
+   false,
+   false,
+   true
+  ],
+  "VNM": [
+   "2026Q3",
+   41.8,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "PVD": [
+   "2026Q3",
+   41.7,
+   false,
+   "",
+   true,
+   false,
+   true
+  ],
+  "ACB": [
+   "2026Q3",
+   41.5,
+   false,
+   "",
+   false,
+   false,
+   true
+  ],
+  "PLX": [
+   "2026Q3",
+   41.5,
+   false,
+   "",
+   false,
+   false,
+   true
+  ],
+  "MBS": [
+   "2026Q3",
+   41.4,
+   false,
+   "",
+   false,
+   false,
+   true
+  ],
+  "BCM": [
+   "2026Q3",
+   41.0,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "VPB": [
+   "2026Q3",
+   39.4,
+   true,
+   "NPL 3.12% > 3%",
+   false,
+   false,
+   false
+  ],
+  "PVP": [
+   "2026Q3",
+   39.1,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "VJC": [
+   "2026Q3",
+   39.1,
+   true,
+   "ICR 0.94 < 1.5",
+   false,
+   false,
+   false
+  ],
+  "ANV": [
+   "2026Q3",
+   38.8,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "PVS": [
+   "2026Q3",
+   37.7,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "SBT": [
    "2026Q2",
-   27.0,
+   37.6,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "CII": [
+   "2026Q3",
+   37.5,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "BVH": [
+   "2026Q3",
+   37.2,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "GVR": [
+   "2026Q3",
+   36.6,
+   false,
+   "",
+   true,
+   false,
+   false
+  ],
+  "VCB": [
+   "2026Q3",
+   36.4,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "MZG": [
+   "2026Q3",
+   36.0,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "HAH": [
+   "2026Q3",
+   33.9,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "VIB": [
+   "2026Q3",
+   33.9,
+   true,
+   "NPL 3.20% > 3%",
+   false,
+   false,
+   false
+  ],
+  "HSG": [
+   "2026Q2",
+   33.0,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "BSI": [
+   "2026Q3",
+   32.8,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "HAG": [
+   "2026Q3",
+   32.4,
+   true,
+   "ICR 1.06 < 1.5",
+   false,
+   false,
+   false
+  ],
+  "VCG": [
+   "2026Q3",
+   31.9,
    true,
    "CFO < 0",
    false,
@@ -4921,107 +6126,8 @@
    false
   ],
   "SHS": [
-   "2026Q2",
-   26.3,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "BID": [
-   "2026Q2",
-   26.1,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "NKG": [
-   "2026Q2",
-   24.4,
-   true,
-   "ICR 1.19 < 1.5",
-   false,
-   false,
-   false
-  ],
-  "TPB": [
-   "2026Q2",
-   23.9,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "VC3": [
-   "2026Q2",
-   22.5,
-   true,
-   "CFO < 0",
-   true,
-   false,
-   false
-  ],
-  "MCH": [
-   "2026Q2",
-   22.2,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "DBC": [
-   "2026Q2",
-   22.0,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "HHV": [
-   "2026Q2",
-   22.0,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "BCM": [
-   "2026Q2",
-   21.8,
-   true,
-   "CFO < 0",
-   true,
-   false,
-   false
-  ],
-  "HUT": [
-   "2026Q2",
-   21.8,
-   true,
-   "CFO < 0",
-   true,
-   false,
-   false
-  ],
-  "SHB": [
-   "2026Q2",
-   21.5,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "ACB": [
-   "2026Q2",
-   21.4,
+   "2026Q3",
+   31.1,
    false,
    "",
    false,
@@ -5029,92 +6135,263 @@
    false
   ],
   "NVL": [
-   "2026Q2",
-   20.4,
+   "2026Q3",
+   30.5,
    true,
    "CFO < 0",
    false,
    false,
    false
   ],
-  "PNJ": [
-   "2026Q2",
-   20.0,
-   false,
-   "",
-   false,
-   false,
-   false
-  ],
-  "CEO": [
-   "2026Q2",
-   18.6,
+  "OCB": [
+   "2026Q3",
+   27.6,
    true,
-   "CFO < 0",
-   false,
-   false,
-   false
-  ],
-  "NLG": [
-   "2026Q2",
-   18.6,
-   true,
-   "CFO < 0",
-   false,
-   false,
-   false
-  ],
-  "DXG": [
-   "2026Q2",
-   17.9,
-   false,
-   "",
-   true,
-   false,
-   false
-  ],
-  "EIB": [
-   "2026Q2",
-   16.4,
-   true,
-   "NPL 3.08% > 3%",
-   false,
-   false,
-   false
-  ],
-  "DXS": [
-   "2026Q2",
-   15.8,
-   true,
-   "CFO < 0",
-   false,
-   false,
-   false
-  ],
-  "VIB": [
-   "2026Q2",
-   14.0,
-   false,
-   "",
+   "NPL 3.99% > 3%",
    false,
    false,
    false
   ],
   "VAB": [
-   "2026Q2",
-   12.6,
+   "2026Q3",
+   27.6,
    false,
    "",
    false,
    false,
    false
   ],
-  "KBC": [
-   "2026Q2",
-   12.2,
+  "VIX": [
+   "2026Q3",
+   27.3,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "VCI": [
+   "2026Q3",
+   26.4,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "VND": [
+   "2026Q3",
+   26.0,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "TCX": [
+   "2026Q3",
+   25.9,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "FPT": [
+   "2026Q3",
+   25.5,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "DIG": [
+   "2026Q3",
+   23.6,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "SSI": [
+   "2026Q3",
+   22.8,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "VC3": [
+   "2026Q3",
+   22.6,
+   false,
+   "",
+   true,
+   false,
+   false
+  ],
+  "PDR": [
+   "2026Q3",
+   22.3,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "VRE": [
+   "2026Q3",
+   22.0,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "HUT": [
+   "2026Q3",
+   21.9,
    true,
    "CFO < 0",
    true,
+   false,
+   false
+  ],
+  "EVF": [
+   "2026Q3",
+   21.7,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "KDH": [
+   "2026Q3",
+   21.6,
+   false,
+   "",
+   true,
+   false,
+   false
+  ],
+  "VSC": [
+   "2026Q3",
+   21.4,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "GEX": [
+   "2026Q3",
+   20.8,
+   false,
+   "",
+   true,
+   false,
+   false
+  ],
+  "DXG": [
+   "2026Q3",
+   17.7,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "DBC": [
+   "2026Q3",
+   17.5,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "HDC": [
+   "2026Q3",
+   14.5,
+   true,
+   "CFO < 0",
+   true,
+   false,
+   false
+  ],
+  "CTS": [
+   "2026Q3",
+   13.7,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "NLG": [
+   "2026Q3",
+   13.0,
+   true,
+   "CFO < 0",
+   true,
+   false,
+   false
+  ],
+  "CEO": [
+   "2026Q3",
+   12.9,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "EIB": [
+   "2026Q3",
+   11.4,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "DPM": [
+   "2026Q3",
+   11.1,
+   false,
+   "",
+   false,
+   false,
+   false
+  ],
+  "DXS": [
+   "2026Q3",
+   10.6,
+   true,
+   "CFO < 0",
+   false,
+   false,
+   false
+  ],
+  "KOS": [
+   "2026Q3",
+   10.0,
+   true,
+   "ICR 1.40 < 1.5",
+   false,
+   false,
+   false
+  ],
+  "PNJ": [
+   "2026Q3",
+   10.0,
+   true,
+   "CFO < 0",
+   false,
    false,
    false
   ],
@@ -5128,15 +6405,6 @@
    false
   ],
   "ACV": [
-   null,
-   null,
-   true,
-   "Chưa có BCTC",
-   false,
-   false,
-   false
-  ],
-  "DRI": [
    null,
    null,
    true,
