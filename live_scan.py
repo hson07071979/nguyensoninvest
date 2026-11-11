@@ -337,6 +337,12 @@ def chot_phien(CF, syms, fresh, ses, today, now, spec_ok):
     return rec
 
 
+def so_ma_chinh(op):
+    """So ma dang cam KHONG tinh vi the cua V (door='V') — dung cho he so 'lenh thu 3 x0,5', dung nhu engine2
+    (R50, 11/11/2026: cua V co co rieng, khong lam nho lenh cua cua chinh)."""
+    return sum(1 for p in (op or []) if p.get('door') != 'V')
+
+
 def co_lenh(h, T, den):
     """Size shown in the alert = the SHARED allocator (allocator.py) applied to the
     live paper book, not a hand-typed 42% x light. Returns (theoretical %, actual %,
@@ -361,7 +367,7 @@ def co_lenh(h, T, den):
             nav = (P.get('cash') + inv) if P.get('cash') is not None else 1e9
             cash = P.get('cash', nav)
             sec = sum(val(p) for p in op if (p.get('sector') or 'Khác') == (sp.get('sector') or 'Khác'))
-        A = AL.entry_target(nav, cash, inv, sec, len(op), den, risk_mul=sp.get('rmul', 1.0),
+        A = AL.entry_target(nav, cash, inv, sec, so_ma_chinh(op), den, risk_mul=sp.get('rmul', 1.0),
                             base_rng=sp.get('base'), cfg=CF)
         return (round(A['theoretical'] / nav * 100, 1), round(A['actual'] / nav * 100, 1),
                 [AL.REASON_VI.get(x, x) for x in (A['reasons'] + ([A['binding']] if not A['ok'] else []))],
@@ -390,7 +396,7 @@ def doi_ngua_live(h, T, den, quotes=None):
         nav = float(B['nav']); cash = float(B.get('cash', nav - inv))
         ng = sp.get('sector') or 'Khác'
         secv = lambda L: sum(float(p.get('value') or 0) for p in L if (p.get('sector') or 'Khác') == ng)
-        A = AL.entry_target(nav, cash, inv, secv(op), len(op), den, risk_mul=sp.get('rmul', 1.0),
+        A = AL.entry_target(nav, cash, inv, secv(op), so_ma_chinh(op), den, risk_mul=sp.get('rmul', 1.0),
                             base_rng=sp.get('base'), cfg=CF)
         if not AL.can_doi_ngua(A, inv, nav, CF):
             return None
@@ -402,7 +408,9 @@ def doi_ngua_live(h, T, den, quotes=None):
             cr = p.get('cost_raw')
             g = (px * (1 - fee) / float(cr) - 1) if (px > 0 and cr) else p.get('gain')
             # so he thong la cua phien truoc -> hom nay da giu them 1 phien
-            cands.append(dict(p, gain=g, held=int(p.get('held') or 0) + 1, px_now=px or None))
+            # vi the cua V khong bi doi ngua (engine2 danh dau nhu lenh Hard)
+            cands.append(dict(p, gain=g, held=int(p.get('held') or 0) + 1, px_now=px or None,
+                              hard=(p.get('hard') or ('V' if p.get('door') == 'V' else None))))
         ch = AL.chon_doi_ngua(cands, CF, bo=(h['sym'],))
         if not ch:
             return None
@@ -411,7 +419,7 @@ def doi_ngua_live(h, T, den, quotes=None):
         if ch.get('px_now') and ch.get('shares'):
             v = float(ch['px_now']) * int(ch['shares'])
         # co lenh moi giu he so 'lenh thu 3' tinh TRUOC khi ban (n_open = so ma truoc ban, dung engine2)
-        A2 = AL.entry_target(nav, cash + v * (1 - fee), inv - float(ch.get('value') or 0), secv(con), len(op), den,
+        A2 = AL.entry_target(nav, cash + v * (1 - fee), inv - float(ch.get('value') or 0), secv(con), so_ma_chinh(op), den,
                              risk_mul=sp.get('rmul', 1.0), base_rng=sp.get('base'), cfg=CF)
         return dict(sym=ch['sym'], gain=ch['gain'], px=ch.get('px_now'), shares=ch.get('shares'),
                     thuc=round(A2['actual'] / nav * 100, 1), tien=A2['actual'], truoc=round(A['actual'] / nav * 100, 1))
@@ -722,7 +730,8 @@ def danh_gia_thoat(P, rows, CF, ses, now, light_today=None):
             b20 = b20 + 1 if (m30 is not None and px_adj < m30) else 0
         # den TAM TINH cua hom nay (regime_live): luat "Den Cam — ha 1/3" nay moi bao duoc trong phien
         st = ER.status(CF, gain, peak, held, probe_fail=bool(p.get('probe_fail')), b10=b10, b20=b20,
-                       light_today=light_today, light_entry=p.get('light'), part=bool(p.get('part')))
+                       light_today=light_today, light_entry=p.get('light'), part=bool(p.get('part')),
+                       **({'door': p['door']} if p.get('door') else {}))
         # TY TRONG BAN (27/09/2026): bao nhieu co phieu, bao nhieu % vi the, bao nhieu % NAV so
         _ph = float(st.get('exit_phan') or 1.0)
         _sh = int(p['sh'] * _ph // 100 * 100) if _ph < 1 else int(p['sh'])
@@ -854,6 +863,9 @@ def gui_tom_tat(T, PF, ses, cu, now):
         L.append(f"Tài khoản sổ thực tế: {float(PF['nav'])/1e9:.3f} tỷ".replace('.', ','))
     # lenh mua thu hom nay: xac nhan / khong
     st = [x for x in (T.get('signals_today') or []) if x.get('probe')]
+    for x in (T.get('signals_today') or []):
+        if x.get('door') == 'V':
+            L.append(f"{x['sym']}: MUA cửa V (thủng nền rồi bật lại) — mua thẳng, giữ theo luật thoát thường")
     for x in st:
         L.append(f"{x['sym']}: " + ("lệnh mua lớn hơn lệnh bán ✅ → GIỮ" if x.get('cond9_ok')
                                     else f"lệnh mua KHÔNG lớn hơn lệnh bán → bán ATC phiên thứ {(T.get('cfg') or {}).get('sell_from', 3)}"))
@@ -863,6 +875,123 @@ def gui_tom_tat(T, PF, ses, cu, now):
     if gui_tin('\n'.join(L), md=False, prio=3, tags=['bar_chart']):
         return [key]
     return []
+
+
+# =============================================================================
+# CUA V (R50, PROD tu 11/11/2026) — cua vao thu hai: ma pha nen roi giat nguoc chu V len >= 20% trong 2 tuan.
+# Bo may (engine2.v_theo_doi) moi toi xuat thresholds.json['cua_v']['ds']: ma + gia DONG CUA can dat (`can`, dong)
+# cho PHIEN KE TIEP. O day chi so gia trong phien voi `can` — KHONG co luat nao khac. Mua THANG (khong phai lenh
+# do, khong cho DK9), co cfg.v_size x NAV qua allocator, toi da v_per_day ma/phien (KL/TB20 cao nhat), toi da
+# v_max_n vi the V. Chuong tu gio chot (14:25) toi 14:45 — cung khung voi lenh mua do. Toi: gia dong cua khong
+# con >= `can`, hoac het luot -> nhac ban ATC T+sell_from (bo may khong ghi lenh do).
+# =============================================================================
+def cua_v_xet(T, CF, ses, rows, bo=()):
+    """-> list ung vien DA dat gia `can` o phien `ses` (theo gia hien tai / dong cua), xep KL/TB20 giam dan.
+    rows: {ma: dong HistoricalQuotes}; ma thieu thi tai rieng (phien_row). Ma dang cam / bi loai bi bo qua."""
+    cv = (T or {}).get('cua_v') or {}
+    if not (cv.get('bat') and (CF or {}).get('v_door')):
+        return []
+    cam = {p['sym'] for p in ((T.get('book') or {}).get('positions') or [])}
+    ds = [x for x in (cv.get('ds') or []) if x.get('sym') and x['sym'] not in cam and x['sym'] not in set(bo)]
+    out = []
+    for x in ds:
+        r = rows.get(x['sym'])
+        if not r or str(r.get('Date', ''))[:10] != ses:
+            r = phien_row(x['sym'], ses)
+            if r is KHONG_RO or not r:
+                continue
+        try:
+            px = float(r.get('PriceClose') or 0); kl = float(r.get('Volume') or 0)
+        except (TypeError, ValueError):
+            continue
+        if px <= 0 or px < float(x['can']):
+            continue
+        vm = float(x.get('vma20') or 0)
+        out.append(dict(x, gia=px, volr=round(kl / vm, 2) if vm > 0 else 0.0))
+    out.sort(key=lambda z: (-z['volr'], z['sym']))
+    return out
+
+
+def cua_v_co(x, T, CF):
+    """Co lenh cua V theo allocator (cfg.v_size x NAV, khong nhan den, khong 'lenh thu 3'). -> (pct NAV, tien, ly do)."""
+    try:
+        import allocator as AL
+        B = T.get('book') or {}
+        if not B.get('nav'):
+            return None, None, []
+        op = B.get('positions') or []
+        inv = sum(float(p.get('value') or 0) for p in op)
+        nav = float(B['nav']); cash = float(B.get('cash', nav - inv))
+        sec = sum(float(p.get('value') or 0) for p in op if (p.get('sector') or 'Khác') == (x.get('sector') or 'Khác'))
+        A = AL.entry_target(nav, cash, inv, sec, 0, None, risk_mul=x.get('rmul', 1.0), base_rng=None,
+                            cfg=dict(CF, base_size=float(CF.get('v_size') or 0.15), nth_mul=None, max_pos_n=10 ** 9),
+                            light_mul=1.0)
+        if not A['ok']:
+            return 0.0, 0.0, [AL.REASON_VI.get(A['binding'], A['binding'])]
+        return round(A['actual'] / nav * 100, 1), A['actual'], [AL.REASON_VI.get(k, k) for k in A['reasons']]
+    except Exception as e:
+        print('cua_v_co loi:', e)
+        return None, None, []
+
+
+def cua_v_phien(T, CF, ses, now, rows, cu, bo=(), hop_le=True):
+    """Chuong + ban ghi cua V cho live.json. Tra ve (khoa da keu, ban ghi, dong nhac ban moi)."""
+    cv = (T or {}).get('cua_v') or {}
+    rec = dict(session=ses, bat=bool(cv.get('bat') and (CF or {}).get('v_door')), theo_doi=len(cv.get('ds') or []), dat=[])
+    if not rec['bat'] or not hop_le or now.weekday() >= 5:
+        return [], rec, []
+    t = now.hour + now.minute / 60
+    hm = gio_chot(CF)
+    tu = (hm // 100 + (hm % 100) / 60) if hm else MUA_DO_TU
+    if t < tu:
+        return [], rec, []
+    dat = cua_v_xet(T, CF, ses, rows, bo)
+    op = (T.get('book') or {}).get('positions') or []
+    con = max(0, int(CF.get('v_max_n') or 3) - sum(1 for p in op if p.get('door') == 'V'))
+    if len(op) >= int(CF.get('max_pos_n') or 12):
+        con = 0
+    luot = min(con, int(CF.get('v_per_day') or 1))
+    for k, x in enumerate(dat):
+        x['duoc_mua'] = k < luot
+    rec['dat'] = [dict(sym=x['sym'], gia=round(x['gia'] / 1000, 2), can=round(float(x['can']) / 1000, 2),
+                       volr=x['volr'], duoc_mua=x['duoc_mua']) for x in dat]
+    da, nhac = [], []
+    sf = int(CF.get('sell_from', 3) or 3)
+    cap = int(CF.get('v_hold_cap') or 40)
+    if tu <= t <= MUA_DO_DEN and kenh_co():
+        moi = [x for x in dat if x['duoc_mua'] and 'V:' + x['sym'] not in cu]
+        if moi:
+            dong = [f"\U0001F7E3 *CỬA V — MUA* · phiên {ses} · {now:%H:%M}", '']
+            for x in moi:
+                pct, tien, ly = cua_v_co(x, T, CF)
+                size = (f"cỡ *{pct:.1f}% NAV*" + (f" ≈ *{tien/1e6:,.0f} triệu*" if tien else '')) if pct else \
+                       ("*không còn chỗ* (" + ', '.join(ly) + ")" if pct == 0.0 else "cỡ: không tính được")
+                dong.append(f"*{x['sym']}*  {x['gia']/1000:.2f} — vừa thủng nền rồi bật lại ≥ {float(CF.get('v_up') or 0.2)*100:.0f}% "
+                            f"từ đáy {float(x['day'])/1000:.2f} (cần đóng cửa ≥ {float(x['can'])/1000:.2f}) · vol {x['volr']}×\n   {size}")
+            dong += ['', "Mua thẳng (LO), *không phải lệnh dò*, không chờ Điều kiện 9.",
+                     f"Bán theo luật thoát thường; giữ tối đa {cap} phiên.",
+                     f"Tối chấm lại bằng giá đóng cửa: không còn đủ thì bán 100% ATC T+{sf}."]
+            if len(dat) > luot:
+                dong.append("Đủ giá nhưng hết lượt (mỗi phiên 1 mã, KL/TB20 cao nhất): "
+                            + ', '.join(x['sym'] for x in dat if not x['duoc_mua']))
+            if gui_tin('\n'.join(dong), md=True, prio=5, tags=['purple_circle']):
+                da += ['V:' + x['sym'] for x in moi]
+    # Toi (so dong cua): ma DA bao mua ma gio khong con dat gia / het luot -> bo may khong co lenh -> nhac ban
+    if t >= 15.25:
+        ok = {x['sym'] for x in dat if x['duoc_mua']}
+        for key in sorted(k for k in cu if k.startswith('V:')):
+            s_ = key[2:]
+            if s_ in ok or 'VX:' + s_ in cu:
+                continue
+            ly = ('hết lượt cửa V (mã khác KL/TB20 cao hơn)' if any(x['sym'] == s_ for x in dat)
+                  else 'giá đóng cửa không còn đủ mức cửa V')
+            ngay_ban = phien_cong(ses, sf)
+            nhac.append(dict(sym=s_, mua=ses, ban=ngay_ban, ly_do=ly))
+            if kenh_co() and gui_tin(f"\u26AA *CỬA V KHÔNG ĐƯỢC XÁC NHẬN* — phiên {ses}\n\n*{s_}*: {ly} → "
+                                     f"*bán 100% ATC ngày {ngay_ban[8:10]}/{ngay_ban[5:7]}* (T+{sf}, dự kiến) nếu đã mua. "
+                                     "Sẽ nhắc lại lúc 14h hôm đó.", md=True, prio=4):
+                da.append('VX:' + s_)
+    return da, rec, nhac
 
 
 def loai_so_tay():
@@ -1497,6 +1626,16 @@ def main():
         da_keu += gui_tom_tat(T, PF, ses, _cu, now) or []
     except Exception as e:
         print('tom tat loi:', type(e).__name__, e)
+    # CUA V (R50, 11/11/2026): chuong mua thang khi gia cham muc `can` cua bang theo doi toi qua
+    try:
+        _kv, out['cua_v'], _nv = cua_v_phien(T, CF, ses, now, {**rows_pf, **rows}, _cu, BO,
+                                             hop_le=(spec_for_session and ses == today))
+        da_keu += _kv
+        for x in _nv:
+            if not any(y.get('sym') == x['sym'] and y.get('mua') == x['mua'] for y in nhac):
+                nhac.append(x)
+    except Exception as e:
+        print('cua V loi:', type(e).__name__, e)
     out['alerted'] = dict(session=ses, syms=sorted((cu_mua if cu_ses == ses else set()) | set(da_keu)))
     out['nhac_ban'] = nhac
     out['chot'] = chot_rec

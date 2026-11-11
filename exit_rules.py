@@ -70,7 +70,7 @@ def is_lock_reason(r):
 
 
 def decide(C, gain, peak, held, probe_fail=False, b10=0, b20=0, light_today=None,
-           light_entry=None, part=False):
+           light_entry=None, part=False, door=None):
     """Production exit chain for ONE position on ONE close. Mirrors engine2 order:
         0 failed probe (Cond9)          -> sell at the first sellable close
         1 hard stop  gain <= -10%       (from hs_from = sell_from)
@@ -79,6 +79,7 @@ def decide(C, gain, peak, held, probe_fail=False, b10=0, b20=0, light_today=None
         4 [legacy breakeven, only if use_be — OFF in PROD since 26/09]
         5 S1 profit lock
         6 time valve held >= t_valve and gain <= valve_min
+        6b CUA V (door='V', R50 11/11/2026): held >= v_hold_cap -> ban (tran thoi gian 8 tuan); cac luat khac y het
         7 MA10       peak >= big_win and b10 >= conf
         8 MA30       b20 >= conf
         9 Cam light  sell 1/3 when light worsens to CAM (partial)
@@ -112,6 +113,8 @@ def decide(C, gain, peak, held, probe_fail=False, b10=0, b20=0, light_today=None
             return lock_reason(trig, floor), 1.0
         if h >= C.get('t_valve', 4) and gain <= C.get('valve_min', 0.0):
             return 'Van thời gian T+%d' % C.get('t_valve', 4), 1.0
+        if door == 'V' and C.get('v_hold_cap') and h >= int(C['v_hold_cap']):
+            return 'Cửa V: hết %d phiên' % int(C['v_hold_cap']), 1.0
         if peak >= C.get('big_win', 0.19) and b10 >= C.get('conf', 2):
             return 'Trailing MA%d (lãi lớn)' % C.get('trail_fast', 10), 1.0
         if b20 >= C.get('conf', 2):
@@ -173,7 +176,7 @@ def status(C, gain, peak, held, **kw):
 # đã bật -> "đóng cửa ≤ X thì BÁN HẾT ATC". Các luật vẫn tính bằng giá ĐÓNG CỬA.
 # Đơn vị giá: giá ĐIỀU CHỈNH cùng thang với cost (giá vốn đã gồm phí mua, như engine2).
 # =============================================================================
-def _ban_tai(C, cost, peak, held, prev, b10, b20, c, probe_fail=False, part=False):
+def _ban_tai(C, cost, peak, held, prev, b10, b20, c, probe_fail=False, part=False, door=None):
     gain = c / cost - 1
     pk = max(float(peak), gain)
     nf, ns = int(C.get('trail_fast', 10)), int(C.get('trail_ma', 30))
@@ -182,7 +185,7 @@ def _ban_tai(C, cost, peak, held, prev, b10, b20, c, probe_fail=False, part=Fals
     m30 = sum(seq[-ns:]) / ns if len(seq) >= ns else None
     nb10 = b10 + 1 if (m10 is not None and c < m10) else 0
     nb20 = b20 + 1 if (m30 is not None and c < m30) else 0
-    return decide(C, gain, pk, held, probe_fail=probe_fail, b10=nb10, b20=nb20, part=part)
+    return decide(C, gain, pk, held, probe_fail=probe_fail, b10=nb10, b20=nb20, part=part, door=door)
 
 
 def buoc_gia(px):
@@ -190,7 +193,7 @@ def buoc_gia(px):
     return 10 if px < 10000 else (50 if px < 50000 else 100)
 
 
-def ke_hoach_ban(C, cost, peak, held_next, prev_closes, b10=0, b20=0, probe_fail=False, part=False, fx=1.0):
+def ke_hoach_ban(C, cost, peak, held_next, prev_closes, b10=0, b20=0, probe_fail=False, part=False, fx=1.0, door=None):
     """Kế hoạch cho phiên tới của MỘT vị thế.
     cost: giá vốn (đ/cp, đã gồm phí mua, thang điều chỉnh); peak: đỉnh lãi theo giá đóng cửa
     tới phiên gần nhất (phân số); held_next: số phiên đã giữ TÍNH CẢ phiên tới; prev_closes:
@@ -206,7 +209,7 @@ def ke_hoach_ban(C, cost, peak, held_next, prev_closes, b10=0, b20=0, probe_fail
         C = {k: v for k, v in C.items() if v is not None}
     prev = [float(x) for x in prev_closes if x == x]
     sf = int(C.get('sell_from', 2) or 2)
-    f = lambda c: _ban_tai(C, cost, peak, held_next, prev, b10, b20, c, probe_fail, part)
+    f = lambda c: _ban_tai(C, cost, peak, held_next, prev, b10, b20, c, probe_fail, part, door)
     hi, lo = cost * 3.0, cost * 0.3
     out = dict(viec='GIU', nguong=None, ly_do=None, held=int(held_next), sell_from=sf, moc={})
     d_hi = f(hi)

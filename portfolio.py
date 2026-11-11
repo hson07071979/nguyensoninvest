@@ -546,6 +546,12 @@ def ap_hard_tre(P, T, C, cho, truoc, lights, nhat_ky, CACHE, ASOF):
     return moi
 
 
+def _door(p):
+    """Vi the mo bang CUA V (R50, 11/11/2026) mang door='V' -> exit_rules them tran thoi gian v_hold_cap.
+    Chi truyen khi co, de vi the thuong goi exit_rules dung nhu cu."""
+    return {'door': p['door']} if p.get('door') else {}
+
+
 def _cham(P, C, ses, light, nhat_ky, CACHE, ASOF, mo):
     """CHAM SOC cac vi the `mo` toi het phien `ses` (luat thoat exit_rules.decide, xu ly tang dan
     tu last_done). Tra ve cac vi the con giu. Tach khoi mot_phien ngay 28/10/2026 de lenh Hard
@@ -620,7 +626,7 @@ def _cham(P, C, ses, light, nhat_ky, CACHE, ASOF, mo):
             # T+sell_from khong ban gi ca (tra ve rule=None, pending = luat dang cham).
             dq = ER.decide(C, gain, peak, held, probe_fail=bool(p.get('probe_fail')), b10=b10, b20=b20,
                            light_today=(light if ngays[i] == ses else None), light_entry=p.get('light'),
-                           part=bool(p.get('part')))
+                           part=bool(p.get('part')), **_door(p))
             r, phan = dq['rule'], dq['phan']
             if r:
                 p['_floor'] = dq['floor']
@@ -640,7 +646,7 @@ def _cham(P, C, ses, light, nhat_ky, CACHE, ASOF, mo):
             p.update(ER.status(C, p['_gain'], float(p.get('peak') or 0.0), _h,
                                probe_fail=bool(p.get('probe_fail')), b10=int(p.get('b10') or 0),
                                b20=int(p.get('b20') or 0), light_today=(light if ngays[-1] == ses else None),
-                               light_entry=p.get('light'), part=bool(p.get('part'))))
+                               light_entry=p.get('light'), part=bool(p.get('part')), **_door(p)))
             p['earliest_sell'] = ngays[i0 + _sf] if i0 + _sf < len(ngays) else f"T+{_sf}"
             p['cost_basis'] = 'cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1'
             # 30 gia dong cua dieu chinh gan nhat: de lop quet trong phien tinh MA10/MA30 voi gia hom nay
@@ -687,24 +693,29 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF,
     for h in (signals or []):
         if h.get('date') != ses:
             continue
+        la_v = h.get('door') == 'V'      # CUA V: mua thang, khong qua lenh do / DK9
         dat9 = (h.get('ordimb') or 0) >= C.get('ordimb_min', 1.4)
-        if C.get('use_ordimb', True) and not dat9 and C.get('stage1') is None:
+        if C.get('use_ordimb', True) and not dat9 and C.get('stage1') is None and not la_v:
             nhat_ky.append(f"TỪ CHỐI {h['sym']} — Điều kiện 9 không đạt ({h.get('ordimb')})")
             continue
         if h['sym'] in dang_cam or h['sym'] in loai:
             continue
         muon_mua.append(dict(h, price=float(h['price']) / 1000,
                              # R48 chot 14:25: ma chot ma dong cua rot DK1-8 -> lenh do truot nhu engine2 (oi_ok=False)
-                             _probe_fail=bool(C.get('stage1') is not None and C.get('use_ordimb', True)
+                             _probe_fail=bool((not la_v) and C.get('stage1') is not None and C.get('use_ordimb', True)
                                               and (not dat9 or h.get('dat_dk18_dong_cua') is False))))
     # thu tu uu tien = DUNG thu tu bo may da xep (signals_today.uu_tien, engine2.rank_rows theo
     # cfg.rank_mode — PROD 'score_volr' tu 22/10/2026). Ban thresholds cu chua co uu_tien -> lui ve
     # allocator.xep_uu_tien (cung cong thuc), roi diem giam dan.
+    # CUA V dung SAU cua chinh (engine2: cua chinh luon duoc dung tien truoc), giu thu tu bo may da ghi.
+    mua_v = [h for h in muon_mua if h.get('door') == 'V']
+    muon_mua = [h for h in muon_mua if h.get('door') != 'V']
     if all(h.get('uu_tien') is not None for h in muon_mua):
         muon_mua.sort(key=lambda h: (h['uu_tien'], h['sym']))
     else:
         _thu = {x['sym']: x['uu_tien'] for x in AL.xep_uu_tien(muon_mua, C)}
         muon_mua.sort(key=lambda h: (_thu[h['sym']], h['sym']))
+    muon_mua += mua_v
 
     for h in muon_mua:
         px = float(h['price']) * 1000
@@ -713,8 +724,9 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF,
         # TOI DA N LENH DO TREO (cfg.max_unconf; PROD max 1 tu 03/10/2026, max 2 tu 23/10/2026 — R31) — cung dinh nghia engine2 stage 1/3:
         # lenh mua trong phien nay (chua co DK9 luc ATC) + lenh da truot DK9 chua ban (buoc 1 da
         # ban cac lenh toi T+3, nen probe_fail con trong so = con treo).
-        n_treo = sum(1 for p in P['open'] if p.get('entry') == ses or p.get('probe_fail'))
-        if AL.unconf_blocked(n_treo, C):
+        la_v = h.get('door') == 'V'
+        n_treo = sum(1 for p in P['open'] if (p.get('entry') == ses and p.get('door') != 'V') or p.get('probe_fail'))
+        if not la_v and AL.unconf_blocked(n_treo, C):
             nhat_ky.append(f"BỎ QUA {h['sym']} — {AL.REASON_VI.get('max_unconf')} "
                            f"({n_treo} lệnh treo, tối đa {C.get('max_unconf')})")
             continue
@@ -742,8 +754,16 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF,
                     nhat_ky.append(f"CẢNH BÁO: ĐỔI NGỰA {_bd['sym']} — không tải được nến / thiếu k_adj, bỏ qua bán")
         inv = tong(); nav = P['cash'] + inv
         sec = sum(p['sh'] * gia(p) for p in P['open'] if (p.get('sector') or 'Khác') == nganh)
-        A = AL.entry_target(nav, P['cash'], inv, sec, len(P['open']), light,
-                            risk_mul=sp.get('rmul', 1.0), base_rng=sp.get('base'), cfg=T.get('cfg') or {})
+        _cfgT = T.get('cfg') or {}
+        if la_v:
+            # co rieng cua cua V: v_size x NAV, khong nhan den, khong 'lenh thu 3' — van qua moi tran cua allocator
+            A = AL.entry_target(nav, P['cash'], inv, sec, 0, None, risk_mul=sp.get('rmul', 1.0), base_rng=None,
+                                cfg=dict(_cfgT, base_size=float(_cfgT.get('v_size') or C.get('v_size') or 0.15),
+                                         nth_mul=None, max_pos_n=10 ** 9), light_mul=1.0)
+        else:
+            # so ma dang cam KHONG tinh vi the cua V (engine2 _npos) -> he so 'lenh thu 3' dung nhu bo may
+            A = AL.entry_target(nav, P['cash'], inv, sec, sum(1 for p in P['open'] if p.get('door') != 'V'), light,
+                                risk_mul=sp.get('rmul', 1.0), base_rng=sp.get('base'), cfg=_cfgT)
         if not A['ok']:
             nhat_ky.append(f"BỎ QUA {h['sym']} — {AL.REASON_VI.get(A['binding'], A['binding'])}")
             continue
@@ -758,11 +778,14 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF,
             book_id=BOOK_ID, position_source='engine_signal', nav_source='portfolio.json',
             sym=h['sym'], name=h.get('name') or th.get('name', ''), sector=nganh,
             entry=ses, entry_px=px, cost_px=c_px, sh=sh, cost=round(chi),
-            peak=0.0, b10=0, b20=0, part=False, pyr=False, held=0,
+            # cua V khong nhoi (pyr=True chan lop kim tu thap, nhu engine2)
+            peak=0.0, b10=0, b20=0, part=False, pyr=bool(la_v), held=0,
             light=light, score=h.get('score'), ordimb=h.get('ordimb'),
             probe_fail=h.get('_probe_fail', False),
-            # DK9 tu so toi ngay mua: DAT / TRUOT / CHUA_CO (27/09/2026 — cot DK9 o Danh muc)
-            cond9=('CHUA_CO' if h.get('ordimb') is None else ('DAT' if h['ordimb'] >= C.get('ordimb_min', 1.4) else 'TRUOT')),
+            # DK9 tu so toi ngay mua: DAT / TRUOT / CHUA_CO (27/09/2026 — cot DK9 o Danh muc); cua V: khong ap dung
+            cond9=('CUA_V' if la_v else
+                   ('CHUA_CO' if h.get('ordimb') is None else ('DAT' if h['ordimb'] >= C.get('ordimb_min', 1.4) else 'TRUOT'))),
+            **({'door': 'V', 'v_low': h.get('v_low'), 'v_up': h.get('v_up')} if la_v else {}),
             ordimb_min=C.get('ordimb_min', 1.4),
             prod_config_hash=T.get('prod_config_hash'),
             size_theo=round(A['theoretical'] / nav * 100, 2), size_reasons=A['reasons'],
@@ -770,7 +793,7 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF,
         P['open'][-1]['x0'] = ty_trong(P, h['sym'], nganh, ses, gia)
         # vi the vua mua cung phai co trang thai cua ra (T+0: chua ban duoc)
         P['open'][-1].update(ER.status(C, px / c_px - 1, 0.0, 0, probe_fail=bool(h.get('_probe_fail')),
-                                       light_today=light, light_entry=light))
+                                       light_today=light, light_entry=light, **_door(P['open'][-1])))
         P['open'][-1]['earliest_sell'] = f"T+{int(C.get('sell_from', 2) or 2)}"
         if h.get('_probe_fail'):
             nhat_ky.append(f"MUA DÒ {h['sym']} " + (f"lúc chốt {int(C.get('chot_phut') or 1425) // 100:02d}:{int(C.get('chot_phut') or 1425) % 100:02d}" if h.get('chot') else "lúc ATC") +
@@ -778,10 +801,16 @@ def mot_phien(P, T, C, ses, light, signals, loai, syms_th, nhat_ky, CACHE, ASOF,
                            f" — tối ĐK9 = {h.get('ordimb')} (cần ≥ {C.get('ordimb_min', 1.4)}): "
                            f"không xác nhận, bán ATC T+{int(C.get('sell_from', 2) or 2)}")
         _x = P['open'][-1]['x0']
-        nhat_ky.append(f"MUA {h['sym']} {px/1000:.2f} × {sh:,} cp ({chi/nav*100:.1f}% NAV · ngành {_x['sector_pct']:.1f}% · "
-                       f"tổng cổ phiếu {_x['total_pct']:.1f}% NAV · "
-                       f"lý thuyết {A['theoretical']/nav*100:.1f}% · đèn {TEN_DEN.get(light, light)} · "
-                       f"OrdImb {h.get('ordimb')})")
+        if la_v:
+            nhat_ky.append(f"MUA {h['sym']} {px/1000:.2f} × {sh:,} cp — CỬA V (thủng nền rồi bật lại "
+                           f"{(h.get('v_up') or 0)*100:.0f}% từ đáy {h.get('v_low')}) · {chi/nav*100:.1f}% NAV · "
+                           f"ngành {_x['sector_pct']:.1f}% · tổng cổ phiếu {_x['total_pct']:.1f}% NAV · "
+                           f"lý thuyết {A['theoretical']/nav*100:.1f}% · mua thẳng, không qua lệnh dò")
+        else:
+            nhat_ky.append(f"MUA {h['sym']} {px/1000:.2f} × {sh:,} cp ({chi/nav*100:.1f}% NAV · ngành {_x['sector_pct']:.1f}% · "
+                           f"tổng cổ phiếu {_x['total_pct']:.1f}% NAV · "
+                           f"lý thuyết {A['theoretical']/nav*100:.1f}% · đèn {TEN_DEN.get(light, light)} · "
+                           f"OrdImb {h.get('ordimb')})")
 
     # ---------- 3. KIM TU THAP (engine2 lop 9, qua allocator) ----------
     if C.get('use_pyramid') and light == 'XANH':
@@ -881,7 +910,7 @@ def nang_cap(P, T, C, ses, now):
             b20 = b20 + 1 if (mS is not None and px < mS) else 0
             if i < len(ngays) - 1 and som is None:
                 dq = ER.decide(C, gain, peak, held, probe_fail=bool(p.get('probe_fail')), b10=b10, b20=b20,
-                               light_today=None, light_entry=p.get('light'), part=bool(p.get('part')))
+                               light_today=None, light_entry=p.get('light'), part=bool(p.get('part')), **_door(p))
                 if dq['rule']:
                     som = (ngays[i], dq['rule'])
         if abs(peak - float(p.get('peak') or 0)) > 0.001:
@@ -893,7 +922,7 @@ def nang_cap(P, T, C, ses, now):
                  pnl=round((adj[-1] * (1 - C['fee_sell']) / epx_adj - 1) * 100, 2))
         p.update(ER.status(C, gain, peak, held, probe_fail=bool(p.get('probe_fail')), b10=b10, b20=b20,
                            light_today=(light if ngays[-1] == ses else None), light_entry=p.get('light'),
-                           part=bool(p.get('part'))))
+                           part=bool(p.get('part')), **_door(p)))
         p['earliest_sell'] = ngays[i0 + _sf] if i0 + _sf < len(ngays) else f"T+{_sf}"
         p['cost_basis'] = 'cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1'
         p['tail_adj'] = [round(x, 2) for x in adj[-30:]]
