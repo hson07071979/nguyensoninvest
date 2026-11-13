@@ -994,6 +994,62 @@ def cua_v_phien(T, CF, ses, now, rows, cu, bo=(), hop_le=True):
     return da, rec, nhac
 
 
+# =============================================================================
+# CHUONG LENH NHOI (13/11/2026, anh Son: "lenh nhoi cung bao di"). Mot dinh nghia: nhoi_live.py
+# (repo private xuat sang, = engine2 lop 9). Xet cac vi the SO GIAO DICH THUC TE (portfolio.json)
+# bang gia trong phien; keu tu gio chot (14:25) toi 14:45 de kip dat ATC. Toi portfolio.py van
+# ghi lenh nhoi bang gia DONG CUA va den cua chinh phien do (trong phien den/gia la xap xi).
+# =============================================================================
+def nhoi_phien(T, CF, PF, ses, now, rows, cu, den):
+    """-> (khoa da keu, ban ghi cho live.json)."""
+    rec = dict(session=ses, bat=False, xet=[], dat=[])
+    try:
+        import nhoi_live as NL
+    except Exception as e:
+        rec['loi'] = f'chua co nhoi_live.py: {e}'
+        return [], rec
+    N = (T or {}).get('nhoi') or {}
+    rec['bat'] = bool(N.get('bat'))
+    if not rec['bat'] or now.weekday() >= 5:
+        return [], rec
+    t = now.hour + now.minute / 60
+    hm = gio_chot(CF)
+    tu = (hm // 100 + (hm % 100) / 60) if hm else MUA_DO_TU
+    if not (tu <= t <= MUA_DO_DEN):
+        return [], rec
+    nav = float(PF.get('nav') or 0) or None
+    cash = float(PF['cash']) if PF.get('cash') is not None else None
+    da, moi = [], []
+    for p in (PF.get('open') or []):
+        vt = NL.tu_so(p, T.get('asof'))
+        if not vt:
+            continue
+        r = rows.get(vt['sym'])
+        if not r or str(r.get('Date', ''))[:10] != ses:
+            continue
+        try:
+            g = float(r.get('PriceClose') or 0); cao = float(r.get('PriceHigh') or 0)
+        except (TypeError, ValueError):
+            continue
+        h9 = ((N.get('gia') or {}).get(vt['sym']) or {}).get('h9')
+        x = NL.xet(vt, g, cao, h9, den, nav=nav, cash=cash, cfg=CF)
+        rec['xet'].append(dict(sym=vt['sym'], phien=vt['held_next'], gia=g, ok=x['ok'], ly_do=x['ly_do'][:3]))
+        if x['ok']:
+            rec['dat'].append(vt['sym'])
+            if 'N:' + vt['sym'] not in cu:
+                moi.append((vt, g, x))
+    if moi and kenh_co():
+        dong = [f"\u2795 *MUA THÊM (NHỒI)* · phiên {ses} · {now:%H:%M}", '']
+        for vt, g, x in moi:
+            dong.append(f"*{vt['sym']}*  {g/1000:.2f} — phiên thứ {vt['held_next']} sau ngày mua, lãi ≥ 10%, sát đỉnh 10 phiên, "
+                        f"đèn {dict(XANH='Xanh', VANG='Vàng', CAM='Cam', DO='Đỏ').get(den, den)}\n   thêm *{x['them_sh']:,} cp* ≈ *{x['them_pct_nav']:.1f}% NAV*"
+                        + (f" ≈ *{x['them_tien']/1e6:,.0f} triệu*" if x.get('them_tien') else '') + " · mua ATC")
+        dong += ['', 'Chỉ nhồi 1 lần. Tối bộ máy xác nhận lại bằng giá đóng cửa.']
+        if gui_tin('\n'.join(dong), md=True, prio=5, tags=['heavy_plus_sign']):
+            da += ['N:' + vt['sym'] for vt, _, _ in moi]
+    return da, rec
+
+
 def loai_so_tay():
     """Ma anh Son loai tay o So tay. Doc THANG manual.json nam ngay canh file nay,
     de loai mot ma la no im chuong ngay luot quet sau — khong phai cho toi 19h30.
@@ -1636,6 +1692,13 @@ def main():
                 nhac.append(x)
     except Exception as e:
         print('cua V loi:', type(e).__name__, e)
+    # LENH NHOI (13/11/2026): vi the so giao dich thuc te du luat nhoi -> chuong MUA THEM ATC
+    try:
+        _kn, out['nhoi'] = nhoi_phien(T, CF, PF, ses, now, {**rows_pf, **rows}, _cu,
+                                      ((den_tt or {}).get('light') or T.get('light')))
+        da_keu += _kn
+    except Exception as e:
+        print('nhoi loi:', type(e).__name__, e)
     out['alerted'] = dict(session=ses, syms=sorted((cu_mua if cu_ses == ses else set()) | set(da_keu)))
     out['nhac_ban'] = nhac
     out['chot'] = chot_rec

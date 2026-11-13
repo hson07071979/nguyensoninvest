@@ -27,6 +27,14 @@ if not m:
 D = json.loads(m.group(1))
 M, BM = D['prod']['metrics'], D['bench_metrics']
 DM = D['prod'].get('deal_metrics') or {}
+# 13/11/2026 (anh Son): anh chia se chi cong bo hieu suat TU 2023 (khoi cong_khai do nsi-bot tinh, = trang Hieu suat
+# cua khach). Ban dung cu chua co khoi nay thi giu cach cu.
+CK = D.get('cong_khai')
+if CK:
+    M = dict(M, total_return=CK['total_return'], maxdd=CK['maxdd'], pf=CK['pf'] or M['pf'], trades=CK['deals'],
+             winrate=CK['winrate'])
+    BM = dict(BM, total=CK['bench_total'], mdd=CK['bench_mdd'])
+    DM = dict(deals=CK['deals'], winrate=CK['winrate'])
 
 im = Image.new('RGB', (1200, 630), BG)
 d = ImageDraw.Draw(im)
@@ -49,7 +57,7 @@ d.text((186, 122), 'Hệ thống giao dịch cổ phiếu Việt Nam', font=F(0,
 
 wr = (DM.get('winrate') or M['winrate']) * 100
 K = [('TỔNG LỢI NHUẬN', '+'+N(M['total_return']*100)+'%', GOOD,
-      N(len(D['prod']['curve'])/250)+' năm · VN-Index +'+N(BM['total']*100)+'%'),
+      (('từ '+CK['tu'][:4]) if CK else N(len(D['prod']['curve'])/250)+' năm')+' · VN-Index +'+N(BM['total']*100)+'%'),
      ('SỤT GIẢM TỐI ĐA', '−'+N(M['maxdd']*100)+'%', CRIT, 'VN-Index −'+N(BM['mdd']*100)+'%'),
      ('PROFIT FACTOR', N(M['pf'], 2), TX, 'lãi gộp / lỗ gộp'),
      ('SỐ DEAL', str(DM.get('deals') or M['trades']), TX, 'tỷ lệ thắng '+N(wr)+'%')]
@@ -62,7 +70,7 @@ for lab, val, col, sub in K:
     x += 278
 
 d.line([(72,470),(1128,470)], fill=LINE)
-d.text((72,496), 'Backtest từng phiên từ 02/01/2019 · TOP '+str(D['universe_n'])
+d.text((72,496), ('Hiệu suất từ '+CK['tu'][:4]+' đến nay' if CK else 'Backtest từng phiên từ 02/01/2019')+' · TOP '+str((D.get('cfg_prod') or {}).get('top_n') or D['universe_n'])
        +' mã · phí 0,15% mua / 0,25% bán', font=F(0,20), fill=TX2)
 d.text((72,528), 'Số liệu phiên '+'/'.join(reversed(D['asof'].split('-')))
        +' · dữ liệu FireAnt + Vietcap IQ', font=F(0,19), fill=TX3)
