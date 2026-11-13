@@ -42,14 +42,27 @@ jobs:
           git config user.name  "Bot Nguyễn Sơn Invest"
           git config user.email "bot@users.noreply.github.com"
           echo "gọi bởi: ${{ github.event.inputs.nguon }} · $(TZ=Asia/Ho_Chi_Minh date '+%H:%M:%S') giờ VN"
-          for lan in 1 2 3; do
-            git fetch -q origin main && git reset -q --hard origin/main
-            python live_scan.py || { echo "!! live_scan.py lỗi"; exit 0; }
-            mkdir -p obs
-            git add live.json obs/ 2>/dev/null || true
-            if git diff --cached --quiet; then echo "không có gì đổi"; exit 0; fi
-            git commit -q -m "Nhịp đồng hồ $(TZ=Asia/Ho_Chi_Minh date '+%d/%m %H:%M')"
-            # có người vừa ghi live.json (vòng dự phòng) -> quét lại trên bản mới nhất, KHÔNG gộp tay
-            if git push -q origin HEAD:main; then echo "đã đẩy"; exit 0; fi
-            echo "đẩy lỗi (lần $lan) — quét lại trên bản mới nhất"; sleep 5
-          done
+          mot_nhip() {
+            for lan in 1 2 3; do
+              git fetch -q origin main && git reset -q --hard origin/main
+              python live_scan.py || { echo "!! live_scan.py lỗi"; return 0; }
+              mkdir -p obs
+              git add live.json obs/ 2>/dev/null || true
+              if git diff --cached --quiet; then echo "không có gì đổi"; return 0; fi
+              git commit -q -m "Nhịp đồng hồ $(TZ=Asia/Ho_Chi_Minh date '+%d/%m %H:%M')"
+              # có người vừa ghi live.json (vòng dự phòng) -> quét lại trên bản mới nhất, KHÔNG gộp tay
+              if git push -q origin HEAD:main; then echo "đã đẩy"; return 0; fi
+              echo "đẩy lỗi (lần $lan) — quét lại trên bản mới nhất"; sleep 5
+            done
+          }
+          mot_nhip
+          # BÁO ĐÚNG GIỜ CHỐT (13/11/2026, audit vào lệnh thực tế): nhịp 14:20 quét xong thì GIỮ MÁY, chờ tới
+          # 14:25:20 rồi quét lại ngay. Tin CHỐT MUA DÒ 14:25 không còn phụ thuộc việc GitHub khởi động máy
+          # mới cho nhịp 14:25 (đo 02/10–12/11: bản ghi sau chốt trung vị 14:27:02, 2/31 phiên sau 14:30).
+          # Nhịp 14:25 của đồng hồ vẫn chạy sau đó như một lần soát lại.
+          hm=$(TZ=Asia/Ho_Chi_Minh date +%H%M)
+          if [ "$hm" -ge 1420 ] && [ "$hm" -lt 1425 ]; then
+            cho=$(( $(TZ=Asia/Ho_Chi_Minh date -d 'today 14:25:20' +%s) - $(date +%s) ))
+            if [ "$cho" -gt 0 ] && [ "$cho" -lt 330 ]; then echo "chờ ${cho}s tới 14:25:20 để chốt"; sleep "$cho"; fi
+            mot_nhip
+          fi
