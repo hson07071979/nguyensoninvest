@@ -5,8 +5,8 @@
  "nav0": 1000000000.0,
  "cash": 853667817.5,
  "nav": 1008917818,
- "session_done": "2026-11-12",
- "updated": "2026-11-12T21:32:50",
+ "session_done": "2026-11-13",
+ "updated": "2026-11-13T21:34:41",
  "open": [
   {
    "book_id": "LIVE_PAPER",
@@ -25,7 +25,7 @@
    "b20": 0,
    "part": false,
    "pyr": false,
-   "held": 6,
+   "held": 7,
    "light": "CAM",
    "score": 54.4,
    "ordimb": 2.293,
@@ -36,7 +36,7 @@
    "size_theo": 14.7,
    "size_reasons": [],
    "last": 13.5,
-   "last_day": "2026-11-12",
+   "last_day": "2026-11-13",
    "pnl": 5.46,
    "x0": {
     "date": "2026-11-04",
@@ -59,10 +59,9 @@
    "last_adj": 13.5,
    "last_val": 13500.0,
    "k_adj": 1.0,
-   "last_done": "2026-11-12",
+   "last_done": "2026-11-13",
    "cost_basis": "cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1",
    "tail_adj": [
-    10900.0,
     11000.0,
     11100.0,
     10850.0,
@@ -91,6 +90,7 @@
     13250.0,
     13600.0,
     13600.0,
+    13500.0,
     13500.0
    ],
    "cfg_hash_state": "555a895e892d"
@@ -443,7 +443,7 @@
  },
  "dung_lai_2409": true,
  "light": "CAM",
- "prod_config_hash": "956f040a9426",
+ "prod_config_hash": "336500f648af",
  "checks": {
   "nav_identity": true,
   "pnl_reconcile_gap_vnd": 1,
