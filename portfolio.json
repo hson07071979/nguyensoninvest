@@ -4,9 +4,9 @@
  "nav_source": "portfolio.json",
  "nav0": 1000000000.0,
  "cash": 853667817.5,
- "nav": 1008917818,
- "session_done": "2026-11-13",
- "updated": "2026-11-13T21:34:41",
+ "nav": 1003742818,
+ "session_done": "2026-11-16",
+ "updated": "2026-11-16T21:32:21",
  "open": [
   {
    "book_id": "LIVE_PAPER",
@@ -21,11 +21,11 @@
    "sh": 11500,
    "cost": 146844938,
    "peak": 0.06506906307205851,
-   "b10": 0,
+   "b10": 1,
    "b20": 0,
    "part": false,
    "pyr": false,
-   "held": 7,
+   "held": 8,
    "light": "CAM",
    "score": 54.4,
    "ordimb": 2.293,
@@ -35,9 +35,9 @@
    "prod_config_hash": "f7521c8dac11",
    "size_theo": 14.7,
    "size_reasons": [],
-   "last": 13.5,
-   "last_day": "2026-11-13",
-   "pnl": 5.46,
+   "last": 13.05,
+   "last_day": "2026-11-16",
+   "pnl": 1.94,
    "x0": {
     "date": "2026-11-04",
     "pos_pct": 14.64,
@@ -46,7 +46,7 @@
     "nav": 1001858368
    },
    "peak_gain": 6.51,
-   "gain": 5.72,
+   "gain": 2.2,
    "profit_lock_active": false,
    "profit_floor": null,
    "profit_trigger": null,
@@ -56,13 +56,12 @@
    "exit_phan": 1.0,
    "action": "GIỮ",
    "earliest_sell": "2026-11-09",
-   "last_adj": 13.5,
-   "last_val": 13500.0,
+   "last_adj": 13.05,
+   "last_val": 13050.0,
    "k_adj": 1.0,
-   "last_done": "2026-11-13",
+   "last_done": "2026-11-16",
    "cost_basis": "cost_px = gia khop x (1 + phi mua); gain = AdjClose / (cost_px x k_adj) - 1",
    "tail_adj": [
-    11000.0,
     11100.0,
     10850.0,
     10500.0,
@@ -91,7 +90,8 @@
     13600.0,
     13600.0,
     13500.0,
-    13500.0
+    13500.0,
+    13050.0
    ],
    "cfg_hash_state": "555a895e892d"
   }
@@ -453,9 +453,9 @@
   "sector_cap_ok": true,
   "pyr_sector_over": [],
   "now": {
-   "max_pos_pct": 15.39,
-   "max_sector_pct": 15.39,
-   "total_pct": 15.39
+   "max_pos_pct": 14.95,
+   "max_sector_pct": 14.95,
+   "total_pct": 14.95
   },
   "pnl_reconcile_ok": true,
   "ok": true
@@ -464,7 +464,7 @@
   "n_open": 1,
   "n_closed": 6,
   "winrate": 33.3,
-  "total_return": 0.89,
+  "total_return": 0.37,
   "best": 4.58,
   "worst": -6.19,
   "since": "2026-09-14"
