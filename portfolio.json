@@ -93,7 +93,7 @@
     13250.0,
     13900.0
    ],
-   "cfg_hash_state": "555a895e892d"
+   "cfg_hash_state": "aa24a7b7459c"
   }
  ],
  "closed": [
@@ -237,6 +237,13 @@
   }
  ],
  "log": [
+  {
+   "date": "2026-11-20",
+   "items": [
+    "NÂNG CẤP TRẠNG THÁI SỔ: cấu hình 336500f648af → aa24a7b7459c (không mua/bán lại, không sửa lịch sử)",
+    "NÂNG CẤP TCH: đỉnh +8.86% · hiện +8.86% · sàn +2.00% · GIỮ — khoá lãi đang bật: đỉnh +8,9%, sàn bảo vệ +2% (hiện +8,9%)"
+   ]
+  },
   {
    "date": "2026-11-11",
    "items": [
@@ -443,7 +450,7 @@
  },
  "dung_lai_2409": true,
  "light": "DO",
- "prod_config_hash": "336500f648af",
+ "prod_config_hash": "aa24a7b7459c",
  "checks": {
   "nav_identity": true,
   "pnl_reconcile_gap_vnd": 1,
@@ -470,6 +477,13 @@
   "since": "2026-09-14"
  },
  "migrations": [
+  {
+   "at": "2026-11-22T00:41:09",
+   "session": "2026-11-20",
+   "from_hash": "336500f648af",
+   "to_hash": "aa24a7b7459c",
+   "n_open": 1
+  },
   {
    "at": "2026-11-08T17:52:00",
    "session": "2026-11-06",
