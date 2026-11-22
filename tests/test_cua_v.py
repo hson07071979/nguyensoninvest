@@ -112,7 +112,10 @@ class ChuongCuaV(S1T.Book):
     def test_het_cho_va_dac_ta_cu_thi_khong_keu(self):
         T = dict(self.T, book=dict(nav=1e9, cash=1e9, positions=[dict(sym=s, door='V', value=1e8, sector='Q') for s in 'ABC']))
         da, _, _ = self.L.cua_v_phien(T, CFGV, self.SES, self.luc('14:30'), self.rows(12500, 21000), set())
-        self.assertEqual(da, [])                                # da du 3 vi the V
+        # 22/11/2026 'bao nhung khong vao': da du 3 vi the V -> KHONG co lenh mua, chi tin rieng 'khong vao'
+        self.assertEqual(sorted(da), ['VK:VVV:v_max_n', 'VK:WWW:v_max_n'])
+        self.assertFalse([x for x in da if x.startswith('V:')])
+        self.assertIn('BỘ MÁY KHÔNG VÀO', self.tin[-1]); self.assertIn('đủ số mã cửa V', self.tin[-1])
         da, _, _ = self.L.cua_v_phien(self.T, CFGV, self.SES, self.luc('14:30'), self.rows(12500, 21000), set(), hop_le=False)
         self.assertEqual(da, [])
         da, _, _ = self.L.cua_v_phien(dict(self.T, cua_v=dict(bat=False, ds=self.T['cua_v']['ds'])), CFGV, self.SES,
