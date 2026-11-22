@@ -127,9 +127,15 @@
    "status": "đạt",
    "note": ""
   },
-  "VTP": {
+  "DGW": {
    "added": "2026-11-20",
-   "score": 60.5,
+   "score": 62.3,
+   "status": "đạt",
+   "note": ""
+  },
+  "DCM": {
+   "added": "2026-11-20",
+   "score": 53.0,
    "status": "đạt",
    "note": ""
   }
@@ -137,7 +143,7 @@
  "log": [
   {
    "date": "2026-11-20",
-   "size": 22,
+   "size": 23,
    "added_ct": [
     {
      "sym": "VTP",
@@ -145,6 +151,20 @@
      "sector": "Hàng & Dịch vụ Công nghiệp",
      "base": 18.5,
      "rs": 13.5
+    },
+    {
+     "sym": "DGW",
+     "score": 62.3,
+     "sector": "Bán lẻ",
+     "base": 23.1,
+     "rs": 55.5
+    },
+    {
+     "sym": "DCM",
+     "score": 53.0,
+     "sector": "Hóa chất",
+     "base": 18.7,
+     "rs": 58.8
     }
    ],
    "removed_ct": [
@@ -167,16 +187,24 @@
      "sym": "DGW",
      "why": "CFO < 0",
      "score": 62.3
+    },
+    {
+     "sym": "VTP",
+     "why": "CFO < 0",
+     "score": 60.5
     }
    ],
    "added": [
-    "VTP"
+    "VTP",
+    "DGW",
+    "DCM"
    ],
    "removed": [
     "TNG",
     "ORS",
     "DCM",
-    "DGW"
+    "DGW",
+    "VTP"
    ]
   },
   {
@@ -6028,7 +6056,7 @@
    "2026Q3",
    64.5,
    true,
-   "CFO < 0",
+   "ICR 0.58 < 1.5",
    false,
    false,
    false
@@ -6037,7 +6065,7 @@
    "2026Q3",
    63.1,
    true,
-   "CFO < 0",
+   "ICR 1.35 < 1.5",
    false,
    false,
    false
@@ -6063,19 +6091,19 @@
   "DGW": [
    "2026Q3",
    62.3,
+   false,
+   "",
+   false,
    true,
-   "CFO < 0",
-   false,
-   false,
    false
   ],
   "VTP": [
    "2026Q3",
    60.5,
-   false,
-   "",
-   false,
    true,
+   "CFO < 0",
+   false,
+   false,
    false
   ],
   "PET": [
@@ -6180,10 +6208,10 @@
   "DCM": [
    "2026Q3",
    53.0,
+   false,
+   "",
+   false,
    true,
-   "CFO < 0",
-   false,
-   false,
    false
   ],
   "VGC": [
@@ -6333,8 +6361,8 @@
   "HHP": [
    "2026Q3",
    40.3,
-   false,
-   "",
+   true,
+   "CFO < 0",
    false,
    false,
    false
@@ -6621,8 +6649,8 @@
   "VCG": [
    "2026Q3",
    26.6,
-   false,
-   "",
+   true,
+   "CFO < 0",
    false,
    false,
    false
@@ -6666,8 +6694,8 @@
   "VC3": [
    "2026Q3",
    23.1,
-   true,
-   "CFO < 0",
+   false,
+   "",
    true,
    false,
    false
@@ -6720,8 +6748,8 @@
   "VSC": [
    "2026Q3",
    21.3,
-   true,
-   "CFO < 0",
+   false,
+   "",
    false,
    false,
    false
@@ -6810,8 +6838,8 @@
   "DXG": [
    "2026Q3",
    12.1,
-   false,
-   "",
+   true,
+   "CFO < 0",
    false,
    false,
    false
@@ -6837,8 +6865,8 @@
   "DPM": [
    "2026Q3",
    10.9,
-   true,
-   "CFO < 0",
+   false,
+   "",
    false,
    false,
    false
