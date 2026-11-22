@@ -377,6 +377,47 @@ def co_lenh(h, T, den):
         return None, None, [], None, None
 
 
+LY_DO_KV = {'sector_cap': 'trần ngành', 'max_total': 'trần tổng vốn', 'cash': 'hết tiền mặt',
+            'max_pos_n': 'đủ số mã tối đa', 'min_size': 'chỗ còn lại dưới cỡ tối thiểu',
+            'max_unconf': 'hết lượt mua dò', 'het_luot_v': 'hết lượt cửa V trong phiên', 'v_max_n': 'đủ số mã cửa V'}
+
+
+def khong_vao_vi(h, T, den, them=()):
+    """BAO NHUNG KHONG VAO (anh Son 22/11/2026): ma DU DIEM MUA nhung bo may co mo lenh khong?
+    Cung thu tu kiem nhu engine2 (cua chinh): du so ma -> khong xet; allocator.entry_target tren so he thong
+    (+ cac ma da gianh luot truoc no trong phien, `them`); khong qua thi thu DOI NGUA (bo may ban ma lai thap de
+    mua). Tra None = bo may VAO duoc; nguoc lai la khoa ly do (sector_cap / max_total / cash / max_pos_n / min_size).
+    Khong co so he thong -> None (giu hanh vi cu)."""
+    try:
+        import allocator as AL
+        CF = T.get('cfg') or {}
+        B = T.get('book') or {}
+        if not B.get('nav'):
+            return None
+        op = list(B.get('positions') or [])
+        if len(op) + len(them) >= int(CF.get('max_pos_n') or 12):
+            return 'max_pos_n'
+        sp = (T['syms'].get(h['sym']) or {}).get('spec') or {}
+        ng = sp.get('sector') or 'Khác'
+        inv = sum(float(p.get('value') or 0) for p in op) + sum(float(x.get('value') or 0) for x in them)
+        nav = float(B['nav'])
+        cash = float(B.get('cash', nav - sum(float(p.get('value') or 0) for p in op))) - sum(float(x.get('value') or 0) for x in them)
+        sec = (sum(float(p.get('value') or 0) for p in op if (p.get('sector') or 'Khác') == ng)
+               + sum(float(x.get('value') or 0) for x in them if (x.get('sector') or 'Khác') == ng))
+        A = AL.entry_target(nav, cash, inv, sec, so_ma_chinh(op) + len(them), den, risk_mul=sp.get('rmul', 1.0),
+                            base_rng=sp.get('base'), cfg=CF)
+        if A['ok']:
+            h['_kv_tien'], h['_kv_nganh'] = A['actual'], ng
+            return None
+        if not them and doi_ngua_live(h, T, den):
+            h['_kv_tien'], h['_kv_nganh'] = 0.0, ng
+            return None
+        return A['binding'] or 'max_total'
+    except Exception as e:
+        print('khong_vao_vi loi:', e)
+        return None
+
+
 def doi_ngua_live(h, T, den, quotes=None):
     """DOI NGUA (PROD tu phien 10/11/2026, anh Son chot 08/11, R49b) — CUNG dinh nghia voi engine2
     (allocator.can_doi_ngua / chon_doi_ngua). Lenh mua moi bi kep vi day von -> chon ma lai thap
@@ -513,7 +554,8 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
     if _tu <= t_bao <= MUA_DO_DEN:
         _cf = (T or {}).get('cfg') or {}
         do_all = sorted([h for h in hits if h.get('mua_do')], key=lambda h: (h.get('uu_tien') or 99, h['sym']))
-        giu = [h for h in do_all if h.get('khong_mua') != 'max_unconf']
+        # 22/11/2026: moi ma 'khong_mua' (het luot do / tran nganh / tran tong von / het tien / du 12 ma) KHONG giu luot
+        giu = [h for h in do_all if not h.get('khong_mua')]
         g_cu = giu_luot_cu(cu)
         n_cu, truoc = g_cu
         giu_s = [h['sym'] for h in giu]
@@ -551,8 +593,10 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
             if not truoc:
                 # lan dau trong phien co ma giu luot: tin MUA DO nhu cu (kem dong KHONG MUA cho ma het luot)
                 # 'D:' = da bao MUA (dat lenh); 'DK:' = chi bao KHONG MUA (khong dat lenh) — tach tu 04/11/2026
-                do = [h for h in do_all if h['sym'] in giu_s
-                      or ('D:' + h['sym'] not in cu and 'DK:' + h['sym'] not in cu)]
+                # 22/11/2026 (anh Son chon 'tach 2 tin'): ma khong vao vi von / nganh / so ma -> tin rieng
+                # 'DU DIEM MUA — BO MAY KHONG VAO' ben duoi; ma het luot do van ghi kem nhu cu
+                do = [h for h in do_all if h.get('khong_mua') in (None, 'max_unconf') and (h['sym'] in giu_s
+                      or ('D:' + h['sym'] not in cu and 'DK:' + h['sym'] not in cu))]
                 _hd = (f"\U0001F7E0 *CHỐT MUA DÒ {_hm // 100:02d}:{_hm % 100:02d}*" if any(h.get('chot') for h in giu)
                        else f"\U0001F7E0 *MUA DÒ* (không mã nào đủ lúc {_hm // 100:02d}:{_hm % 100:02d} → mua ATC theo KL dự phóng)"
                        if _hm else f"\U0001F7E0 *MUA DÒ*")
@@ -591,7 +635,8 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
                     da_gui += ['DK:' + h['sym'] for h in do if h['sym'] not in giu_s]
         elif not giu:
             # khong ma nao giu luot (vd dang co lenh do treo tu phien truoc): bao KHONG MUA mot lan cho ma moi
-            km_ = [h for h in do_all if 'D:' + h['sym'] not in cu and 'DK:' + h['sym'] not in cu]
+            km_ = [h for h in do_all if h.get('khong_mua') == 'max_unconf'
+                   and 'D:' + h['sym'] not in cu and 'DK:' + h['sym'] not in cu]
             if km_:
                 dong = [f"\U0001F7E0 *ĐỦ ĐIỀU KIỆN MUA DÒ NHƯNG HẾT LƯỢT* — phiên {ses} · {t_bao_s}", '']
                 for h in km_:
@@ -601,6 +646,25 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
                                 f" · tối đa {_cf.get('max_unconf')}")
                 if _post('\n'.join(dong), prio=3):
                     da_gui += ['DK:' + h['sym'] for h in km_]
+        # BAO NHUNG KHONG VAO (anh Son 22/11/2026): tin RIENG cho ma du diem mua ma bo may khong vao.
+        # Bao lai khi ly do doi (khoa 'KV:<ma>:<ly do>'). Khong co nhac ban, khong vao so — toi chi bao ket qua DK9.
+        # (het luot do 'max_unconf' da co cach bao rieng o tren: MUA DO / DOI UU TIEN / HET LUOT)
+        kv_ = [h for h in do_all if h.get('khong_mua') not in (None, 'max_unconf')
+               and f"KV:{h['sym']}:{h['khong_mua']}" not in cu]
+        if kv_:
+            dong = [f"\u26AA *ĐỦ ĐIỂM MUA — BỘ MÁY KHÔNG VÀO* — phiên {ses} · {t_bao_s}", '']
+            for h in kv_:
+                theo, _t, _l, _ti, nav_ = co_lenh(h, T or {}, den)
+                ly_ = LY_DO_KV.get(h['khong_mua'], h['khong_mua'])
+                co_ = (f"cỡ PROD tham khảo *{theo:.1f}% NAV*" + (f" ≈ {theo / 100 * nav_ / 1e6:,.0f} triệu trên NAV hệ thống" if nav_ else '')
+                       if theo else "cỡ PROD: không tính được")
+                dong.append(f"{_ut_of(h)}*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f}\n"
+                            f"   ⛔ bộ máy *không vào* — {ly_}\n   {co_} nếu tài khoản bạn còn chỗ")
+            dong += ['', "Bộ máy *không mua* các mã này: sổ hệ thống không ghi, không có nhắc bán. "
+                         "Tối sẽ báo kết quả Điều kiện 9 để bạn tham khảo."]
+            if _post('\n'.join(dong), prio=3):
+                da_gui += [f"KV:{h['sym']}:{h['khong_mua']}" for h in kv_]
+                da_gui += ['DK:' + h['sym'] for h in kv_ if 'DK:' + h['sym'] not in cu]
     # (1b) NHAC BAN lenh mua do truot DK1-8 (ma khong co trong so ghi tien -> khong co chuong thoat)
     today_ = (gio_vn().date().isoformat())
     if 14.0 <= t_bao <= 14.75:
@@ -635,6 +699,15 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
     # (2) Sau phien: DK9 truot -> ban lenh do ATC T+2
     if sau_phien:
         tr = [h for h in hits if h.get('truot9') and 'X:' + h['sym'] not in cu]
+        # 22/11/2026: ma bo may KHONG VAO (ly do khac het luot do) -> chi bao ket qua DK9, khong nhac ban
+        tr_kv = [h for h in tr if h.get('khong_mua') and h['khong_mua'] != 'max_unconf']
+        tr = [h for h in tr if h not in tr_kv]
+        if tr_kv:
+            dong = [f"\u26AA *ĐIỀU KIỆN 9 — MÃ BỘ MÁY KHÔNG VÀO* (chỉ để biết) — phiên {ses}", '']
+            dong += [f"*{h['sym']}* dòng tiền {h['ordimb']}× (< {h['ordimb_min']}) → *không đạt* · bộ máy không vào: "
+                     f"{LY_DO_KV.get(h['khong_mua'], h['khong_mua'])}" for h in tr_kv]
+            if _post('\n'.join(dong), prio=2):
+                da_gui += ['X:' + h['sym'] for h in tr_kv]
         if tr:
             dong = [f"\u26AA *KHÔNG ĐẠT ĐIỀU KIỆN 9* — phiên {ses}", '']
             dong += [f"*{h['sym']}* dòng tiền {h['ordimb']}× (< {h['ordimb_min']}) → *bán TOÀN BỘ (100%) lệnh dò lúc ATC T+{int(((T or {}).get('cfg') or {}).get('sell_from', 2) or 2)}* nếu đã mua dò"
@@ -650,6 +723,15 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
     # Ma bi luat 'toi da 1 lenh mua thu treo' chan: bao MOT dong rieng, khong goi la xac nhan/giu.
     km = [h for h in mua if h.get('khong_mua') and 'KM:' + h['sym'] not in cu]
     mua = [h for h in mua if not h.get('khong_mua')]
+    # 22/11/2026: ma bo may KHONG VAO vi von / nganh / so ma -> chi bao 'DK9 dat', khong nhac ban
+    km_kv = [h for h in km if h['khong_mua'] != 'max_unconf']
+    km = [h for h in km if h not in km_kv]
+    if km_kv and sau_phien:
+        dong = [f"\u26AA *ĐIỀU KIỆN 9 — MÃ BỘ MÁY KHÔNG VÀO* (chỉ để biết) — phiên {ses}", '']
+        dong += [f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · dòng tiền {h['ordimb']}× (≥ {h['ordimb_min']}) → *đạt* · "
+                 f"bộ máy không vào: {LY_DO_KV.get(h['khong_mua'], h['khong_mua'])}" for h in km_kv]
+        if _post('\n'.join(dong), prio=2):
+            da_gui += ['KM:' + h['sym'] for h in km_kv]
     if km and sau_phien:
         dong = [f"⛔ *ĐỦ ĐIỀU KIỆN NHƯNG HỆ THỐNG KHÔNG MUA* — phiên {ses}", '']
         dong += [f"*{h['sym']}*  {h['price']}  ({h['pct']:+.2f}%) · điểm {h['score']:.0f} — đang có lệnh dò chưa xác nhận"
@@ -948,13 +1030,29 @@ def cua_v_phien(T, CF, ses, now, rows, cu, bo=(), hop_le=True):
     dat = cua_v_xet(T, CF, ses, rows, bo)
     op = (T.get('book') or {}).get('positions') or []
     con = max(0, int(CF.get('v_max_n') or 3) - sum(1 for p in op if p.get('door') == 'V'))
-    if len(op) >= int(CF.get('max_pos_n') or 12):
-        con = 0
+    du_ma = len(op) >= int(CF.get('max_pos_n') or 12)
     luot = min(con, int(CF.get('v_per_day') or 1))
-    for k, x in enumerate(dat):
-        x['duoc_mua'] = k < luot
+    # 22/11/2026: cung thu tu engine2 — du 12 ma / du ma V / het luot phien -> dung; allocator khong qua (tran
+    # nganh, tran tong von, het tien) -> BO QUA ma do, ma ke tiep duoc luot. Ma bi bo qua van bao (tin rieng).
+    k = 0
+    for x in dat:
+        x['duoc_mua'], x['khong_vao'], x['khong_vao_vi'] = False, None, ''
+        if du_ma:
+            x['khong_vao'] = 'max_pos_n'
+        elif con <= 0:
+            x['khong_vao'] = 'v_max_n'
+        elif k >= luot:
+            x['khong_vao'] = 'het_luot_v'
+        else:
+            pct_, _, ly_ = cua_v_co(x, T, CF)
+            if pct_ == 0.0:
+                x['khong_vao'], x['khong_vao_vi'] = 'cho', ', '.join(ly_) or 'không còn chỗ'
+            else:
+                x['duoc_mua'] = True
+                k += 1
     rec['dat'] = [dict(sym=x['sym'], gia=round(x['gia'] / 1000, 2), can=round(float(x['can']) / 1000, 2),
-                       volr=x['volr'], duoc_mua=x['duoc_mua']) for x in dat]
+                       volr=x['volr'], duoc_mua=x['duoc_mua'], khong_vao=x['khong_vao'],
+                       khong_vao_vi=(x['khong_vao_vi'] or LY_DO_KV.get(x['khong_vao'] or '', '')) or None) for x in dat]
     da, nhac = [], []
     sf = int(CF.get('sell_from', 3) or 3)
     cap = int(CF.get('v_hold_cap') or 40)
@@ -971,11 +1069,25 @@ def cua_v_phien(T, CF, ses, now, rows, cu, bo=(), hop_le=True):
             dong += ['', "Mua thẳng (LO), *không phải lệnh dò*, không chờ Điều kiện 9.",
                      f"Bán theo luật thoát thường; giữ tối đa {cap} phiên.",
                      f"Tối chấm lại bằng giá đóng cửa: không còn đủ thì bán 100% ATC T+{sf}."]
-            if len(dat) > luot:
-                dong.append("Đủ giá nhưng hết lượt (mỗi phiên 1 mã, KL/TB20 cao nhất): "
-                            + ', '.join(x['sym'] for x in dat if not x['duoc_mua']))
+            hl = [x['sym'] for x in dat if x['khong_vao'] == 'het_luot_v']
+            if hl:
+                dong.append("Đủ giá nhưng hết lượt (mỗi phiên 1 mã, KL/TB20 cao nhất): " + ', '.join(hl))
             if gui_tin('\n'.join(dong), md=True, prio=5, tags=['purple_circle']):
                 da += ['V:' + x['sym'] for x in moi]
+        # BAO NHUNG KHONG VAO (22/11/2026): tin rieng, bao lai khi ly do doi
+        # (het luot trong phien da ghi kem trong tin MUA cua V o tren)
+        kvv = [x for x in dat if not x['duoc_mua'] and x['khong_vao'] != 'het_luot_v'
+               and f"VK:{x['sym']}:{x['khong_vao']}" not in cu]
+        if kvv:
+            dong = [f"\u26AA *CỬA V — ĐỦ ĐIỂM, BỘ MÁY KHÔNG VÀO* · phiên {ses} · {now:%H:%M}", '']
+            for x in kvv:
+                ly_ = x['khong_vao_vi'] or LY_DO_KV.get(x['khong_vao'], x['khong_vao'])
+                dong.append(f"*{x['sym']}*  {x['gia']/1000:.2f} — bật ≥ {float(CF.get('v_up') or 0.2)*100:.0f}% từ đáy "
+                            f"{float(x['day'])/1000:.2f} · vol {x['volr']}×\n   ⛔ bộ máy *không vào* — {ly_}\n"
+                            f"   cỡ PROD tham khảo *{float(CF.get('v_size') or 0.15)*100:.0f}% NAV* nếu tài khoản bạn còn chỗ")
+            dong += ['', "Bộ máy không mua: sổ hệ thống không ghi, không có nhắc bán."]
+            if gui_tin('\n'.join(dong), md=True, prio=3):
+                da += [f"VK:{x['sym']}:{x['khong_vao']}" for x in kvv]
     # Toi (so dong cua): ma DA bao mua ma gio khong con dat gia / het luot -> bo may khong co lenh -> nhac ban
     if t >= 15.25:
         ok = {x['sym'] for x in dat if x['duoc_mua']}
@@ -1223,7 +1335,7 @@ def nhac_het_luot(hits, nhac, cu_mua, ses, sf):
     return nhac
 
 
-def danh_dau_max_unconf(hits, T, ses, sf=3, truoc=()):
+def danh_dau_max_unconf(hits, T, ses, sf=3, truoc=(), den=None):
     """THU TU UU TIEN + TOI DA N LENH MUA THU TREO — ghi thang vao ban ghi live.json.
 
     (1) uu_tien (22/10/2026, R38): moi ung vien cua phien duoc danh so 1, 2, 3... theo
@@ -1262,9 +1374,11 @@ def danh_dau_max_unconf(hits, T, ses, sf=3, truoc=()):
     for h in ung:
         h['uu_tien'], h['n_ung_vien'] = thu_tu[h['sym']], len(ung)
     ung.sort(key=lambda h: h['uu_tien'])
-    if cf.get('max_unconf') is None:
-        return 0
-    lim = int(cf['max_unconf'])
+    # BAO NHUNG KHONG VAO (anh Son 22/11/2026): ma du diem nhung bo may khong mo lenh vi tran nganh /
+    # tran tong von / het tien / du 12 ma -> danh dau khong_mua=<ly do> va KHONG chiem luot (engine2 'continue'
+    # sang ma ke tiep). Chuong van bao ma nay (tin rieng), bo may giu nguyen luat.
+    den = den or T.get('light')
+    lim = int(cf['max_unconf']) if cf.get('max_unconf') is not None else 10 ** 9
     if chot:
         treo = [p['sym'] for p in pos if p.get('probe_fail') or int(p.get('held') or 0) == 0]
         n = 0
@@ -1274,6 +1388,11 @@ def danh_dau_max_unconf(hits, T, ses, sf=3, truoc=()):
             if len(treo) >= lim:
                 h['khong_mua'], h['khong_mua_vi'] = 'max_unconf', list(treo)
                 n += 1
+                continue
+            kv = khong_vao_vi(h, T, den)
+            if kv:
+                h['khong_mua'], h['khong_mua_vi'] = kv, []
+                n += 1
         return n
     try:
         treo = [p['sym'] for p in pos if _AL.probe_hanging(p, sf, days_ahead=1)]
@@ -1281,12 +1400,19 @@ def danh_dau_max_unconf(hits, T, ses, sf=3, truoc=()):
         print('dem lenh do treo loi:', e)
         return 0
     n = 0
+    them = []
     for h in ung:
         if len(treo) >= lim:
             h['khong_mua'], h['khong_mua_vi'] = 'max_unconf', list(treo)
             n += 1
-        else:
-            treo.append(h['sym'])
+            continue
+        kv = khong_vao_vi(h, T, den, them)
+        if kv:
+            h['khong_mua'], h['khong_mua_vi'] = kv, []
+            n += 1
+            continue
+        treo.append(h['sym'])
+        them.append(dict(sym=h['sym'], value=h.get('_kv_tien') or 0.0, sector=h.get('_kv_nganh')))
     return n
 
 
@@ -1608,7 +1734,7 @@ def main():
     # 22/10/2026: thu tu UU TIEN (R38) + luat toi da 1 lenh mua thu treo ghi thang vao ban ghi
     # (truoc chi co trong Telegram) — chay TRUOC khi sap xep de bang theo dung thu tu mua.
     n_khong_mua = danh_dau_max_unconf(hits, T, ses, int(CF.get('sell_from', 3) or 3),
-                                      truoc=chot_xep) if spec_ok else 0
+                                      truoc=chot_xep, den=T.get('light', 'VANG')) if spec_ok else 0
     hits.sort(key=lambda x: (order[x['level']], x.get('uu_tien') or 99, -x['pct']))
 
     cov = len(fresh) / max(1, len(syms))
