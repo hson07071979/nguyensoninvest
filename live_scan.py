@@ -829,6 +829,9 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
     return da_gui + ([h['sym'] for h in moi] if ok else [])
 
 
+SAT_NGUONG = 0.02   # 25/11/2026: gia trong phien cach nguong ban <= 2% -> bao truoc ATC
+
+
 def danh_gia_thoat(P, rows, CF, ses, now, light_today=None):
     """LUAT THOAT TRONG PHIEN cho so ghi tien (26/09/2026, TOP110 + S1).
 
@@ -874,7 +877,24 @@ def danh_gia_thoat(P, rows, CF, ses, now, light_today=None):
         _ph = float(st.get('exit_phan') or 1.0)
         _sh = int(p['sh'] * _ph // 100 * 100) if _ph < 1 else int(p['sh'])
         _nav = float(P.get('nav') or 0)
+        # NGUONG BAN (25/11/2026, loi TCH): gia DONG CUA cao nhat ma luat thoat bat — cung ham
+        # exit_rules.ke_hoach_ban nhu so he thong. Khong co nguong thi chuong khong biet ma dang SAT
+        # NGUONG (TCH 14:00-14:45 gia 13,05, nguong 13,00 — ATC 12,85 thung san ma khong ai bao).
+        _ng = _cach = _viec = _lyng = None
+        try:
+            if moi:
+                _kh = ER.ke_hoach_ban(CF, cost * k, float(p.get('peak') or 0.0), held, tail,
+                                      int(p.get('b10') or 0), int(p.get('b20') or 0),
+                                      probe_fail=bool(p.get('probe_fail')), part=bool(p.get('part')),
+                                      fx=(raw / adj if adj else 1.0), door=p.get('door'))
+                _viec = _kh.get('viec'); _lyng = _kh.get('ly_do')
+                if _kh.get('nguong_raw'):
+                    _ng = round(float(_kh['nguong_raw']) / 1000, 2)
+                    _cach = round((_ng / (raw / 1000) - 1) * 100, 2)
+        except Exception as e:
+            print('nguong ban loi', p.get('sym'), type(e).__name__, e)
         out.append(dict(sym=p['sym'], entry=p.get('entry'), price=round(raw / 1000, 2), held=held,
+                        cost_px=round(cost / 1000, 3), nguong=_ng, cach_pct=_cach, viec=_viec, ly_do_nguong=_lyng,
                         sh=int(p['sh']), sell_sh=_sh, sell_pct_pos=round(100 * _sh / p['sh'], 1) if p['sh'] else None,
                         sell_pct_nav=round(100 * _sh * raw / _nav, 2) if _nav > 0 else None,
                         cond9=p.get('cond9'), ordimb=p.get('ordimb'),
@@ -892,6 +912,31 @@ def gui_telegram_thoat(ex, P, ses, cu, now, T):
 
     def _post(text):
         return gui_tin(text, md=False, prio=5, tags=['small_red_triangle_down'])
+    # SAT NGUONG (25/11/2026): gia tam tinh con tren nguong nhung cach <= SAT_NGUONG -> ATC co the day
+    # xuong duoi (TCH: 13,05 vs nguong 13,00, dong cua 12,85). Bao TRUOC khi het gio dat ATC.
+    if 13.75 <= t <= 14.75:
+        sat = [x for x in ex if not x.get('exit_reason') and x.get('sellable') and x.get('nguong')
+               and x.get('price') and x['price'] <= x['nguong'] * (1 + SAT_NGUONG)
+               and 'SN:' + x['sym'] not in cu]
+        if sat:
+            dong = [f"⚠️ SÁT NGƯỠNG BÁN — sổ thực tế, phiên {ses} · {now:%H:%M}", '']
+            for x in sat:
+                dong.append(f"{x['sym']}: giá {_so(x['price'])} · đóng cửa ≤ {_so(x['nguong'])} là BÁN HẾT ATC "
+                            f"(chỉ cách {('%.1f' % abs(x.get('cach_pct') or 0)).replace('.', ',')}%)\n   → {('{:,}'.format(x['sell_sh'])).replace(',', '.')} cp · {x.get('action') or ''}")
+            dong += ['', f'Giá ATC hay lệch 1–2% so với 14h30 (TCH 25/11: 13,05 → ATC 12,85). Cách ngưỡng ≤ {SAT_NGUONG*100:.0f}% là rủi ro thủng — '
+                     'xem bảng giá trước 14:45 và quyết định đặt bán ATC.']
+            if _post('\n'.join(dong)):
+                da += ['SN:' + x['sym'] for x in sat]
+    # SAU ATC (14:46-15:30): gia dong cua that da co — ma nao THUNG nguong ma chua bao lenh ban thi bao ngay
+    if 14.76 <= t < 15.5:
+        thung = [x for x in ex if x.get('exit_reason') and not x.get('provisional') and 'C:' + x['sym'] not in cu]
+        if thung:
+            dong = [f"🔴 ĐÓNG CỬA ĐÃ THỦNG LUẬT BÁN — sổ thực tế, phiên {ses}", '']
+            dong += [f"{x['sym']}: đóng cửa {_so(x['price'])} — {x['exit_reason']} → bộ máy BÁN {x['sell_pct_pos']:.0f}% "
+                     f"({('{:,}'.format(x['sell_sh'])).replace(',', '.')} cp) ở ATC hôm nay" for x in thung]
+            dong += ['', 'Nếu tài khoản thật CHƯA bán ở ATC: bán ngay đầu phiên tới.']
+            if _post('\n'.join(dong)):
+                da += ['C:' + x['sym'] for x in thung]
     if 14.0 <= t <= 14.84:
         ban = [x for x in ex if x.get('exit_reason') and 'T:' + x['sym'] not in cu]
         cho = [x for x in ex if x.get('pending_exit') and 'W:' + x['sym'] not in cu]
@@ -962,7 +1007,14 @@ def gui_nhac_atc(T, rows, ses, cu, now):
             dong.append(f"{k['sym']} ({ng}) giá {_so(px)} → BÁN HẾT ATC" + (f" · ngưỡng {_so(k.get('nguong'))}" if k.get('nguong') else '')
                         + f" — {k.get('ly_do') or ''}")
             da.append(key)
-    if dong and gui_tin('\n'.join([f"🔻 ĐẶT LỆNH BÁN ATC — phiên {ses[8:10]}/{ses[5:7]} · {now:%H:%M}", ''] + dong
+        elif (k.get('viec') == 'NGUONG' and px is not None and k.get('nguong') is not None
+              and px <= float(k['nguong']) * (1 + SAT_NGUONG) and f"AS:{ng[:2]}:{k['sym']}" not in cu):
+            # 25/11/2026: sat nguong — ATC co the day xuong duoi, bao truoc khi het gio dat lenh
+            dong.append(f"⚠️ {k['sym']} ({ng}) giá {_so(px)} SÁT NGƯỠNG: đóng cửa ≤ {_so(k['nguong'])} là BÁN HẾT ATC "
+                        f"(cách {('%.1f' % ((float(k['nguong']) / px - 1) * 100)).replace('.', ',')}%) — {k.get('ly_do') or ''}")
+            da.append(f"AS:{ng[:2]}:{k['sym']}")
+    _tieu = '🔻 ĐẶT LỆNH BÁN ATC' if any(not x.startswith('AS:') for x in da) else '⚠️ SÁT NGƯỠNG BÁN'
+    if dong and gui_tin('\n'.join([f"{_tieu} — phiên {ses[8:10]}/{ses[5:7]} · {now:%H:%M}", ''] + dong
                                    + ['', 'Luật tính bằng giá đóng cửa: đặt ATC trước 14:45.']), md=False, prio=5,
                        tags=['rotating_light']):
         return da
@@ -1852,6 +1904,20 @@ def main():
         nhac = nhac_het_luot(hits, nhac, cu_mua, ses, int(CF.get('sell_from', 3) or 3))
     da_keu = gui_telegram(hits, ses, cu_mua, cu_ses, T.get('light', 'VANG'), frac, T, den_tt=den_tt,
                           xac_nhan=xac_nhan, nhac=nhac) or []
+    # 25/11/2026 (loi TCH): ban dung toi KHONG chay cho phien truoc -> ke hoach ban / nguong / so thuc te deu
+    # la cua 2 phien truoc ma chuong van chay im lang. Phat hien thi BAO NGAY ve dien thoai, mot lan/phien.
+    try:
+        _asof = str(T.get('asof') or '')
+        if ses == today and _asof and phien_cong(_asof, 1) < ses:
+            out['du_lieu_cu'] = dict(asof=_asof, can=phien_cong(_asof, 1))
+            if 'CU:' + ses not in (cu_mua if cu_ses == ses else set()) and kenh_co() and now.weekday() < 5:
+                if gui_tin(f"🚨 DỮ LIỆU CŨ — bản dựng mới nhất là phiên {_asof}, thiếu phiên {phien_cong(_asof, 1)}.\n"
+                           "Ngưỡng bán / kế hoạch bán / sổ thực tế hôm nay đang tính trên số CŨ.\n"
+                           "Việc cần làm: GitHub → nsi-bot → Actions → 'Cập nhật Nguyễn Sơn Invest' → Run workflow.",
+                           md=False, prio=5, tags=['rotating_light']):
+                    da_keu = list(da_keu) + ['CU:' + ses]
+    except Exception as e:
+        print('kiem du lieu cu loi:', type(e).__name__, e)
     try:
         out['exits'] = danh_gia_thoat(PF, {**rows_pf, **rows}, CF, ses, now, light_today=den_live)
         da_keu += gui_telegram_thoat(out['exits'], PF, ses, (cu_mua if cu_ses == ses else set()), now, T) or []

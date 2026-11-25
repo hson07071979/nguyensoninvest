@@ -8260,10 +8260,19 @@ function dongKeHoach() {
   if (typeof laQuanTri === 'function' && laQuanTri()) (D.ke_hoach_so_tay || []).forEach(k => them(k, 'sotay', k.sh));
   // mã sổ giao dịch thực tế mà sổ hệ thống không có: lấy dòng luật thoát của máy chủ
   const coMa = new Set(out.map(x => x.sym));
+  // 25/11/2026 (lỗi TCH): trước đây giá vốn = null, ngưỡng = null, lãi = số máy chủ (chưa trừ phí bán, trễ tới
+  // 5 phút) -> trang ghi "GIỮ +2,2%" trong khi giá 12,85 đã thủng sàn. Nay: giá vốn lấy từ sổ (cost_px, đã gồm
+  // phí mua), ngưỡng = giá đóng cửa cao nhất mà luật thoát bật (máy chủ tính bằng exit_rules.ke_hoach_ban,
+  // cùng hàm với sổ hệ thống), và so ngưỡng với giá real-time 15 giây/lần như sổ hệ thống.
+  const F = (typeof pfData === 'function') ? pfData() : null;
+  const vonSo = {}; ((F && F.open) || []).forEach(p => { if (p.cost_px) vonSo[p.sym] = p.cost_px / 1000; });
   (((typeof LIVE !== 'undefined' && LIVE.server) || {}).exits || []).forEach(x => {
     if (coMa.has(x.sym)) return;
-    out.push({ sym: x.sym, nguon: 'so', server: x, gia_von: null, viec: x.exit_reason ? 'BAN' : 'GIU',
-               ly_do: x.exit_reason || x.pending_exit || null, nguong: null, moc: {} });
+    const coNg = x.nguong != null && x.sellable !== false;
+    out.push({ sym: x.sym, nguon: 'so', server: x, gia_von: x.cost_px || vonSo[x.sym] || null,
+               viec: coNg ? 'NGUONG' : (x.exit_reason ? 'BAN' : 'GIU'), sh: x.sh,
+               ly_do: x.exit_reason || x.pending_exit || (coNg ? (x.ly_do_nguong || 'luật thoát của sổ') : null),
+               nguong: coNg ? x.nguong : null, peak: x.peak_gain, moc: {} });
   });
   return out;
 }
@@ -8289,8 +8298,10 @@ function trangThaiBan(k) {
       mau = '--critical';
     } else {
       const cach = p ? (k.nguong / p - 1) * 100 : null;
-      viec = `GIỮ — đóng cửa ≤ ${so(k.nguong)} thì BÁN HẾT ATC${cach != null ? ` (cách ${cach.toFixed(1).replace('.', ',')}%)` : ''} · ${ly}`;
-      mau = cach != null && cach > -3 ? '--warn' : '--text-secondary';
+      const sat = cach != null && cach > -2;     // 25/11/2026: cách ngưỡng ≤ 2% -> ATC có thể đẩy thủng
+      viec = `${sat ? '⚠ SÁT NGƯỠNG — ' : 'GIỮ — '}đóng cửa ≤ ${so(k.nguong)} thì BÁN HẾT ATC${cach != null ? ` (cách ${cach.toFixed(1).replace('.', ',')}%)` : ''} · ${ly}`;
+      mau = sat ? '--critical' : cach != null && cach > -3 ? '--warn' : '--text-secondary';
+      if (sat && atc) duoi = true;               // từ 14h15: sát ngưỡng cũng kêu chuông
     }
   } else if (k.server) {
     viec = k.server.action || 'GIỮ'; mau = k.server.exit_reason ? '--critical' : '--text-secondary';
@@ -8342,9 +8353,9 @@ function kiemTraNguongBan() {
   const hom = (typeof gioVN === 'function' ? gioVN() : new Date()).toISOString().slice(0, 10);
   const moi = [];
   dongKeHoach().forEach(k => {
-    if (k.nguon === 'so') return;                 // sổ thực tế: chuongBan() của máy chủ đã lo
+    // 25/11/2026: sổ thực tế cũng kêu ở trình duyệt (trước đây bỏ qua, trông vào máy chủ 5 phút/lần)
     const s = trangThaiBan(k);
-    const key = 'LB:' + k.nguon + ':' + k.sym + ':' + hom;
+    const key = 'LB:' + k.nguon + ':' + k.sym + ':' + hom + ':' + (/SÁT NGƯỠNG/.test(s.viec) ? 'S' : 'B');   // sát rồi thủng: kêu lại
     if (s.duoi && !LB.keu.has(key)) { LB.keu.add(key); moi.push({ sym: k.sym, price: s.p == null ? '' : s.p.toFixed(2), viec: s.viec }); }
   });
   if (moi.length) reoChuong(moi, 'ban');
