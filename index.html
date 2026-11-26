@@ -1964,6 +1964,12 @@ function pageHome(root){
     <tbody id="lbody"></tbody></table></div>
   <div class="muted" id="ldem" style="font-size:12.5px;margin-top:6px"></div>
 
+  <h2 id="lenhthat">Lệnh đã vào thật — sổ giao dịch thực tế</h2>
+  <p class="muted" style="margin-top:-6px;font-size:13.5px">Các lệnh chuông đã báo và sổ thực tế đã khớp trong phiên. Bảng trên là số của hệ thống
+  chạy lại theo luật; đôi khi hai sổ lệch nhau (cùng phiên nhiều mã đủ điểm, dữ liệu trong phiên khác số cuối ngày) — cột "Hệ thống" ghi rõ.
+  Số ở bảng này không cộng vào các chỉ số phía trên.</p>
+  <div class="card tblwrap" id="lthat"></div>
+
   <h2>Danh mục hệ thống đang cầm</h2>
   <div class="card" id="hopen"></div>
   `;
@@ -1998,6 +2004,33 @@ function pageHome(root){
     labels:K.full ? dates : C.dates, xticks:K.full ? xticks : xt, fmtY:v=>v.toFixed(2), fmtV:v=>v.toFixed(3)+'×'});
 
   lichSuLenh(K.tu);
+  lenhThat();
+}
+
+/* 26/11/2026 (lỗi TCH): Lịch sử lệnh chỉ đọc P.trades (hệ thống chạy lại) -> lệnh sổ thực tế mà hệ thống
+   không có (TCH 04/11, VND 06/11, PLX 15/09) biến mất khỏi trang dù chuông đã báo và khách đã vào. */
+function lenhThat(){
+  const el = document.getElementById('lthat'); if (!el) return;
+  const R = (typeof lichSuThat === 'function' ? lichSuThat() : []).filter(t => t.nguon === 'ghitien');
+  if (!R.length) { el.innerHTML = '<p class="muted" style="margin:0">Chưa có lệnh nào đóng.</p>'; return; }
+  const ht = lsDuLieu();
+  const p2 = x => x == null ? '—' : (+x).toFixed(2).replace('.', ',');
+  const pc = x => x == null ? '—' : (x >= 0 ? '+' : '') + (+x).toFixed(2).replace('.', ',') + '%';
+  const ngay = d => d ? d.split('-').reverse().join('/') : '—';
+  el.innerHTML = `<table class="lsl"><thead><tr><th>Mã</th><th>Ngành</th><th>Ngày mua</th><th>Ngày bán</th>
+    <th class="r">Giữ</th><th class="r">Giá mua</th><th class="r">Giá bán</th><th class="r">Lãi/lỗ</th>
+    <th class="r">% tài khoản</th><th>Lý do bán</th><th>Hệ thống</th><th></th></tr></thead><tbody>${R.map(t => {
+      const e = ht.find(x => x.sym === t.sym && x.entry === t.entry);
+      const so = !e ? '<span class="pill CAM" title="Hệ thống chạy lại theo số cuối ngày không vào lệnh này">Không có</span>'
+        : (e.exit === t.exit && Math.abs((e.pnl_pct || 0) - (t.pnl || 0)) < 0.05) ? '<span class="muted">Trùng</span>'
+        : `<span class="muted" title="${esc(e.reason || '')}">Bán ${ngay(e.exit)} · ${pc(e.pnl_pct)}</span>`;
+      return `<tr><td class="sym">${esc(t.sym)}</td><td class="muted lsn">${esc(t.sector || '')}</td>
+        <td>${ngay(t.entry)}</td><td>${ngay(t.exit)}</td><td class="r">${t.held != null ? t.held + ' phiên' : '—'}</td>
+        <td class="r">${p2(t.entry_px)}</td><td class="r">${p2(t.exit_px)}</td>
+        <td class="r ${cls(t.pnl)}" style="font-weight:660">${pc(t.pnl)}</td>
+        <td class="r ${t.pct_nav == null ? '' : cls(t.pnl)}">${t.pct_nav != null && t.pnl != null ? pc(t.pnl * t.pct_nav / 100) : '—'}</td>
+        <td class="muted" style="font-size:13px">${t.hard ? nhanHard(t.hard) + ' ' : ''}${esc(t.reason || '')}</td>
+        <td>${so}</td><td><button class="mini" onclick="openChart('${esc(t.sym)}')">Nến</button></td></tr>`; }).join('')}</tbody></table>`;
 }
 
 /* ---------- LỊCH SỬ LỆNH (trên trang Hiệu suất) ---------- */
@@ -5451,7 +5484,9 @@ function danhMuc() {
     const shK = p.shares ? (kKH === 1 ? p.shares : Math.max(100, Math.round(p.shares * kKH / 100) * 100)) : null;
     them({
       sym: p.sym, name: tenCua(p.sym), sector: p.sector || nganhCua(p.sym),
-      entry: p.entry, entry_px: p.entry_raw ? p.entry_raw / 1000 : von, last: px, sh: shK,
+      // 26/11/2026 (VPI): giá vốn hiện = giá vốn ĐIỀU CHỈNH (cùng thang với giá hiện tại và lãi/lỗ, cùng số với
+      // trang Chuông). Trước đây hiện giá khớp gốc 57,40 cạnh giá 57,20 mà lãi +9% -> trông như lỗi.
+      entry: p.entry, entry_px: von, entry_goc: p.entry_raw ? p.entry_raw / 1000 : null, last: px, sh: shK,
       pnl: laiSauPhi(von, px) * 100,
       tien: p.shares ? p.shares * px * 1000 * kKH : null,
       // NAV của CHÍNH quyển sổ sinh ra dòng này. Sổ chạy của bộ máy xuất phát
@@ -5610,7 +5645,7 @@ function bangDanhMucNgan() {
       ${dm.map(p => `<tr><td class="sym">${esc(p.sym)}</td>
         <td class="muted" style="font-size:13px">${(p.sector || '').slice(0, 24)}</td>
         <td>${ddmm(p.entry)}</td>
-        <td style="text-align:right">${dec(+p.entry_px)}</td>
+        <td style="text-align:right">${dec(+p.entry_px)}${(p.entry_goc && Math.abs(p.entry_goc / p.entry_px - 1) > 0.01) ? `<div class="muted" style="font-size:11.5px" title="Giá khớp lúc mua ${dec(+p.entry_goc)}; mã đã chia cổ tức / phát hành thêm nên giá vốn được điều chỉnh cùng thang với giá hiện tại">gốc ${dec(+p.entry_goc)} · đã điều chỉnh quyền</div>` : ''}</td>
         <td style="text-align:right">${p.last != null ? dec(+p.last) : '—'}</td>
         <td style="text-align:right" class="muted">${p.sh ? num(p.sh) : '—'}</td>
         <td style="text-align:right">${p.tien ? vnd(p.tien) : '—'}</td>
@@ -5702,7 +5737,7 @@ function pageSoLenh(root) {
             ? ` <span title="Đèn tím — ${((D.lookup||{})[p.sym]||{}).tim_vi||''}" style="color:var(--s7)">●</span>` : ''}</td>
           <td class="muted" style="font-size:13px">${(p.name || '').slice(0, 30)}</td>
           <td>${ddmm(p.entry)}</td>
-          <td style="text-align:right">${dec(+p.entry_px)}</td>
+          <td style="text-align:right">${dec(+p.entry_px)}${(p.entry_goc && Math.abs(p.entry_goc / p.entry_px - 1) > 0.01) ? `<div class="muted" style="font-size:11.5px" title="Giá khớp lúc mua ${dec(+p.entry_goc)}; mã đã chia cổ tức / phát hành thêm nên giá vốn được điều chỉnh cùng thang với giá hiện tại">gốc ${dec(+p.entry_goc)} · đã điều chỉnh quyền</div>` : ''}</td>
           <td style="text-align:right">${p.last != null ? dec(+p.last) : '—'}</td>
           <td style="text-align:right" class="muted">${p.sh ? num(p.sh) : '—'}</td>
           <td style="text-align:right;font-weight:640">${p.tien ? vnd(p.tien) : '—'}</td>
