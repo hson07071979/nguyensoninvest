@@ -1076,6 +1076,8 @@ const PAGES = [
  ['sotay','Sổ tay của tôi',        pageNotebook,  true],
  // 'qt' = an voi khach, HIEN trong menu khi mo tu trang quan tri (laQuanTri, p12.js) — co nut vuot
  ['chandoan','Chẩn đoán', pageChanDoan, 'qt'],
+ // 26/11/2026 (anh Sơn): luật + toàn bộ lệnh từ 2023 theo cửa vào + vị thế real-time — chỉ trang quản trị
+ ['hethonggd','Hệ thống giao dịch', pageHeThongGD, 'qt'],
  // ba trang thử nghiệm của bản 17 — giữ lại, ẩn khỏi menu
  ['homnay','Hôm nay (thử nghiệm)',      pageHomNay,  true],
  ['cohoi','Cơ hội (thử nghiệm)',        pageCoHoi,   true],
@@ -8828,6 +8830,226 @@ function pageEvidence(root){
   ].map(([n,m,verdict])=>`<tr><td class="sym">${n}</td>
     <td style="text-align:right">${m?sg(m.total_return):'—'}</td><td style="text-align:right">${m?m.pf:'—'}</td>
     <td style="text-align:right">${m?m.sharpe:'—'}</td><td class="muted">${verdict}</td></tr>`).join('');
+}
+
+/* ============================================================================
+   TRANG QUẢN TRỊ — HỆ THỐNG GIAO DỊCH (26/11/2026, anh Sơn)
+   Luật PROD đọc thẳng từ cấu hình đang chạy (cpV), toàn bộ lệnh từ 2023 tách theo CỬA VÀO
+   (cửa chính đã xác nhận · thăm dò trượt ĐK9 · cửa V · Hard) và lý do bán, bảng lọc được như
+   Lịch sử lệnh, mổ xẻ cửa V, và vị thế đang cầm cập nhật giá real-time 15 giây/lần.
+   Số lệnh = P.trades (bộ máy, mỗi bản dựng). Đặc trưng phiên vào (t.f) do produce2._dac_trung tính
+   trên giá điều chỉnh của bộ máy — chỉ để phân tích, không phải luật.
+   ========================================================================== */
+const HTGD_TU = '2023-01-01';
+const HTGD_CUA = {
+  C: ['Cửa chính · đã xác nhận', 'Bứt nền, mua thăm dò 14:25, ĐK9 tối xác nhận'],
+  TD: ['Cửa chính · thăm dò trượt', 'Bứt nền nhưng ĐK9 tối không đạt → bán ATC T+3'],
+  V: ['Cửa V', 'Thủng nền rồi bật ngược mạnh, mua thẳng ở giá đóng cửa'],
+  Hard: ['Hard', 'Anh Sơn tự vào / tự bán'],
+};
+function htgdCua(t) {
+  if (t.hard) return 'Hard';
+  if (t.door === 'V') return 'V';
+  if (/Cond9|Lệnh mua không lớn hơn/.test(t.reason || '')) return 'TD';
+  return 'C';
+}
+function htgdNhom(r) {
+  r = r || '';
+  if (/Cond9|Lệnh mua không lớn hơn/.test(r)) return 'Thăm dò trượt ĐK9';
+  if (/^Momentum|Không chạy/.test(r)) return 'Không chạy T+3';
+  if (/^Van thời gian|Hết thời gian chờ/.test(r)) return 'Van thời gian T+4';
+  if (/MA10/.test(r)) return 'Để lãi chạy (MA10)';
+  if (/MA30/.test(r)) return 'Gãy MA30';
+  if (/^Khoá lãi/.test(r)) return 'Khoá lãi';
+  if (/^Đổi ngựa/.test(r)) return 'Đổi ngựa';
+  if (/^Cửa V/.test(r)) return 'Cửa V hết hạn';
+  if (/^Hard/.test(r)) return 'Hard Sell';
+  if (/[Cc]ắt lỗ|Hard stop/.test(r)) return 'Cắt lỗ';
+  return r;
+}
+function htgdThongKe(rows) {
+  const n = rows.length, th = rows.filter(t => t.pnl_pct > 0), tu = rows.filter(t => t.pnl_pct <= 0);
+  const tb = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+  const giu = rows.map(t => t.held).sort((a, b) => a - b);
+  return { n, wr: n ? th.length / n * 100 : null, w2: rows.filter(t => t.pnl_pct > 2).length,
+    aw: tb(th.map(t => t.pnl_pct)), al: tb(tu.map(t => t.pnl_pct)), ex: tb(rows.map(t => t.pnl_pct)),
+    tong: rows.reduce((s, t) => s + t.pnl_pct, 0), tk: rows.reduce((s, t) => s + (t.tk || 0), 0),
+    giu: giu.length ? giu[Math.floor(giu.length / 2)] : null };
+}
+const htgdPc = (x, d = 2) => x == null ? '—' : (x > 0 ? '+' : '') + (+x).toFixed(d).replace('.', ',') + '%';
+const htgdSo = (x, d = 2) => x == null ? '—' : (+x).toFixed(d).replace('.', ',');
+const htgdNgay = d => d ? d.split('-').reverse().join('/') : '—';
+const htgdP = x => x == null ? '' : cls(x);
+
+function pageHeThongGD(root) {
+  const R = lsDuLieu().filter(t => t.entry >= HTGD_TU).map(t => Object.assign(t, { cua: htgdCua(t), nhom: htgdNhom(t.reason), f: t.f || {} }));
+  const coDT = R.some(t => t.f && t.f.ngay != null);
+  const pl = (k, x, d) => cpV(k, x) != null ? cpV(k, x) : d;
+  const p100 = (k, x) => htgdSo(pl(k, x) * 100, 1).replace(/,0$/, '');
+  const lk = pl('profit_lock', null, [[0.08, 0.02], [0.12, 0.06], [0.15, 0.08]]);
+  const sm = pl('size_map', null, { XANH: 1, VANG: 0.6, CAM: 0.35, DO: 0.2 });
+  root.innerHTML = `
+  <div class="hero"><div class="badge">Trang quản trị · cấu hình ${esc(D.prod_config_hash || '')} · dữ liệu tới phiên ${htgdNgay(D.asof)}</div>
+    <h1>Hệ thống giao dịch</h1>
+    <p class="lead">Luật đang chạy, toàn bộ ${R.length} lệnh từ 2023 tách theo cửa vào và lý do bán, cùng vị thế đang cầm với giá real-time.</p></div>
+
+  <h2>Đang cầm — real-time</h2><div class="card tblwrap" id="htgdMo"></div>
+
+  <h2>Mỗi cửa vào kiếm tiền ra sao</h2>
+  <p class="muted" style="margin-top:0">"Đóng góp" = cộng lãi/lỗ từng lệnh theo % tài khoản lúc vào. Lãi &gt;2% tách riêng vì nhiều lệnh "thắng" chỉ lãi vài phần nghìn.</p>
+  <div class="grid kpis" id="htgdCua"></div>
+
+  <h2>Cửa V — vì sao thắng ít</h2><div id="htgdV"></div>
+
+  <h2>Luật PROD</h2>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:14px">
+  <div class="card"><h3 style="margin-top:0">Cửa vào</h3><table class="lsl"><tbody>
+    <tr><td><b>Sân chơi</b></td><td>HOSE/HNX · TOP ${pl('top_n', null, 120)} thanh khoản TB20, xếp lại mỗi phiên · vốn hoá &gt; ${htgdSo(pl('min_mktcap', null, 1e12) / 1e9, 0)} tỷ (phiên trước) · ≥ ${pl('min_history', null, 250)} phiên lịch sử</td></tr>
+    <tr><td><b>Cổng tài chính</b></td><td>ICR &lt; 1,5 chặn (1,5–2,5 cờ vàng × 0,5) · CFO cộng 4 quý âm → chặn (trừ CTCK, bảo hiểm) · Nợ/VCSH &gt; 4 · NH: nợ xấu &gt; 3% hoặc CAR &lt; 8%</td></tr>
+    <tr><td><b>Cửa chính</b></td><td>Điểm ≥ ${pl('score_floor', null, 45)} · nền ${pl('base_len', null, 30)} phiên ≤ ${p100('base_range', null)}% · giá tăng HOSE ≥ ${p100('trig_hose', null)}% / HNX ≥ ${p100('trig_hnx', null)}% · KL ≥ ${htgdSo(pl('vol_floor', null, 2), 1)}× TB20 · GTGD ≥ ${htgdSo(pl('gtgd_min', null, 15e9) / 1e9, 0)} tỷ · biến động TB20 ≥ ${p100('volat_min', null)}%</td></tr>
+    <tr><td><b>Chốt lệnh</b></td><td>${String(pl('chot_phut', null, 1425)).replace(/(\d\d)$/, ':$1')}: mã số 1 theo điểm + Vol/TB20 (KL khớp thật đủ ngưỡng) → mua thăm dò đủ cỡ. Không mã nào → dự phòng ATC</td></tr>
+    <tr><td><b>Xác nhận tối</b></td><td>ĐK9 lệnh mua ÷ lệnh bán ≥ ${htgdSo(pl('ordimb_min', null, 1.4), 1)} → giữ · không đạt → bán ATC T+${pl('sell_from', null, 3)} · tối đa ${pl('max_unconf', null, 1)} lệnh thăm dò chưa xác nhận</td></tr>
+    <tr><td><b>Cửa V</b></td><td>Nền ≤ ${p100('v_base', null)}% đo ${pl('v_look', null, 20)} phiên trước · thủng đáy nền &gt; ${p100('v_brk', null)}% · đóng cửa bật ≥ ${p100('v_up', null)}% từ đáy ${pl('v_win', null, 10)} phiên · phiên đầu tiên đạt · qua cổng tài chính · mua thẳng ${p100('v_size', null)}% NAV · ${pl('v_per_day', null, 1)} mã/phiên, tối đa ${pl('v_max_n', null, 3)} mã · giữ tối đa ${pl('v_hold_cap', null, 40)} phiên</td></tr>
+    <tr><td><b>Nhồi</b></td><td>Phiên 4–7, lãi ≥ 10%, sát đỉnh 10 phiên, đèn Xanh → +50% vị thế, 1 lần</td></tr>
+    <tr><td><b>Cỡ lệnh</b></td><td>${p100('base_size', null)}% × đèn (${Object.entries(sm).map(([k, v]) => (LIGHTNAME[k] || k) + ' ' + htgdSo(v, 2).replace(/,?0+$/, '')).join(' · ')}) × nền ≤ 10% 1,2 × cờ vàng 0,5 · lệnh thứ 3 trở đi × 0,5 · trần ${p100('max_pos', null)}%/mã, ${p100('sector_cap', null)}%/ngành, ${pl('max_pos_n', null, 12)} mã</td></tr>
+    <tr><td><b>Đổi ngựa</b></td><td>Hết tiền, tín hiệu mới chỉ vào được &lt; 50% → bán mã lãi thấp nhất (&lt; 5%, hàng đã về, không phải thăm dò), 1 lần/phiên</td></tr>
+  </tbody></table></div>
+  <div class="card"><h3 style="margin-top:0">Cửa thoát (theo thứ tự, giá đóng cửa, từ T+${pl('sell_from', null, 3)})</h3><table class="lsl"><tbody>
+    <tr><td><b>Thăm dò trượt</b></td><td>ĐK9 tối hôm mua không đạt → bán hết ATC</td></tr>
+    <tr><td><b>Cắt lỗ khẩn</b></td><td>Lỗ chạm ${p100('hard_stop', null)}%</td></tr>
+    <tr><td><b>Không chạy</b></td><td>Tới T+${pl('mo_by', null, 3)} chưa có phiên đóng cửa lãi ≥ ${p100('mo_need', null)}%</td></tr>
+    <tr><td><b>Cắt lỗ</b></td><td>Lỗ chạm ${p100('stop', null)}%</td></tr>
+    <tr><td><b>Khoá lãi</b></td><td>${lk.map(([a, b]) => `từng lãi ${htgdSo(a * 100, 0)}% → sàn +${htgdSo(b * 100, 0)}%`).join(' · ')}</td></tr>
+    <tr><td><b>Van thời gian</b></td><td>T+${pl('t_valve', null, 4)} vẫn lỗ</td></tr>
+    <tr><td><b>Để lãi chạy</b></td><td>Đã lãi ≥ ${p100('big_win', null)}% → ${pl('conf', null, 2)} phiên đóng dưới MA${pl('trail_fast', null, 10)}</td></tr>
+    <tr><td><b>Gãy xu hướng</b></td><td>${pl('conf', null, 2)} phiên đóng dưới MA${pl('trail_ma', null, 30)}</td></tr>
+    <tr><td><b>Cửa V hết hạn</b></td><td>Giữ đủ ${pl('v_hold_cap', null, 40)} phiên</td></tr>
+    <tr><td><b>Hard Sell</b></td><td>Anh Sơn bán chủ động, ưu tiên hơn lệnh bot cùng phiên</td></tr>
+  </tbody></table>
+  <h3>Chuông</h3><p class="muted" style="margin:0;font-size:13.5px">Báo mua lúc chốt và dự phòng ATC · "đủ điểm — không vào" kèm lý do · nhắc bán ATC khi chạm luật · sát ngưỡng 13:45–14:45 (cách ngưỡng ≤ 2%) · đóng cửa đã thủng 14:46–15:30 · dữ liệu cũ khi bản dựng thiếu phiên. Cả hai sổ, web + điện thoại.</p></div>
+  </div>
+
+  <h2 id="htgdBang">Toàn bộ lệnh từ 2023</h2>
+  <div class="lslloc">
+    <input type="search" id="hq" placeholder="Tìm mã, ngành…">
+    <select id="hcua"><option value="">Mọi cửa vào</option>${Object.entries(HTGD_CUA).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')}</select>
+    <select id="hnhom"><option value="">Mọi lý do bán</option>${[...new Set(R.map(t => t.nhom))].sort().map(x => `<option>${esc(x)}</option>`).join('')}</select>
+    <select id="hnam"><option value="">Mọi năm</option>${[...new Set(R.map(t => t.entry.slice(0, 4)))].sort().reverse().map(y => `<option>${y}</option>`).join('')}</select>
+    <select id="hkq"><option value="">Thắng &amp; thua</option><option value="w">Chỉ lãi</option><option value="w2">Lãi &gt;2%</option><option value="l">Lỗ / hoà</option></select>
+    <select id="hden"><option value="">Mọi đèn</option><option value="XANH">Đèn Xanh</option><option value="VANG">Đèn Vàng</option><option value="CAM">Đèn Cam</option><option value="DO">Đèn Đỏ</option></select>
+    ${coDT ? '<select id="hphien"><option value="">Mọi phiên vào</option><option value="hi">Phiên vào tăng ≥6%</option><option value="lo">Phiên vào tăng &lt;6%</option></select>' : ''}
+    <button class="mini" id="hxoa">Xoá lọc</button>
+  </div>
+  <div class="grid kpis" id="hkpi" style="margin-bottom:14px"></div>
+  <div class="card tblwrap"><table class="lsl" id="htab"><thead><tr>
+    <th data-k="sym">Mã</th><th data-k="cua">Cửa vào</th><th data-k="entry">Ngày mua</th><th data-k="exit">Ngày bán</th><th data-k="held" class="r">Giữ</th>
+    <th data-k="gm" class="r">Giá mua</th><th data-k="gb" class="r">Giá bán</th><th data-k="pnl_pct" class="r">Lãi/lỗ</th><th data-k="tk" class="r">% TK</th><th data-k="peak" class="r">Đỉnh lãi</th>
+    <th data-k="reason">Lý do bán</th><th data-k="light">Đèn</th>
+    <th data-k="f.ngay" class="r" title="Giá tăng bao nhiêu trong phiên vào lệnh">Phiên vào</th><th data-k="f.vol" class="r" title="KL phiên vào ÷ TB20">KL×</th>
+    <th data-k="f.ma200" class="r" title="Giá so với MA200 lúc vào">vs MA200</th><th data-k="f.t3" class="r" title="Lãi cao nhất theo giá đóng cửa 3 phiên sau">Max T+1–3</th><th></th>
+  </tr></thead><tbody id="hbody"></tbody></table></div>
+  <div class="muted" id="hdem" style="font-size:12.5px;margin-top:6px"></div>
+  ${coDT ? '' : '<p class="muted" style="font-size:13px">Cột phiên vào / KL× / MA200 / Max T+1–3 sẽ có từ bản dựng kế tiếp.</p>'}
+
+  <h2>Sổ giao dịch thực tế</h2>
+  <p class="muted" style="margin-top:0">Lệnh chuông đã báo và sổ thực tế đã khớp. Không cộng vào số phía trên.</p>
+  <div class="card tblwrap" id="htgdThat"></div>`;
+
+  /* ---- mỗi cửa ---- */
+  const ds = Object.keys(HTGD_CUA).map(k => [k, htgdThongKe(R.filter(t => t.cua === k))]).filter(x => x[1].n);
+  document.getElementById('htgdCua').innerHTML = ds.map(([k, s]) => kpi(HTGD_CUA[k][0], htgdPc(s.tk, 1),
+    `${s.n} lệnh · lãi ${htgdSo(s.wr, 0)}% (lãi &gt;2%: ${s.w2}) · thắng TB ${htgdPc(s.aw, 1)} · thua TB ${htgdPc(s.al, 1)} · kỳ vọng ${htgdPc(s.ex)}/lệnh · giữ trung vị ${s.giu} phiên`, htgdP(s.tk))).join('');
+
+  /* ---- cửa V ---- */
+  const V = R.filter(t => t.cua === 'V');
+  if (V.length) {
+    const s = htgdThongKe(V), byNam = {};
+    V.forEach(t => { const y = t.entry.slice(0, 4); (byNam[y] = byNam[y] || [0, 0])[0]++; if (t.pnl_pct > 0) byNam[y][1]++; });
+    const nhomV = {}; V.forEach(t => (nhomV[t.nhom] = nhomV[t.nhom] || []).push(t));
+    const chet = (nhomV['Không chạy T+3'] || []).length + (nhomV['Van thời gian T+4'] || []).length;
+    const lon = V.filter(t => t.pnl_pct >= 15).sort((a, b) => b.pnl_pct - a.pnl_pct);
+    const nhomDT = coDT ? [
+      ['Phiên vào tăng ≥6% (gần trần)', V.filter(t => t.f.ngay != null && t.f.ngay >= 6)],
+      ['Phiên vào tăng <6%', V.filter(t => t.f.ngay != null && t.f.ngay < 6)],
+      ['Giá trên MA200 >5% lúc vào', V.filter(t => t.f.ma200 != null && t.f.ma200 > 5)],
+      ['Giá dưới / sát MA200', V.filter(t => t.f.ma200 != null && t.f.ma200 <= 5)]] : [];
+    document.getElementById('htgdV').innerHTML = `
+    <div class="card"><ul style="margin:0;padding-left:20px;line-height:1.7">
+      <li><b>Tỷ lệ thắng thật:</b> ${V.filter(t => t.pnl_pct > 0).length}/${s.n} lệnh có lãi (${htgdSo(s.wr, 0)}%), nhưng chỉ <b>${s.w2}/${s.n} lệnh lãi &gt;2% (${htgdSo(s.w2 / s.n * 100, 0)}%)</b>. Theo năm: ${Object.keys(byNam).sort().map(y => `${y} ${byNam[y][1]}/${byNam[y][0]}`).join(' · ')}.</li>
+      <li><b>Chết sớm:</b> ${chet}/${s.n} lệnh bán vì không chạy T+3 hoặc van T+4 — cú bật đã xong ngay trong phiên tín hiệu.</li>
+      <li><b>Sống nhờ lệnh lớn:</b> ${lon.map(t => `${esc(t.sym)} ${htgdNgay(t.entry).slice(3)} (${htgdPc(t.pnl_pct, 0)})`).join(', ') || 'chưa có'} đóng góp ${htgdPc(lon.reduce((a, t) => a + (t.tk || 0), 0), 1)} trên tổng ${htgdPc(s.tk, 1)} tài khoản của cửa V.</li>
+    </ul>
+    <p class="muted" style="font-size:13px;margin:10px 0 0">Mẫu nhỏ, đây là giả thuyết để kiểm định (một thay đổi một lần, cả lịch sử 2019–2026 + walk-forward, đo số lệnh bị mất) — chưa phải luật.</p></div>
+    <div class="grid kpis" style="margin-top:12px">${nhomDT.map(([n, g]) => { const x = htgdThongKe(g);
+      return kpi(n, htgdPc(x.tk, 1), `${x.n} lệnh · lãi &gt;2%: ${x.w2} · tổng lãi/lỗ ${htgdPc(x.tong, 1)}`, htgdP(x.tk)); }).join('')}</div>
+    <div class="card tblwrap" style="margin-top:12px"><table class="lsl"><thead><tr><th>Cửa V bán vì</th><th class="r">Số lệnh</th><th class="r">Có lãi</th><th class="r">Lãi &gt;2%</th><th class="r">Đóng góp TK</th><th class="r">Giữ trung vị</th></tr></thead><tbody>
+    ${Object.entries(nhomV).sort((a, b) => b[1].length - a[1].length).map(([k, g]) => { const x = htgdThongKe(g);
+      return `<tr><td>${esc(k)}</td><td class="r">${x.n}</td><td class="r">${g.filter(t => t.pnl_pct > 0).length}</td><td class="r">${x.w2}</td><td class="r ${htgdP(x.tk)}">${htgdPc(x.tk, 1)}</td><td class="r">${x.giu} phiên</td></tr>`; }).join('')}
+    </tbody></table></div>`;
+  }
+
+  /* ---- bảng lệnh ---- */
+  const $ = id => document.getElementById(id);
+  const F = ['hq', 'hcua', 'hnhom', 'hnam', 'hkq', 'hden', 'hphien'].filter(id => $(id));
+  let sk = 'entry', sd = -1;
+  const lay = (t, k) => k.startsWith('f.') ? (t.f || {})[k.slice(2)] : t[k];
+  function ve() {
+    const v = Object.fromEntries(F.map(id => [id, $(id).value])), q = (v.hq || '').trim().toLowerCase();
+    const rows = R.filter(t => (!v.hcua || t.cua === v.hcua) && (!v.hnhom || t.nhom === v.hnhom) && (!v.hnam || t.entry.startsWith(v.hnam))
+      && (!v.hden || t.light === v.hden) && (!v.hkq || (v.hkq === 'w' ? t.pnl_pct > 0 : v.hkq === 'w2' ? t.pnl_pct > 2 : t.pnl_pct <= 0))
+      && (!v.hphien || (t.f.ngay != null && (v.hphien === 'hi' ? t.f.ngay >= 6 : t.f.ngay < 6)))
+      && (!q || (t.sym + ' ' + (t.sector || '')).toLowerCase().includes(q)));
+    rows.sort((a, b) => { const x = lay(a, sk), y = lay(b, sk); if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
+      return (x > y ? 1 : x < y ? -1 : 0) * sd || (a.entry < b.entry ? 1 : -1); });
+    const s = htgdThongKe(rows);
+    $('hkpi').innerHTML = kpi('Số lệnh', s.n, `từ ${HTGD_TU.slice(0, 4)}`) + kpi('Tỷ lệ lãi', s.n ? htgdSo(s.wr, 0) + '%' : '—', `lãi &gt;2%: ${s.w2}`)
+      + kpi('Thắng TB · thua TB', `${htgdPc(s.aw, 1)} · ${htgdPc(s.al, 1)}`, 'mỗi lệnh') + kpi('Kỳ vọng', htgdPc(s.ex), 'mỗi lệnh', htgdP(s.ex))
+      + kpi('Đóng góp tài khoản', htgdPc(s.tk, 1), 'cộng % TK từng lệnh', htgdP(s.tk));
+    $('hbody').innerHTML = rows.length ? rows.map(t => `<tr>
+      <td class="sym">${esc(t.sym)}<div class="muted lsn">${esc(t.sector || '')}</div></td>
+      <td><span class="pill ${t.cua === 'V' ? 'DO' : t.cua === 'C' ? 'XANH' : ''}">${HTGD_CUA[t.cua][0]}</span>${t.pyr_date ? ' <span class="pill VANG" title="Có lệnh nhồi">Nhồi</span>' : ''}</td>
+      <td>${htgdNgay(t.entry)}</td><td>${htgdNgay(t.exit)}</td><td class="r">${t.held} phiên</td>
+      <td class="r">${htgdSo(t.gm)}</td><td class="r">${htgdSo(t.gb)}</td><td class="r ${htgdP(t.pnl_pct)}" style="font-weight:660">${htgdPc(t.pnl_pct)}</td>
+      <td class="r ${htgdP(t.tk)}">${htgdPc(t.tk)}</td><td class="r">${t.peak ? '+' + htgdSo(t.peak, 1) + '%' : '—'}</td>
+      <td class="muted" style="font-size:13px">${esc(t.reason)}${t.frac && t.frac < 1 ? ' (bán 1 phần)' : ''}</td>
+      <td><span class="pill ${t.light}">${LIGHTNAME[t.light] || t.light || ''}</span></td>
+      <td class="r">${htgdPc(t.f.ngay, 1)}</td><td class="r">${t.f.vol == null ? '—' : htgdSo(t.f.vol, 1) + '×'}</td>
+      <td class="r">${htgdPc(t.f.ma200, 1)}</td><td class="r ${htgdP(t.f.t3)}">${htgdPc(t.f.t3, 1)}</td>
+      <td><button class="mini" onclick="openChart('${esc(t.sym)}')">Nến</button></td></tr>`).join('')
+      : '<tr><td colspan="17" class="muted">Không có lệnh nào khớp bộ lọc.</td></tr>';
+    $('hdem').textContent = `${rows.length} / ${R.length} lệnh`;
+  }
+  F.forEach(id => $(id).addEventListener(id === 'hq' ? 'input' : 'change', ve));
+  $('hxoa').onclick = () => { F.forEach(id => $(id).value = ''); ve(); };
+  root.querySelectorAll('#htab th[data-k]').forEach(th => th.onclick = () => { const k = th.dataset.k; sd = sk === k ? -sd : -1; sk = k; ve(); });
+  ve();
+
+  /* ---- sổ thực tế ---- */
+  const TH = (typeof lichSuThat === 'function' ? lichSuThat() : []).filter(t => t.nguon === 'ghitien');
+  $('htgdThat').innerHTML = TH.length ? `<table class="lsl"><thead><tr><th>Mã</th><th>Ngày mua</th><th>Ngày bán</th><th class="r">Giữ</th><th class="r">Giá mua</th><th class="r">Giá bán</th><th class="r">Lãi/lỗ</th><th>Lý do bán</th><th>Hệ thống</th></tr></thead><tbody>
+    ${TH.map(t => { const e = R.find(x => x.sym === t.sym && x.entry === t.entry);
+      return `<tr><td class="sym">${esc(t.sym)}</td><td>${htgdNgay(t.entry)}</td><td>${htgdNgay(t.exit)}</td><td class="r">${t.held ?? '—'} phiên</td>
+      <td class="r">${htgdSo(t.entry_px)}</td><td class="r">${htgdSo(t.exit_px)}</td><td class="r ${htgdP(t.pnl)}" style="font-weight:660">${htgdPc(t.pnl)}</td>
+      <td class="muted" style="font-size:13px">${esc(t.reason || '')}</td><td class="muted">${!e ? 'Không có' : e.exit === t.exit ? 'Trùng' : 'Bán ' + htgdNgay(e.exit) + ' · ' + htgdPc(e.pnl_pct)}</td></tr>`; }).join('')}</tbody></table>`
+    : '<p class="muted" style="margin:0">Chưa có lệnh nào đóng.</p>';
+
+  /* ---- đang cầm: real-time ---- */
+  const veMo = () => {
+    const el = document.getElementById('htgdMo'); if (!el || !el.isConnected) return false;
+    const ks = typeof dongKeHoach === 'function' ? dongKeHoach() : [];
+    const cuaMo = sym => { const p = (D.open_positions || []).find(x => x.sym === sym); return p ? (p.hard ? 'Hard' : p.door === 'V' ? 'V' : 'C') : null; };
+    el.innerHTML = ks.length ? `<table class="lsl"><thead><tr><th>Mã</th><th>Sổ</th><th>Cửa vào</th><th class="r">Giá vốn</th><th class="r">Giá hiện tại</th><th class="r">Lãi thực nhận</th><th class="r">Ngưỡng bán</th><th>Việc hôm nay</th></tr></thead><tbody>
+      ${ks.map(k => { const s = trangThaiBan(k), c = k.nguon === 'he' ? cuaMo(k.sym) : null;
+        return `<tr><td class="sym">${esc(k.sym)}</td><td class="muted">${k.nguon === 'he' ? 'Hệ thống' : k.nguon === 'so' ? 'Sổ thực tế' : 'Sổ tay'}</td>
+        <td>${c ? HTGD_CUA[c][0] : '—'}</td><td class="r">${htgdSo(k.gia_von)}</td><td class="r">${htgdSo(s.p)}</td>
+        <td class="r ${htgdP(s.lai)}" style="font-weight:660">${htgdPc(s.lai, 1)}</td><td class="r">${k.nguong != null ? '≤ ' + htgdSo(k.nguong) : '—'}</td>
+        <td style="font-size:13px">${s.viec}</td></tr>`; }).join('')}</tbody></table>
+      <p class="muted" style="font-size:12.5px;margin:6px 0 0">Giá cập nhật 15 giây/lần, cùng nguồn và cùng luật với trang Chuông báo.</p>`
+      : '<p class="muted" style="margin:0">Không cầm mã nào.</p>';
+    return true;
+  };
+  veMo();
+  const hen = setInterval(() => { if (!veMo()) clearInterval(hen); }, 15000);
 }
 
 /* ---------- router ---------- */
