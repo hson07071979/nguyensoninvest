@@ -89,6 +89,7 @@ jobs:
             # obs/ = so do Dieu kien 9 moi lan quet (audit 23/09/2026)
             mkdir -p obs
             git add live.json 2>/dev/null || true
+            git add du_phong.json 2>/dev/null || true   # R57: lenh du phong chuong da bao
             git add obs/ 2>/dev/null || true
             if git diff --cached --quiet; then
               echo "  không có gì đổi"

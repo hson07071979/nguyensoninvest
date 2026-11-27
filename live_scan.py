@@ -628,8 +628,8 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
         _dp_ = [h for h in giu if h.get('mua_do_du_phong') and not h.get('chot')]
         if _dp_:
             _cuoi.insert(1, "⚠️ Lệnh DỰ PHÒNG: KL thật mới " + ', '.join(f"{h['sym']} {h['volr']}×" for h in _dp_)
-                         + f" — chưa chắc đủ {_cf.get('vol_floor', 2.0)}× lúc đóng cửa. Đóng cửa hụt KL thì bộ máy "
-                         f"không ghi lệnh và bán 100% ATC T+{sf}.")
+                         + f" — chưa chắc đủ {_cf.get('vol_floor', 2.0)}× lúc đóng cửa. Bộ máy VẪN GHI LỆNH ở giá lúc báo; "
+                         f"đóng cửa hụt KL thì bán 100% ATC T+{sf}.")
         if giu and set(giu_s) != set(truoc):
             if not truoc:
                 # lan dau trong phien co ma giu luot: tin MUA DO nhu cu (kem dong KHONG MUA cho ma het luot)
@@ -745,9 +745,14 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
             dong = [f"\u26AA *MUA DÒ KHÔNG ĐỦ ĐK1–8 LÚC ĐÓNG CỬA* — phiên {ses}", '']
             lb_ = SP.labels(L_) if L_ else {}
             dong += [f"*{x['sym']}* thiếu {', '.join(lb_.get(k, k) for k in x['thieu'])} → *bán TOÀN BỘ (100%) ATC ngày {x['ban'][8:10]}/{x['ban'][5:7]}* (T+{sf}, dự kiến) nếu đã mua. Sẽ nhắc lại lúc 14h hôm đó." for x in tr]
+            _dpj = doc_du_phong().get(ses) or {}
             dong += ['', '• Đừng mua thêm, đừng bình quân giá xuống — kể cả khi tối nay Điều kiện 9 đạt.',
-                     '• Hàng chưa về thì chưa bán được; tới ngày trên đặt bán ATC (chuông nhắc 14h).',
-                     '• Muốn hệ thống theo dõi và báo bán vị thế này như lệnh thật: Hard Buy mã đó vào sổ, đúng phiên và giá đã khớp.']
+                     '• Hàng chưa về thì chưa bán được; tới ngày trên đặt bán ATC (chuông nhắc 14h).']
+            dong += [(f"• {x['sym']} là lệnh DỰ PHÒNG chuông đã báo lúc {str(_dpj.get('luc', ''))[:5]} → bộ máy ĐÃ GHI LỆNH ở giá "
+                      f"{('%.2f' % ((_dpj.get('gia') or 0) / 1000)).replace('.', ',')} (sổ hệ thống + sổ thực tế) và sẽ tự báo bán T+{sf}.")
+                     if _dpj.get('sym') == x['sym'] else
+                     f"• {x['sym']}: muốn hệ thống theo dõi như lệnh thật thì Hard Buy vào sổ, đúng phiên và giá đã khớp."
+                     for x in tr]
             if _post('\n'.join(dong)):
                 da_gui += ['X8:' + x['sym'] for x in tr]
         # DINH CHINH (22/10/2026): da bao 'khong du DK1-8' o lan quet truoc, lan quet nay cham lai DAT
@@ -1316,6 +1321,37 @@ def quotes_snapshot(syms, chunk=40):
             except Exception:
                 time.sleep(1.2 * (a + 1))
     return out
+
+
+DU_PHONG_F = 'du_phong.json'
+
+
+def doc_du_phong():
+    try:
+        return json.load(open(DU_PHONG_F, encoding='utf-8'))
+    except Exception:
+        return {}
+
+
+def ghi_du_phong(hits, ses, da_bao, now):
+    """{phien: {sym, luc, gia (dong, gia tho), volr, du_phong}} — ma DU PHONG dang giu luot ma chuong DA BAO
+    ('D:' da gui). Chi ghi khi chua co ma nao cua phien hoac ma giu luot doi sang ma du phong khac. Ma chot
+    14:25 khong ghi o day (bo may da co chot_rows)."""
+    giu = [h for h in hits if h.get('mua_do_du_phong') and not h.get('chot') and h.get('uu_tien') in (1, None)
+           and not h.get('khong_mua') and ('D:' + h['sym']) in da_bao]
+    if not giu:
+        return None
+    h = sorted(giu, key=lambda x: (x.get('uu_tien') or 99))[0]
+    D_ = doc_du_phong()
+    cu = D_.get(ses)
+    if cu and cu.get('sym') == h['sym']:
+        return cu
+    D_[ses] = dict(sym=h['sym'], luc=now.strftime('%H:%M:%S'), gia=round(float(h['price']) * 1000),
+                   volr=h.get('volr'), du_phong=h.get('volr_proj_curve'), truoc=(cu or {}).get('sym'))
+    tmp = DU_PHONG_F + '.tmp'
+    json.dump(D_, open(tmp, 'w', encoding='utf-8'), ensure_ascii=False, indent=0, sort_keys=True)
+    os.replace(tmp, DU_PHONG_F)
+    return D_[ses]
 
 
 def du_phong_ok(res, CF, volr, tv, frac):
@@ -1914,6 +1950,13 @@ def main():
         nhac = nhac_het_luot(hits, nhac, cu_mua, ses, int(CF.get('sell_from', 3) or 3))
     da_keu = gui_telegram(hits, ses, cu_mua, cu_ses, T.get('light', 'VANG'), frac, T, den_tt=den_tt,
                           xac_nhan=xac_nhan, nhac=nhac) or []
+    # R57 PROD (27/11/2026, anh Son chot A): LENH DU PHONG chuong da bao = lenh that. Ghi lai ma dang GIU LUOT
+    # du phong (da gui 'D:') + gia + gio luc bao vao du_phong.json -> ban dung toi (engine2.dp_rows) vao dung
+    # ma do, dung gia do. Doi uu tien sang ma du phong khac -> ghi de (bo may chi giu 1 lenh do).
+    try:
+        ghi_du_phong(hits, ses, set(da_keu) | (set(cu_mua) if cu_ses == ses else set()), now)
+    except Exception as e:
+        print('ghi du_phong loi:', type(e).__name__, e)
     # 25/11/2026 (loi TCH): ban dung toi KHONG chay cho phien truoc -> ke hoach ban / nguong / so thuc te deu
     # la cua 2 phien truoc ma chuong van chay im lang. Phat hien thi BAO NGAY ve dien thoai, mot lan/phien.
     try:
