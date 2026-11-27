@@ -47,7 +47,7 @@ jobs:
               git fetch -q origin main && git reset -q --hard origin/main
               python live_scan.py || { echo "!! live_scan.py lỗi"; return 0; }
               mkdir -p obs
-              git add live.json obs/ 2>/dev/null || true
+              git add live.json obs/ du_phong.json 2>/dev/null || true
               if git diff --cached --quiet; then echo "không có gì đổi"; return 0; fi
               git commit -q -m "Nhịp đồng hồ $(TZ=Asia/Ho_Chi_Minh date '+%d/%m %H:%M')"
               # có người vừa ghi live.json (vòng dự phòng) -> quét lại trên bản mới nhất, KHÔNG gộp tay
