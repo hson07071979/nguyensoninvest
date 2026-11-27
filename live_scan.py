@@ -621,8 +621,15 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
         def _ut_of(h):
             return (f"*ƯU TIÊN {h['uu_tien']}/{h['n_ung_vien']}* · " if h.get('uu_tien') and (h.get('n_ung_vien') or 0) > 1 else '')
 
-        _cuoi = ["", "Đặt lệnh NGAY (LO), đừng chờ ATC nếu giá đang sát/ở trần — ATC trần rất khó khớp.",
+        # 27/11/2026 (ca GAS): ghi ro CACH DAT LENH va, voi lenh DU PHONG, rui ro dong cua hut KL
+        _cuoi = ["", "Cách đặt: LO ngay ở giá bán tốt nhất trong 14:25–14:30 (phiên liên tục). Phần chưa khớp → huỷ, "
+                     "đặt lại lệnh ATC lúc 14:30. Mã đang sát/ở trần: đặt càng sớm càng tốt — ATC trần dư mua rất khó khớp.",
                  f"Tối ~18–19h xác nhận ĐK1–8 bằng số đóng cửa + Điều kiện 9: đạt → giữ; không đạt → bán 100% ATC T+{sf}."]
+        _dp_ = [h for h in giu if h.get('mua_do_du_phong') and not h.get('chot')]
+        if _dp_:
+            _cuoi.insert(1, "⚠️ Lệnh DỰ PHÒNG: KL thật mới " + ', '.join(f"{h['sym']} {h['volr']}×" for h in _dp_)
+                         + f" — chưa chắc đủ {_cf.get('vol_floor', 2.0)}× lúc đóng cửa. Đóng cửa hụt KL thì bộ máy "
+                         f"không ghi lệnh và bán 100% ATC T+{sf}.")
         if giu and set(giu_s) != set(truoc):
             if not truoc:
                 # lan dau trong phien co ma giu luot: tin MUA DO nhu cu (kem dong KHONG MUA cho ma het luot)
@@ -738,6 +745,9 @@ def gui_telegram(hits, ses, cu_mua, cu_ses, den, frac, T=None, den_tt=None, xac_
             dong = [f"\u26AA *MUA DÒ KHÔNG ĐỦ ĐK1–8 LÚC ĐÓNG CỬA* — phiên {ses}", '']
             lb_ = SP.labels(L_) if L_ else {}
             dong += [f"*{x['sym']}* thiếu {', '.join(lb_.get(k, k) for k in x['thieu'])} → *bán TOÀN BỘ (100%) ATC ngày {x['ban'][8:10]}/{x['ban'][5:7]}* (T+{sf}, dự kiến) nếu đã mua. Sẽ nhắc lại lúc 14h hôm đó." for x in tr]
+            dong += ['', '• Đừng mua thêm, đừng bình quân giá xuống — kể cả khi tối nay Điều kiện 9 đạt.',
+                     '• Hàng chưa về thì chưa bán được; tới ngày trên đặt bán ATC (chuông nhắc 14h).',
+                     '• Muốn hệ thống theo dõi và báo bán vị thế này như lệnh thật: Hard Buy mã đó vào sổ, đúng phiên và giá đã khớp.']
             if _post('\n'.join(dong)):
                 da_gui += ['X8:' + x['sym'] for x in tr]
         # DINH CHINH (22/10/2026): da bao 'khong du DK1-8' o lan quet truoc, lan quet nay cham lai DAT

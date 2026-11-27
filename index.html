@@ -5214,7 +5214,10 @@ function pageLiveTrucTiep(root, L) {
         <td style="text-align:right">${h.price}</td>
         <td style="text-align:right;font-weight:660" class="${h.pct >= 0 ? 'pos' : 'neg'}">${h.pct >= 0 ? '+' : ''}${h.pct}%</td>
         <td style="text-align:right" class="muted">≥ ${h.need_px}</td>
-        <td style="text-align:right">${h.volr}×${L.open && h.volr_proj !== h.volr ? ` <span class="muted">→${h.volr_proj}×</span>` : ''}</td>
+        <td style="text-align:right">${h.volr}×${(() => { /* 27/11/2026 (GAS): mã DỰ PHÒNG hiện đúng số dự phóng mà LUẬT dùng (volr_proj_curve,
+          = KL ÷ phần phiên đã qua — live_scan.du_phong_ok), không phải số theo đường KL trong ngày — trước đây trang ghi 1,68× mà chuông vẫn báo mua (luật thấy 1,82×) */
+          const vp = (h.mua_do_du_phong && h.volr_proj_curve != null) ? h.volr_proj_curve : h.volr_proj;
+          return L.open && vp !== h.volr ? ` <span class="muted" title="${h.mua_do_du_phong ? 'Dự phóng theo luật mua dự phòng ATC (cần ≥ 1,8×)' : 'Dự phóng KL cả phiên'}">→${vp}×</span>` : ''; })()}</td>
         <td style="text-align:right">${h.gtgd} tỷ</td>
         <td style="text-align:right;color:var(--text-primary);font-weight:640">${h.score}</td>
         <td style="text-align:center;white-space:nowrap">${
